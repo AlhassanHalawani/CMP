@@ -1,0 +1,45 @@
+{
+  "name": "@fcit-cmp/backend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/app.ts",
+    "build": "tsc",
+    "start": "node dist/app.js",
+    "migrate": "tsx src/scripts/migrate.ts",
+    "seed": "tsx seeds/run.ts",
+    "test": "jest --passWithNoTests"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "better-sqlite3": "^11.8.1",
+    "keycloak-connect": "^26.1.0",
+    "express-validator": "^7.2.1",
+    "winston": "^3.17.0",
+    "qrcode": "^1.5.4",
+    "pdfkit": "^0.15.1",
+    "nodemailer": "^6.9.16",
+    "cors": "^2.8.5",
+    "helmet": "^8.0.0",
+    "dotenv": "^16.4.7",
+    "jsonwebtoken": "^9.0.2",
+    "jwks-rsa": "^3.1.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/qrcode": "^1.5.5",
+    "@types/pdfkit": "^0.13.6",
+    "@types/nodemailer": "^6.4.17",
+    "@types/cors": "^2.8.17",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^22.10.7",
+    "typescript": "^5.7.2",
+    "tsx": "^4.19.2",
+    "jest": "^29.7.0",
+    "@types/jest": "^29.5.14",
+    "ts-jest": "^29.2.5",
+    "supertest": "^7.0.0",
+    "@types/supertest": "^6.0.2"
+  }
+}
