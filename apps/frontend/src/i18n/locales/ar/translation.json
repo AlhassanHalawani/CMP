@@ -1,0 +1,92 @@
+{
+  "app": {
+    "title": "منصة إدارة أندية كلية الحاسبات",
+    "shortTitle": "CMP"
+  },
+  "nav": {
+    "dashboard": "لوحة التحكم",
+    "clubs": "الأندية",
+    "events": "الفعاليات",
+    "achievements": "الإنجازات",
+    "kpi": "مؤشرات الأداء",
+    "leaderboard": "لوحة المتصدرين",
+    "notifications": "الإشعارات",
+    "admin": "الإدارة",
+    "profile": "الملف الشخصي"
+  },
+  "auth": {
+    "login": "تسجيل الدخول",
+    "logout": "تسجيل الخروج",
+    "loginWith": "تسجيل الدخول بحساب الكلية"
+  },
+  "common": {
+    "search": "بحث",
+    "filter": "تصفية",
+    "create": "إنشاء",
+    "edit": "تعديل",
+    "delete": "حذف",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "confirm": "تأكيد",
+    "loading": "جارٍ التحميل...",
+    "noData": "لا توجد بيانات",
+    "viewAll": "عرض الكل",
+    "back": "رجوع"
+  },
+  "dashboard": {
+    "welcome": "مرحباً بعودتك",
+    "upcomingEvents": "الفعاليات القادمة",
+    "recentNotifications": "آخر الإشعارات",
+    "quickStats": "إحصائيات سريعة"
+  },
+  "clubs": {
+    "title": "الأندية",
+    "members": "الأعضاء",
+    "leader": "القائد",
+    "events": "الفعاليات",
+    "createClub": "إنشاء نادي"
+  },
+  "events": {
+    "title": "الفعاليات",
+    "upcoming": "القادمة",
+    "past": "السابقة",
+    "myEvents": "فعالياتي",
+    "register": "تسجيل",
+    "cancelRegistration": "إلغاء التسجيل",
+    "registered": "مسجّل",
+    "full": "مكتمل",
+    "attendees": "الحضور",
+    "createEvent": "إنشاء فعالية"
+  },
+  "attendance": {
+    "title": "الحضور",
+    "scanQr": "مسح رمز QR",
+    "generateQr": "إنشاء رمز QR",
+    "checkedIn": "تم التسجيل",
+    "manualCheckIn": "تسجيل يدوي"
+  },
+  "achievements": {
+    "title": "الإنجازات",
+    "downloadReport": "تحميل التقرير"
+  },
+  "kpi": {
+    "title": "لوحة مؤشرات الأداء",
+    "metrics": "المقاييس",
+    "leaderboard": "لوحة المتصدرين"
+  },
+  "admin": {
+    "title": "لوحة الإدارة",
+    "users": "المستخدمون",
+    "semesters": "الفصول الدراسية",
+    "auditLog": "سجل المراجعة",
+    "stats": "الإحصائيات"
+  },
+  "theme": {
+    "light": "فاتح",
+    "dark": "داكن"
+  },
+  "language": {
+    "en": "English",
+    "ar": "العربية"
+  }
+}

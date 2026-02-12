@@ -1,0 +1,92 @@
+{
+  "app": {
+    "title": "FCIT Clubs Management Platform",
+    "shortTitle": "CMP"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "clubs": "Clubs",
+    "events": "Events",
+    "achievements": "Achievements",
+    "kpi": "KPI",
+    "leaderboard": "Leaderboard",
+    "notifications": "Notifications",
+    "admin": "Admin",
+    "profile": "Profile"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "loginWith": "Login with FCIT Account"
+  },
+  "common": {
+    "search": "Search",
+    "filter": "Filter",
+    "create": "Create",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "loading": "Loading...",
+    "noData": "No data available",
+    "viewAll": "View All",
+    "back": "Back"
+  },
+  "dashboard": {
+    "welcome": "Welcome back",
+    "upcomingEvents": "Upcoming Events",
+    "recentNotifications": "Recent Notifications",
+    "quickStats": "Quick Stats"
+  },
+  "clubs": {
+    "title": "Clubs",
+    "members": "Members",
+    "leader": "Leader",
+    "events": "Events",
+    "createClub": "Create Club"
+  },
+  "events": {
+    "title": "Events",
+    "upcoming": "Upcoming",
+    "past": "Past",
+    "myEvents": "My Events",
+    "register": "Register",
+    "cancelRegistration": "Cancel Registration",
+    "registered": "Registered",
+    "full": "Full",
+    "attendees": "Attendees",
+    "createEvent": "Create Event"
+  },
+  "attendance": {
+    "title": "Attendance",
+    "scanQr": "Scan QR Code",
+    "generateQr": "Generate QR Code",
+    "checkedIn": "Checked In",
+    "manualCheckIn": "Manual Check-In"
+  },
+  "achievements": {
+    "title": "Achievements",
+    "downloadReport": "Download Report"
+  },
+  "kpi": {
+    "title": "KPI Dashboard",
+    "metrics": "Metrics",
+    "leaderboard": "Leaderboard"
+  },
+  "admin": {
+    "title": "Admin Panel",
+    "users": "Users",
+    "semesters": "Semesters",
+    "auditLog": "Audit Log",
+    "stats": "Statistics"
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "language": {
+    "en": "English",
+    "ar": "العربية"
+  }
+}
