@@ -9,6 +9,17 @@ spec:
     privateKeySecretRef:
       name: letsencrypt-prod
     solvers:
-      - http01:
-          ingress:
-            class: traefik
+      - selector:
+          dnsZones:
+            - "fcitcmp.com"
+        dns01:
+          webhook:
+            # Must match the Helm value used when installing the webhook.
+            groupName: acme.fcitcmp.com
+            solverName: godaddy
+            config:
+              apiKeySecretRef:
+                name: godaddy-api-key
+                key: token
+              production: true
+              ttl: 600
