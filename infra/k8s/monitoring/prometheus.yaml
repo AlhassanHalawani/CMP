@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cmp-prometheus-note
+  namespace: cmp
+data:
+  note: "Prometheus stack is not provisioned in this test profile. Add your monitoring stack manifests here if needed."

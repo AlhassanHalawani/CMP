@@ -1,0 +1,49 @@
+{
+  "realm": "cmp",
+  "enabled": true,
+  "displayName": "CMP",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": true,
+  "roles": {
+    "realm": [
+      {
+        "name": "student",
+        "description": "Default CMP student role"
+      },
+      {
+        "name": "club_leader",
+        "description": "CMP club leader role"
+      },
+      {
+        "name": "admin",
+        "description": "CMP administrator role"
+      }
+    ]
+  },
+  "defaultRoles": [
+    "student"
+  ],
+  "clients": [
+    {
+      "clientId": "cmp-app",
+      "name": "CMP App",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:5173/*",
+        "http://127.0.0.1:5173/*"
+      ],
+      "webOrigins": [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:5173/*##http://127.0.0.1:5173/*"
+      }
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
+import { Card, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Spinner } from '@/components/ui/Spinner';
 import { kpiApi } from '@/api/kpi';
@@ -25,7 +25,7 @@ export function LeaderboardPage() {
         <div className="space-y-3">
           {data?.data.map((entry, i) => (
             <Card key={entry.club_id} className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center border-r-2 border-[var(--color-border)] text-2xl font-black">
+              <div className="flex h-12 w-12 items-center justify-center border-r-2 border-[var(--border)] text-2xl font-black">
                 {i + 1}
               </div>
               <CardContent className="flex-1 py-3">

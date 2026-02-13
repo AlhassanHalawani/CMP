@@ -1,13 +1,9 @@
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '@/contexts/AuthContext';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
+import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 
 export function AchievementsPage() {
   const { t } = useTranslation();
-  const { user } = useAuth();
-  const { language } = useLanguage();
 
   return (
     <div>

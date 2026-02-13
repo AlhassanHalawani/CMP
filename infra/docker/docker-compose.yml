@@ -1,0 +1,70 @@
+services:
+  frontend:
+    image: node:20-alpine
+    working_dir: /workspace
+    command: >
+      sh -c "npm install &&
+             npm run dev:frontend -- --host 0.0.0.0 --port 5173"
+    ports:
+      - "5173:5173"
+    volumes:
+      - ../../:/workspace
+    environment:
+      VITE_KEYCLOAK_URL: http://localhost:8080
+      VITE_KEYCLOAK_REALM: cmp
+      VITE_KEYCLOAK_CLIENT_ID: cmp-app
+    depends_on:
+      - backend
+      - keycloak
+
+  backend:
+    image: node:20-alpine
+    working_dir: /workspace
+    command: >
+      sh -c "npm install &&
+             npm run migrate --workspace=apps/backend &&
+             npm run dev:backend"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../../:/workspace
+      - backend_data:/workspace/apps/backend/data
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_PATH: ./data/cmp.db
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_REALM: cmp
+      KEYCLOAK_CLIENT_ID: cmp-app
+      KEYCLOAK_CLIENT_SECRET: change-me-in-production
+      JWT_SECRET: dev-secret-change-me-in-production-min-32
+      SMTP_HOST: mailhog
+      SMTP_PORT: 1025
+      SMTP_USER: ""
+      SMTP_PASS: ""
+      SMTP_FROM: noreply@fcit-cmp.local
+    depends_on:
+      - keycloak
+      - mailhog
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.1
+    command:
+      - start-dev
+      - --import-realm
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+volumes:
+  backend_data:

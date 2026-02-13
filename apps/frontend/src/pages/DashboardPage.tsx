@@ -18,7 +18,7 @@ export function DashboardPage() {
     queryFn: () => eventsApi.list({ status: 'published', limit: 5 }),
   });
 
-  const { data: clubsData, isLoading: clubsLoading } = useQuery({
+  const { data: clubsData } = useQuery({
     queryKey: ['clubs'],
     queryFn: () => clubsApi.list({ limit: 10 }),
   });

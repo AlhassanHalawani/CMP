@@ -16,7 +16,7 @@ This document is the sequential implementation plan for the FCIT Clubs Managemen
 | Phase 6 — Frontend Foundation | DONE | i18n (en+ar), Keycloak config, Auth/Theme/Language contexts, Tailwind v4 neobrutalism theme |
 | Phase 7 — UI Components | DONE | Button, Input, Card, Badge, Spinner, Dialog, Select, Tabs, Toast, DropdownMenu + Sidebar, Topbar, PageLayout, ProtectedRoute |
 | Phase 8 — Frontend Pages | DONE | 11 pages + 7 API client modules, all routes wired in App.tsx |
-| Phase 9 — Infra & DevOps | TODO | Docker Compose, Keycloak realm export, Dockerfile |
+| Phase 9 — Infra & DevOps | TODO | Docker Compose, Keycloak realm export, Dockerfile, and neobrutalism.dev UI source compliance gate |
 | Phase 10 — Documentation | TODO | Fill in 6 doc files |
 
 ---
@@ -258,6 +258,11 @@ Create `src/api/` client files (one per domain) using axios — they read the Ke
 
 ## Phase 9 — Infra & DevOps
 
+### 9.0 UI Source Compliance Gate (must be satisfied before closing Phase 9)
+- [ ] All visual shared components in `apps/frontend/src/components/ui/` are based on `https://www.neobrutalism.dev/` component patterns and tokens (`--background`, `--foreground`, `--border`, `--main`, `--overlay`, `--shadow`)
+- [ ] Legacy custom token names are removed from frontend styles
+- [ ] No page should implement ad-hoc visual primitives when an equivalent shared UI component exists
+- [ ] Add migration notes in docs to map local component names to neobrutalism.dev counterparts
 ### 9.1 Docker Compose (`infra/docker/docker-compose.yml`)
 Services:
 - `frontend` — Vite dev server on port 5173
@@ -296,7 +301,7 @@ Fill in the empty doc files:
 ```
 Phase 1  →  Phase 2  →  Phase 3  →  Phase 4  →  Phase 5   (backend complete)
 Phase 6  →  Phase 7  →  Phase 8                            (frontend complete)
-Phase 9  →  Phase 10                                        (infra + docs)
+Phase 9.0 → Phase 9.1 → Phase 9.2 → Phase 9.3 → Phase 10   (UI compliance + infra + docs)
 ```
 
 Backend and frontend can be worked on in parallel after Phase 1 (backend foundation) is done, since the API contract is clear from `docs/api.md` once written.

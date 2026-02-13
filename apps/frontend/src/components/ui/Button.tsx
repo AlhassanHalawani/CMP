@@ -3,15 +3,15 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center font-bold border-2 border-[var(--color-border)] transition-all active:translate-y-0.5 active:shadow-none disabled:opacity-50 disabled:pointer-events-none',
+  'inline-flex items-center justify-center font-bold border-2 border-[var(--border)] transition-all active:translate-y-0.5 active:shadow-none disabled:opacity-50 disabled:pointer-events-none',
   {
     variants: {
       variant: {
-        default: 'bg-[var(--color-primary)] text-white shadow-[var(--shadow-brutal-sm)] hover:-translate-y-0.5',
-        secondary: 'bg-[var(--color-secondary)] text-white shadow-[var(--shadow-brutal-sm)] hover:-translate-y-0.5',
-        outline: 'bg-[var(--color-surface)] shadow-[var(--shadow-brutal-sm)] hover:-translate-y-0.5',
+        default: 'bg-[var(--main)] text-white shadow-[2px_2px_0px_0px_var(--shadow)] hover:-translate-y-0.5',
+        secondary: 'bg-[var(--secondary)] text-white shadow-[2px_2px_0px_0px_var(--shadow)] hover:-translate-y-0.5',
+        outline: 'bg-[var(--background)] shadow-[2px_2px_0px_0px_var(--shadow)] hover:-translate-y-0.5',
         ghost: 'border-transparent shadow-none hover:bg-black/5',
-        destructive: 'bg-red-500 text-white shadow-[var(--shadow-brutal-sm)] hover:-translate-y-0.5',
+        destructive: 'bg-red-500 text-white shadow-[2px_2px_0px_0px_var(--shadow)] hover:-translate-y-0.5',
       },
       size: {
         sm: 'px-3 py-1.5 text-sm',

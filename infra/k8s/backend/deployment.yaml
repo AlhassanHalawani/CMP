@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cmp-backend
+  namespace: cmp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cmp-backend
+  template:
+    metadata:
+      labels:
+        app: cmp-backend
+    spec:
+      initContainers:
+        - name: migrate
+          image: cmp-backend:latest
+          imagePullPolicy: IfNotPresent
+          command: ["npm", "run", "migrate"]
+          workingDir: /app/apps/backend
+          envFrom:
+            - configMapRef:
+                name: cmp-backend-config
+            - secretRef:
+                name: cmp-backend-secrets
+          volumeMounts:
+            - name: sqlite-data
+              mountPath: /data
+      containers:
+        - name: backend
+          image: cmp-backend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: cmp-backend-config
+            - secretRef:
+                name: cmp-backend-secrets
+          volumeMounts:
+            - name: sqlite-data
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 8
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 20
+            periodSeconds: 20
+      volumes:
+        - name: sqlite-data
+          persistentVolumeClaim:
+            claimName: cmp-sqlite-pvc

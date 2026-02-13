@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: cmp-keycloak
+  namespace: cmp
+spec:
+  serviceName: cmp-keycloak
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cmp-keycloak
+  template:
+    metadata:
+      labels:
+        app: cmp-keycloak
+    spec:
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:26.1
+          args:
+            - start-dev
+            - --import-realm
+            - --proxy-headers=xforwarded
+            - --hostname=https://keycloak.fcitcmp.com
+            - --hostname-strict=false
+          env:
+            - name: KC_HTTP_ENABLED
+              value: "true"
+            - name: KEYCLOAK_ADMIN
+              valueFrom:
+                secretKeyRef:
+                  name: cmp-keycloak-admin
+                  key: KEYCLOAK_ADMIN
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cmp-keycloak-admin
+                  key: KEYCLOAK_ADMIN_PASSWORD
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /realms/master
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /realms/master
+              port: 8080
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          volumeMounts:
+            - name: keycloak-data
+              mountPath: /opt/keycloak/data
+            - name: realm-import
+              mountPath: /opt/keycloak/data/import/realm-export.json
+              subPath: realm-export.json
+      volumes:
+        - name: keycloak-data
+          persistentVolumeClaim:
+            claimName: cmp-keycloak-pvc
+        - name: realm-import
+          configMap:
+            name: cmp-keycloak-realm

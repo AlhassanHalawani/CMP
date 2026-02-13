@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cmp-keycloak-realm
+  namespace: cmp
+data:
+  realm-export.json: |
+    {
+      "realm": "cmp",
+      "enabled": true,
+      "displayName": "CMP",
+      "registrationAllowed": false,
+      "resetPasswordAllowed": true,
+      "roles": {
+        "realm": [
+          {
+            "name": "student",
+            "description": "Default CMP student role"
+          },
+          {
+            "name": "club_leader",
+            "description": "CMP club leader role"
+          },
+          {
+            "name": "admin",
+            "description": "CMP administrator role"
+          }
+        ]
+      },
+      "defaultRoles": [
+        "student"
+      ],
+      "clients": [
+        {
+          "clientId": "cmp-app",
+          "name": "CMP App",
+          "enabled": true,
+          "protocol": "openid-connect",
+          "publicClient": true,
+          "standardFlowEnabled": true,
+          "directAccessGrantsEnabled": true,
+          "serviceAccountsEnabled": false,
+          "redirectUris": [
+            "https://cmp.fcitcmp.com/*"
+          ],
+          "webOrigins": [
+            "https://cmp.fcitcmp.com"
+          ],
+          "attributes": {
+            "post.logout.redirect.uris": "https://cmp.fcitcmp.com/*"
+          }
+        }
+      ]
+    }

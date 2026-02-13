@@ -1,0 +1,45 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cmp-ingress
+  namespace: cmp
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - cmp.fcitcmp.com
+      secretName: cmp-fcitcmp-tls
+    - hosts:
+        - keycloak.fcitcmp.com
+      secretName: keycloak-fcitcmp-tls
+  rules:
+    - host: cmp.fcitcmp.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: cmp-backend
+                port:
+                  number: 3000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: cmp-frontend
+                port:
+                  number: 80
+    - host: keycloak.fcitcmp.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: cmp-keycloak
+                port:
+                  number: 8080

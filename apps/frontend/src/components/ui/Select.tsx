@@ -10,7 +10,7 @@ export function SelectTrigger({ className, children, ...props }: ComponentPropsW
   return (
     <SelectPrimitive.Trigger
       className={cn(
-        'flex items-center justify-between w-full border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 font-bold shadow-[var(--shadow-brutal-sm)]',
+        'flex items-center justify-between w-full border-2 border-[var(--border)] bg-[var(--background)] px-3 py-2 font-bold shadow-[2px_2px_0px_0px_var(--shadow)]',
         className
       )}
       {...props}
@@ -28,7 +28,7 @@ export function SelectContent({ className, children, ...props }: ComponentPropsW
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
         className={cn(
-          'z-50 border-2 border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-brutal)]',
+          'z-50 border-2 border-[var(--border)] bg-[var(--background)] shadow-[4px_4px_0px_0px_var(--shadow)]',
           className
         )}
         position="popper"
@@ -43,7 +43,7 @@ export function SelectContent({ className, children, ...props }: ComponentPropsW
 export function SelectItem({ className, children, ...props }: ComponentPropsWithoutRef<typeof SelectPrimitive.Item>) {
   return (
     <SelectPrimitive.Item
-      className={cn('cursor-pointer px-3 py-2 font-bold outline-none hover:bg-[var(--color-accent)]', className)}
+      className={cn('cursor-pointer px-3 py-2 font-bold outline-none hover:bg-[var(--overlay)]', className)}
       {...props}
     >
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>

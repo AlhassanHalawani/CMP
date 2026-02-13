@@ -1,24 +1,31 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #FF6B6B;
-  --color-primary-dark: #E55555;
-  --color-secondary: #4ECDC4;
-  --color-secondary-dark: #3DBDB5;
-  --color-accent: #FFE66D;
-  --color-background: #FAFAFA;
-  --color-background-dark: #1A1A2E;
-  --color-surface: #FFFFFF;
-  --color-surface-dark: #16213E;
-  --color-text: #2D3436;
-  --color-text-dark: #F5F5F5;
-  --color-border: #2D3436;
-  --color-border-dark: #F5F5F5;
-  --shadow-brutal: 4px 4px 0px 0px #2D3436;
-  --shadow-brutal-sm: 2px 2px 0px 0px #2D3436;
-  --shadow-brutal-lg: 6px 6px 0px 0px #2D3436;
-  --shadow-brutal-dark: 4px 4px 0px 0px #F5F5F5;
-  --radius-brutal: 0px;
+  /* neobrutalism.dev token model */
+  --background: #ffffff;
+  --foreground: #111111;
+  --card: #ffffff;
+  --card-foreground: #111111;
+  --popover: #ffffff;
+  --popover-foreground: #111111;
+  --primary: #111111;
+  --primary-foreground: #ffffff;
+  --secondary: #4ecdc4;
+  --secondary-foreground: #111111;
+  --muted: #f1f1f1;
+  --muted-foreground: #6b7280;
+  --accent: #f1f1f1;
+  --accent-foreground: #111111;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #111111;
+  --input: #111111;
+  --ring: #111111;
+  --main: #ff6b6b;
+  --main-foreground: #ffffff;
+  --overlay: #ffe66d;
+  --shadow: #111111;
+  --radius: 0rem;
 }
 
 * {
@@ -26,15 +33,34 @@
 }
 
 body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
   margin: 0;
-  background-color: var(--color-background);
-  color: var(--color-text);
+  background-color: var(--background);
+  color: var(--foreground);
 }
 
-[data-theme="dark"] body {
-  background-color: var(--color-background-dark);
-  color: var(--color-text-dark);
+[data-theme="dark"] {
+  --background: #111111;
+  --foreground: #ffffff;
+  --card: #111111;
+  --card-foreground: #ffffff;
+  --popover: #111111;
+  --popover-foreground: #ffffff;
+  --primary: #ffffff;
+  --primary-foreground: #111111;
+  --secondary: #2a9d8f;
+  --secondary-foreground: #ffffff;
+  --muted: #222222;
+  --muted-foreground: #c8c8c8;
+  --accent: #222222;
+  --accent-foreground: #ffffff;
+  --border: #ffffff;
+  --input: #ffffff;
+  --ring: #ffffff;
+  --main: #ff8f8f;
+  --main-foreground: #111111;
+  --overlay: #ffe66d;
+  --shadow: #ffffff;
 }
 
 [dir="rtl"] {

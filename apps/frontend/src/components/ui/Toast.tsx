@@ -17,7 +17,7 @@ export function Toast({ className, ...props }: ComponentPropsWithoutRef<typeof T
   return (
     <ToastPrimitive.Root
       className={cn(
-        'border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-brutal)] data-[state=open]:animate-in data-[state=closed]:animate-out',
+        'border-2 border-[var(--border)] bg-[var(--background)] p-4 shadow-[4px_4px_0px_0px_var(--shadow)] data-[state=open]:animate-in data-[state=closed]:animate-out',
         className
       )}
       {...props}

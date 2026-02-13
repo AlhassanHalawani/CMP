@@ -7,7 +7,7 @@ export function Card({ className, ...props }: CardProps) {
   return (
     <div
       className={cn(
-        'border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-brutal)]',
+        'border-2 border-[var(--border)] bg-[var(--background)] p-4 shadow-[4px_4px_0px_0px_var(--shadow)]',
         className
       )}
       {...props}
@@ -16,7 +16,7 @@ export function Card({ className, ...props }: CardProps) {
 }
 
 export function CardHeader({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('mb-3 pb-3 border-b-2 border-[var(--color-border)]', className)} {...props} />;
+  return <div className={cn('mb-3 pb-3 border-b-2 border-[var(--border)]', className)} {...props} />;
 }
 
 export function CardTitle({ className, ...props }: HTMLAttributes<HTMLHeadingElement>) {

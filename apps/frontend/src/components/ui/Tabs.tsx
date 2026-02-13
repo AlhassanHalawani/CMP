@@ -7,7 +7,7 @@ export const Tabs = TabsPrimitive.Root;
 export function TabsList({ className, ...props }: ComponentPropsWithoutRef<typeof TabsPrimitive.List>) {
   return (
     <TabsPrimitive.List
-      className={cn('flex border-b-2 border-[var(--color-border)]', className)}
+      className={cn('flex border-b-2 border-[var(--border)]', className)}
       {...props}
     />
   );
@@ -17,7 +17,7 @@ export function TabsTrigger({ className, ...props }: ComponentPropsWithoutRef<ty
   return (
     <TabsPrimitive.Trigger
       className={cn(
-        'px-4 py-2 font-bold border-b-2 border-transparent -mb-[2px] transition-colors data-[state=active]:border-[var(--color-primary)] data-[state=active]:text-[var(--color-primary)]',
+        'px-4 py-2 font-bold border-b-2 border-transparent -mb-[2px] transition-colors data-[state=active]:border-[var(--main)] data-[state=active]:text-[var(--main)]',
         className
       )}
       {...props}

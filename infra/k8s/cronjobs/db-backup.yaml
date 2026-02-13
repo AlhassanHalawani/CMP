@@ -1,0 +1,33 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cmp-sqlite-backup
+  namespace: cmp
+spec:
+  schedule: "0 */6 * * *"
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: backup
+              image: alpine:3.20
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  mkdir -p /data/backups
+                  if [ -f /data/cmp.db ]; then
+                    cp /data/cmp.db /data/backups/cmp-$(date +%Y%m%d-%H%M%S).db
+                  fi
+              volumeMounts:
+                - name: sqlite-data
+                  mountPath: /data
+          volumes:
+            - name: sqlite-data
+              persistentVolumeClaim:
+                claimName: cmp-sqlite-pvc

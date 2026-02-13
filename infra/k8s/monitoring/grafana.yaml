@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cmp-grafana-note
+  namespace: cmp
+data:
+  note: "Grafana stack is not provisioned in this test profile. Add your Grafana manifests here if needed."

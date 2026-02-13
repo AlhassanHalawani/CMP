@@ -23,10 +23,10 @@ export function Sidebar() {
   );
 
   return (
-    <aside className="w-64 min-h-screen border-r-2 border-[var(--color-border)] bg-[var(--color-surface)] p-4 flex flex-col">
-      <div className="mb-6 border-b-2 border-[var(--color-border)] pb-4">
+    <aside className="w-64 min-h-screen border-r-2 border-[var(--border)] bg-[var(--background)] p-4 flex flex-col">
+      <div className="mb-6 border-b-2 border-[var(--border)] pb-4">
         <h1 className="text-xl font-black">{t('app.shortTitle')}</h1>
-        <p className="text-xs font-bold text-[var(--color-primary)]">{t('app.title')}</p>
+        <p className="text-xs font-bold text-[var(--main)]">{t('app.title')}</p>
       </div>
       <nav className="flex flex-col gap-1">
         {visibleItems.map((item) => (
@@ -37,8 +37,8 @@ export function Sidebar() {
               cn(
                 'px-3 py-2 font-bold border-2 border-transparent transition-all',
                 isActive
-                  ? 'border-[var(--color-border)] bg-[var(--color-accent)] shadow-[var(--shadow-brutal-sm)]'
-                  : 'hover:border-[var(--color-border)] hover:bg-[var(--color-accent)]/30'
+                  ? 'border-[var(--border)] bg-[var(--overlay)] shadow-[2px_2px_0px_0px_var(--shadow)]'
+                  : 'hover:border-[var(--border)] hover:bg-[var(--overlay)]'
               )
             }
           >
