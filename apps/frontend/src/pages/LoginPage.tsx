@@ -13,7 +13,7 @@ export function LoginPage() {
 
   return (
     <div className="flex h-screen items-center justify-center bg-[var(--background)]">
-      <div className="w-full max-w-sm border-2 border-[var(--border)] bg-[var(--background)] p-8 shadow-[6px_6px_0px_0px_var(--shadow)]">
+      <div className="w-full max-w-sm border-2 border-[var(--border)] bg-[var(--background)] p-8 shadow-[6px_6px_0px_0px_var(--border)]">
         <h1 className="mb-2 text-3xl font-black">{t('app.shortTitle')}</h1>
         <p className="mb-8 text-sm font-bold text-[var(--main)]">{t('app.title')}</p>
         <Button className="w-full" size="lg" onClick={login}>

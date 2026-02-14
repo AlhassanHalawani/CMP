@@ -37,7 +37,7 @@ export function Sidebar() {
               cn(
                 'px-3 py-2 font-bold border-2 border-transparent transition-all',
                 isActive
-                  ? 'border-[var(--border)] bg-[var(--overlay)] shadow-[2px_2px_0px_0px_var(--shadow)]'
+                  ? 'border-[var(--border)] bg-[var(--overlay)] shadow-[2px_2px_0px_0px_var(--border)]'
                   : 'hover:border-[var(--border)] hover:bg-[var(--overlay)]'
               )
             }

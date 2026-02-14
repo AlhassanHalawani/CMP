@@ -5,7 +5,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import '@/i18n/config';
-import '@/styles/base.css';
+import '@/styles/globals.css';
 import App from './App';
 
 const queryClient = new QueryClient({

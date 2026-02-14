@@ -10,7 +10,7 @@ export function DropdownMenuContent({ className, ...props }: ComponentPropsWitho
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
         className={cn(
-          'z-50 min-w-[160px] border-2 border-[var(--border)] bg-[var(--background)] p-1 shadow-[4px_4px_0px_0px_var(--shadow)]',
+          'z-50 min-w-[160px] border-2 border-[var(--border)] bg-[var(--background)] p-1 shadow-[4px_4px_0px_0px_var(--border)]',
           className
         )}
         sideOffset={4}

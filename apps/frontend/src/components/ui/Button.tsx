@@ -7,11 +7,11 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-[var(--main)] text-white shadow-[2px_2px_0px_0px_var(--shadow)] hover:-translate-y-0.5',
-        secondary: 'bg-[var(--secondary)] text-white shadow-[2px_2px_0px_0px_var(--shadow)] hover:-translate-y-0.5',
-        outline: 'bg-[var(--background)] shadow-[2px_2px_0px_0px_var(--shadow)] hover:-translate-y-0.5',
+        default: 'bg-[var(--main)] text-white shadow-[2px_2px_0px_0px_var(--border)] hover:-translate-y-0.5',
+        secondary: 'bg-[var(--secondary)] text-white shadow-[2px_2px_0px_0px_var(--border)] hover:-translate-y-0.5',
+        outline: 'bg-[var(--background)] shadow-[2px_2px_0px_0px_var(--border)] hover:-translate-y-0.5',
         ghost: 'border-transparent shadow-none hover:bg-black/5',
-        destructive: 'bg-red-500 text-white shadow-[2px_2px_0px_0px_var(--shadow)] hover:-translate-y-0.5',
+        destructive: 'bg-red-500 text-white shadow-[2px_2px_0px_0px_var(--border)] hover:-translate-y-0.5',
       },
       size: {
         sm: 'px-3 py-1.5 text-sm',

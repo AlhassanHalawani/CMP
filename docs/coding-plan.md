@@ -187,7 +187,7 @@ Implement in domain order. Each controller imports its model + services; each ro
 | File | What to implement |
 |---|---|
 | `src/contexts/AuthContext.tsx` | Wrap `keycloak-js` init, expose `user`, `token`, `login()`, `logout()`, `hasRole()` |
-| `src/contexts/ThemeContext.tsx` | Light/dark toggle — writes `data-theme` to `<html>`, persisted in localStorage |
+| `src/contexts/ThemeContext.tsx` | Light/dark toggle — writes `.dark` class + `data-theme` on `<html>`, persisted in localStorage |
 | `src/contexts/LanguageContext.tsx` | `lang` state (`en`/`ar`), toggles i18next language, sets `dir` on `<html>` |
 
 ### 6.3 Entry points
@@ -195,7 +195,7 @@ Implement in domain order. Each controller imports its model + services; each ro
 |---|---|
 | `src/main.tsx` | Mount `<App>` inside `QueryClientProvider` + `AuthProvider` + `ThemeProvider` + `LanguageProvider` |
 | `src/App.tsx` | `<BrowserRouter>` with all routes, protected route wrapper, 404 fallback |
-| `src/styles/base.css` | Tailwind v4 `@import "tailwindcss"`, `@theme {}` tokens for neobrutalism (bold borders, flat shadows) |
+| `src/styles/globals.css` | Tailwind v4 `@import "tailwindcss"` + `@import "tw-animate-css"` with neobrutalism `@theme inline` tokens and grid background pattern |
 
 ---
 
@@ -259,7 +259,7 @@ Create `src/api/` client files (one per domain) using axios — they read the Ke
 ## Phase 9 — Infra & DevOps
 
 ### 9.0 UI Source Compliance Gate (must be satisfied before closing Phase 9)
-- [ ] All visual shared components in `apps/frontend/src/components/ui/` are based on `https://www.neobrutalism.dev/` component patterns and tokens (`--background`, `--foreground`, `--border`, `--main`, `--overlay`, `--shadow`)
+- [ ] All visual shared components in `apps/frontend/src/components/ui/` are based on `https://www.neobrutalism.dev/` component patterns and tokens (`--background`, `--secondary-background`, `--foreground`, `--main`, `--main-foreground`, `--border`, `--overlay`, `--ring`, `--shadow`)
 - [ ] Legacy custom token names are removed from frontend styles
 - [ ] No page should implement ad-hoc visual primitives when an equivalent shared UI component exists
 - [ ] Add migration notes in docs to map local component names to neobrutalism.dev counterparts
@@ -346,7 +346,7 @@ Backend and frontend can be worked on in parallel after Phase 1 (backend foundat
 - **Verified**: Server starts on port 3000, health/clubs/events/leaderboard endpoints return valid JSON
 
 ### Frontend (Phases 6-8) — COMPLETE
-- **Foundation**: Tailwind v4 with neobrutalism `@theme` tokens, `cn()` utility, Keycloak singleton, i18next with en+ar translations (80+ keys each)
+- **Foundation**: Tailwind v4 with neobrutalism `globals.css` (`@theme inline`, `.dark` variant, shared token palette, patterned grid background), `cn()` utility, Keycloak singleton, i18next with en+ar translations (80+ keys each)
 - **Contexts**: AuthContext (Keycloak init + token refresh + user sync), ThemeContext (light/dark + localStorage), LanguageContext (en/ar + RTL `dir` attribute)
 - **UI components (10)**: Button (CVA variants), Input, Card, Badge, Spinner, Dialog, Select, Tabs, Toast, DropdownMenu — all with neobrutalism styling (2px borders, flat shadows)
 - **Layout (4)**: Sidebar (role-aware nav), Topbar (lang/theme toggles + user dropdown), PageLayout, ProtectedRoute (auth + role gate)

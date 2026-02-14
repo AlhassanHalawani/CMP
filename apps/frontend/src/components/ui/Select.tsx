@@ -10,7 +10,7 @@ export function SelectTrigger({ className, children, ...props }: ComponentPropsW
   return (
     <SelectPrimitive.Trigger
       className={cn(
-        'flex items-center justify-between w-full border-2 border-[var(--border)] bg-[var(--background)] px-3 py-2 font-bold shadow-[2px_2px_0px_0px_var(--shadow)]',
+        'flex items-center justify-between w-full border-2 border-[var(--border)] bg-[var(--background)] px-3 py-2 font-bold shadow-[2px_2px_0px_0px_var(--border)]',
         className
       )}
       {...props}
@@ -28,7 +28,7 @@ export function SelectContent({ className, children, ...props }: ComponentPropsW
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
         className={cn(
-          'z-50 border-2 border-[var(--border)] bg-[var(--background)] shadow-[4px_4px_0px_0px_var(--shadow)]',
+          'z-50 border-2 border-[var(--border)] bg-[var(--background)] shadow-[4px_4px_0px_0px_var(--border)]',
           className
         )}
         position="popper"
