@@ -5,10 +5,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent } from '@neo/Card';
-import { Badge } from '@neo/Badge';
-import { Button } from '@neo/Button';
-import { Spinner } from '@neo/Spinner';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import {
   Dialog,
   DialogContent,
@@ -16,7 +16,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@neo/Dialog';
+} from '@/components/ui/dialog';
 import { clubsApi } from '@/api/clubs';
 import { eventsApi } from '@/api/events';
 import { EventFormDialog } from '@/components/events/EventFormDialog';

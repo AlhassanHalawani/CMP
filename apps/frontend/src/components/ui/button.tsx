@@ -19,7 +19,8 @@ const buttonVariants = cva(
           "bg-secondary-background text-foreground border-2 border-border shadow-shadow hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none",
         outline:
           "bg-background text-foreground border-2 border-border shadow-shadow hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none",
-        ghost: "bg-transparent text-foreground border-2 border-transparent shadow-none hover:bg-overlay/10",
+        ghost:
+          "bg-transparent text-foreground border-2 border-transparent shadow-none hover:bg-overlay/10",
         destructive:
           "bg-red-500 text-main-foreground border-2 border-border shadow-shadow hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none",
         reverse:

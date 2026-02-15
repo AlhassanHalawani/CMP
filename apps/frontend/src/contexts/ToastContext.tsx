@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
-import { Toast, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from '@neo/Toast';
+import { Toast, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from '@/components/ui/toast';
 
 type ToastItem = {
   id: number;
