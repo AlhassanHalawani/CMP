@@ -11,7 +11,7 @@ export interface Event {
   starts_at: string;
   ends_at: string;
   capacity: number | null;
-  status: string;
+  status: 'draft' | 'published' | 'cancelled' | 'completed';
   created_by: number | null;
   created_at: string;
 }

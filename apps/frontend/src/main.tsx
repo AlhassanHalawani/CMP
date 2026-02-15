@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
+import { AppToastProvider } from '@/contexts/ToastContext';
 import '@/i18n/config';
 import '@/styles/globals.css';
 import App from './App';
@@ -22,9 +23,11 @@ createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ThemeProvider>
-          <LanguageProvider>
-            <App />
-          </LanguageProvider>
+          <AppToastProvider>
+            <LanguageProvider>
+              <App />
+            </LanguageProvider>
+          </AppToastProvider>
         </ThemeProvider>
       </AuthProvider>
     </QueryClientProvider>

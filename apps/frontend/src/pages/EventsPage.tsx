@@ -1,31 +1,89 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { isAxiosError } from 'axios';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
-import { Spinner } from '@/components/ui/Spinner';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
-import { eventsApi } from '@/api/events';
+import { useAuth } from '@/contexts/AuthContext';
+import { Card, CardHeader, CardTitle, CardContent } from '@neo/Card';
+import { Badge } from '@neo/Badge';
+import { Button } from '@neo/Button';
+import { Spinner } from '@neo/Spinner';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@neo/Tabs';
+import { clubsApi } from '@/api/clubs';
+import { eventsApi, type Event } from '@/api/events';
+import { EventFormDialog } from '@/components/events/EventFormDialog';
+import { useAppToast } from '@/contexts/ToastContext';
 
 export function EventsPage() {
   const { t } = useTranslation();
   const { language } = useLanguage();
+  const { hasRole } = useAuth();
+  const { showToast } = useAppToast();
+  const queryClient = useQueryClient();
+  const canManageEvents = hasRole('admin') || hasRole('club_leader');
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createError, setCreateError] = useState('');
 
   const { data: allEvents, isLoading } = useQuery({
     queryKey: ['events'],
     queryFn: () => eventsApi.list({ limit: 50 }),
   });
 
+  const { data: clubsData } = useQuery({
+    queryKey: ['clubs', 'for-events-form'],
+    queryFn: () => clubsApi.list({ limit: 200 }),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: eventsApi.create,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['events'] });
+      setCreateOpen(false);
+      setCreateError('');
+      showToast('Event created', 'The event was created successfully.');
+    },
+    onError: (error: unknown) => {
+      if (isAxiosError(error)) {
+        const message = error.response?.data?.error || 'Failed to create event.';
+        setCreateError(message);
+        showToast('Create failed', message);
+        return;
+      }
+      setCreateError('Failed to create event.');
+      showToast('Create failed', 'Failed to create event.');
+    },
+  });
+
   if (isLoading) return <div className="flex justify-center p-12"><Spinner size="lg" /></div>;
 
-  const published = allEvents?.data.filter((e) => e.status === 'published') || [];
-  const upcoming = published.filter((e) => new Date(e.starts_at) > new Date());
-  const past = published.filter((e) => new Date(e.starts_at) <= new Date());
+  const sourceEvents = canManageEvents
+    ? (allEvents?.data ?? [])
+    : (allEvents?.data.filter((e) => e.status === 'published') ?? []);
+  const upcoming = sourceEvents.filter((e) => new Date(e.starts_at) > new Date());
+  const past = sourceEvents.filter((e) => new Date(e.starts_at) <= new Date());
 
   return (
     <div>
-      <h1 className="mb-6 text-3xl font-black">{t('events.title')}</h1>
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <h1 className="text-3xl font-black">{t('events.title')}</h1>
+        {canManageEvents && (
+          <Button onClick={() => setCreateOpen(true)}>{t('events.createEvent')}</Button>
+        )}
+      </div>
+
+      <EventFormDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        mode="create"
+        clubs={clubsData?.data ?? []}
+        language={language}
+        onSubmit={async (payload) => {
+          await createMutation.mutateAsync(payload);
+        }}
+        isSubmitting={createMutation.isPending}
+        errorMessage={createError}
+      />
 
       <Tabs defaultValue="upcoming">
         <TabsList>
@@ -44,7 +102,7 @@ export function EventsPage() {
   );
 }
 
-function EventGrid({ events, language }: { events: any[]; language: string }) {
+function EventGrid({ events, language }: { events: Event[]; language: 'en' | 'ar' }) {
   const { t } = useTranslation();
 
   if (events.length === 0) return <p className="mt-4 text-sm">{t('common.noData')}</p>;

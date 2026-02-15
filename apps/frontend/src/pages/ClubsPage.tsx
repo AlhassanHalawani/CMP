@@ -1,25 +1,76 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { isAxiosError } from 'axios';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
-import { Spinner } from '@/components/ui/Spinner';
+import { useAuth } from '@/contexts/AuthContext';
+import { Card, CardHeader, CardTitle, CardContent } from '@neo/Card';
+import { Button } from '@neo/Button';
+import { Spinner } from '@neo/Spinner';
 import { clubsApi } from '@/api/clubs';
+import { ClubFormDialog } from '@/components/clubs/ClubFormDialog';
+import { useAppToast } from '@/contexts/ToastContext';
 
 export function ClubsPage() {
   const { t } = useTranslation();
   const { language } = useLanguage();
+  const { hasRole } = useAuth();
+  const { showToast } = useAppToast();
+  const queryClient = useQueryClient();
+  const isAdmin = hasRole('admin');
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createError, setCreateError] = useState('');
 
   const { data, isLoading } = useQuery({
     queryKey: ['clubs'],
     queryFn: () => clubsApi.list(),
   });
 
+  const createMutation = useMutation({
+    mutationFn: clubsApi.create,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['clubs'] });
+      setCreateOpen(false);
+      setCreateError('');
+      showToast('Club created', 'The club was created successfully.');
+    },
+    onError: (error: unknown) => {
+      if (isAxiosError(error)) {
+        const message = error.response?.data?.error || 'Failed to create club.';
+        setCreateError(message);
+        showToast('Create failed', message);
+        return;
+      }
+      setCreateError('Failed to create club.');
+      showToast('Create failed', 'Failed to create club.');
+    },
+  });
+
   if (isLoading) return <div className="flex justify-center p-12"><Spinner size="lg" /></div>;
 
   return (
     <div>
-      <h1 className="mb-6 text-3xl font-black">{t('clubs.title')}</h1>
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <h1 className="text-3xl font-black">{t('clubs.title')}</h1>
+        {isAdmin && (
+          <Button onClick={() => setCreateOpen(true)}>
+            {t('clubs.createClub')}
+          </Button>
+        )}
+      </div>
+
+      <ClubFormDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        mode="create"
+        onSubmit={async (payload) => {
+          await createMutation.mutateAsync(payload);
+        }}
+        isSubmitting={createMutation.isPending}
+        errorMessage={createError}
+      />
+
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         {data?.data.map((club) => (
           <Link key={club.id} to={`/clubs/${club.id}`}>

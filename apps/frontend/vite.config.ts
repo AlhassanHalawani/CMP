@@ -11,6 +11,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
+      '@neo': resolve(__dirname, 'src/components/ui'),
       'tw-animate-css': resolve(__dirname, 'src/styles/tw-animate-css.css'),
     },
   },
