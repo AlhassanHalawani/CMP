@@ -8,6 +8,13 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const jwks_rsa_1 = __importDefault(require("jwks-rsa"));
 const env_1 = require("../config/env");
 const user_model_1 = require("../models/user.model");
+function extractRoles(payload) {
+    const realmRoles = payload?.realm_access?.roles ?? [];
+    const resourceAccess = payload?.resource_access ?? {};
+    const clientRoles = Object.values(resourceAccess)
+        .flatMap((client) => client?.roles ?? []);
+    return Array.from(new Set([...realmRoles, ...clientRoles]));
+}
 const jwksClient = (0, jwks_rsa_1.default)({
     jwksUri: `${env_1.env.keycloak.url}/realms/${env_1.env.keycloak.realm}/protocol/openid-connect/certs`,
     cache: true,
@@ -52,7 +59,7 @@ async function authenticate(req, res, next) {
         const keycloakId = payload.sub;
         const email = payload.email || `${keycloakId}@placeholder`;
         const name = payload.name || payload.preferred_username || 'Unknown';
-        const roles = payload.realm_access?.roles || [];
+        const roles = extractRoles(payload);
         let role = 'student';
         if (roles.includes('admin'))
             role = 'admin';

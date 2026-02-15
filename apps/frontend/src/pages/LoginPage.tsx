@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,11 @@ export function LoginPage() {
         <Button className="w-full" size="lg" onClick={login}>
           {t('auth.loginWith')}
         </Button>
+        <div className="mt-4 text-center text-sm">
+          <Link to="/signup" className="font-bold underline">
+            {t('auth.signup')}
+          </Link>
+        </div>
         <div className="mt-4 text-center">
           <button onClick={toggleLanguage} className="text-sm font-bold underline">
             {language === 'en' ? 'العربية' : 'English'}

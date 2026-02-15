@@ -15,10 +15,20 @@ interface AuthContextValue {
   token: string | null;
   login: () => void;
   logout: () => void;
+  register: (loginHint?: string) => void;
   hasRole: (role: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+function extractRoles(tokenParsed: any): string[] {
+  const realmRoles = tokenParsed?.realm_access?.roles ?? [];
+  const resourceAccess = tokenParsed?.resource_access ?? {};
+  const clientRoles = Object.values(resourceAccess)
+    .flatMap((client: any) => client?.roles ?? []);
+
+  return Array.from(new Set([...realmRoles, ...clientRoles]));
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [initialized, setInitialized] = useState(false);
@@ -38,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             id: keycloak.subject || '',
             name: (keycloak.tokenParsed as any)?.name || '',
             email: (keycloak.tokenParsed as any)?.email || '',
-            roles: (keycloak.tokenParsed as any)?.realm_access?.roles || [],
+            roles: extractRoles(keycloak.tokenParsed),
           });
         }
       })
@@ -60,10 +70,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = () => keycloak.login();
   const logout = () => keycloak.logout({ redirectUri: window.location.origin });
+  const register = (loginHint?: string) =>
+    keycloak.register(loginHint ? { loginHint } : undefined);
   const hasRole = (role: string) => user?.roles.includes(role) ?? false;
 
   return (
-    <AuthContext.Provider value={{ initialized, authenticated, user, token, login, logout, hasRole }}>
+    <AuthContext.Provider value={{ initialized, authenticated, user, token, login, logout, register, hasRole }}>
       {children}
     </AuthContext.Provider>
   );

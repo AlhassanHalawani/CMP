@@ -39,6 +39,13 @@ export const env = {
     from: optional('SMTP_FROM', 'noreply@fcit-cmp.local'),
   },
 
+  get allowedSignupDomains(): string[] {
+    return optional('ALLOWED_SIGNUP_EMAIL_DOMAINS', 'stu.kau.edu.sa,kau.edu.sa')
+      .split(',')
+      .map((d) => d.trim())
+      .filter(Boolean);
+  },
+
   get isDev() {
     return this.nodeEnv === 'development';
   },

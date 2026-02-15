@@ -5,6 +5,7 @@ import { env } from './config/env';
 import { logger } from './utils/logger';
 import { errorHandler } from './middleware/errorHandler';
 
+import authRouter from './routes/auth.routes';
 import usersRouter from './routes/users.routes';
 import clubsRouter from './routes/clubs.routes';
 import eventsRouter from './routes/events.routes';
@@ -30,6 +31,7 @@ app.get('/api/health', (_req, res) => {
 });
 
 // --- routes ---
+app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/clubs', clubsRouter);
 app.use('/api/events', eventsRouter);

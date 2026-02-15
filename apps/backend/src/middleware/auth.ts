@@ -9,6 +9,15 @@ export interface AuthRequest extends Request {
   tokenPayload?: any;
 }
 
+function extractRoles(payload: any): string[] {
+  const realmRoles: string[] = payload?.realm_access?.roles ?? [];
+  const resourceAccess = payload?.resource_access ?? {};
+  const clientRoles: string[] = Object.values(resourceAccess)
+    .flatMap((client: any) => client?.roles ?? []);
+
+  return Array.from(new Set([...realmRoles, ...clientRoles]));
+}
+
 const jwksClient = jwksRsa({
   jwksUri: `${env.keycloak.url}/realms/${env.keycloak.realm}/protocol/openid-connect/certs`,
   cache: true,
@@ -58,7 +67,7 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
     const keycloakId = payload.sub as string;
     const email = payload.email || `${keycloakId}@placeholder`;
     const name = payload.name || payload.preferred_username || 'Unknown';
-    const roles = payload.realm_access?.roles || [];
+    const roles = extractRoles(payload);
 
     let role: User['role'] = 'student';
     if (roles.includes('admin')) role = 'admin';

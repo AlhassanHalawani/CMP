@@ -17,7 +17,15 @@
   "auth": {
     "login": "تسجيل الدخول",
     "logout": "تسجيل الخروج",
-    "loginWith": "تسجيل الدخول بحساب الكلية"
+    "loginWith": "تسجيل الدخول بحساب الكلية",
+    "signup": "ليس لديك حساب؟ سجّل الآن",
+    "signupTitle": "إنشاء حساب",
+    "signupEmailLabel": "البريد الإلكتروني",
+    "signupEmailHint": "استخدم بريدك الأكاديمي أو الوظيفي في جامعة الملك عبدالعزيز",
+    "signupEmailRequired": "البريد الإلكتروني مطلوب.",
+    "signupSubmit": "متابعة",
+    "signupDomainError": "يُسمح فقط ببريد @stu.kau.edu.sa أو @kau.edu.sa.",
+    "backToLogin": "العودة إلى تسجيل الدخول"
   },
   "common": {
     "search": "بحث",

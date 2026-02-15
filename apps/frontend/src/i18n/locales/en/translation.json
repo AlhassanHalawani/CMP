@@ -17,7 +17,15 @@
   "auth": {
     "login": "Login",
     "logout": "Logout",
-    "loginWith": "Login with FCIT Account"
+    "loginWith": "Login with FCIT Account",
+    "signup": "Don't have an account? Sign up",
+    "signupTitle": "Create Account",
+    "signupEmailLabel": "Email",
+    "signupEmailHint": "Use your KAU academic or staff email",
+    "signupEmailRequired": "Email is required.",
+    "signupSubmit": "Continue",
+    "signupDomainError": "Only @stu.kau.edu.sa and @kau.edu.sa emails are allowed.",
+    "backToLogin": "Back to login"
   },
   "common": {
     "search": "Search",
