@@ -1,6 +1,12 @@
 import api from './client';
 
+export interface SignupPayload {
+  name: string;
+  email: string;
+  password: string;
+}
+
 export const authApi = {
-  validateSignupEmail: (email: string) =>
-    api.post<{ ok: boolean }>('/auth/signup', { email }).then((r) => r.data),
+  signup: (payload: SignupPayload) =>
+    api.post<{ ok: boolean }>('/auth/signup', payload).then((r) => r.data),
 };

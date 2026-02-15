@@ -33,7 +33,7 @@ async function generateAchievementReport(userId) {
                 if (achievement.description) {
                     doc.fontSize(10).font('Helvetica').text(achievement.description);
                 }
-                doc.fontSize(9).font('Helvetica').text(`Awarded: ${achievement.awarded_at}`, { color: '#666' });
+                doc.fontSize(9).font('Helvetica').fillColor('#666').text(`Awarded: ${achievement.awarded_at}`);
                 doc.moveDown();
             }
         }

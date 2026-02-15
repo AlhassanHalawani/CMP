@@ -18,6 +18,7 @@ export declare const env: {
         readonly pass: string;
         readonly from: string;
     };
+    readonly allowedSignupDomains: string[];
     readonly isDev: boolean;
     readonly isProd: boolean;
 };

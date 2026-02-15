@@ -9,6 +9,7 @@ const helmet_1 = __importDefault(require("helmet"));
 const env_1 = require("./config/env");
 const logger_1 = require("./utils/logger");
 const errorHandler_1 = require("./middleware/errorHandler");
+const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
 const users_routes_1 = __importDefault(require("./routes/users.routes"));
 const clubs_routes_1 = __importDefault(require("./routes/clubs.routes"));
 const events_routes_1 = __importDefault(require("./routes/events.routes"));
@@ -29,6 +30,7 @@ app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 // --- routes ---
+app.use('/api/auth', auth_routes_1.default);
 app.use('/api/users', users_routes_1.default);
 app.use('/api/clubs', clubs_routes_1.default);
 app.use('/api/events', events_routes_1.default);
