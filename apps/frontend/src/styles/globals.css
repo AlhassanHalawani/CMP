@@ -4,38 +4,38 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(93.46% 0.0305 255.11);
+  --background: oklch(92.13% 0.0388 282.36);
   --secondary-background: oklch(100% 0 0);
   --foreground: oklch(0% 0 0);
   --main-foreground: oklch(0% 0 0);
-  --main: oklch(67.47% 0.1726 259.49);
+  --main: oklch(66.34% 0.1806 277.2);
   --border: oklch(0% 0 0);
   --ring: oklch(0% 0 0);
   --overlay: oklch(0% 0 0 / 0.8);
   --shadow: 4px 4px 0px 0px var(--border);
-  --chart-1: #5294ff;
-  --chart-2: #ff4d50;
-  --chart-3: #facc00;
-  --chart-4: #05e17a;
-  --chart-5: #7a83ff;
+  --chart-1: #7A83FF;
+  --chart-2: #FACC00;
+  --chart-3: #FF4D50;
+  --chart-4: #00D696;
+  --chart-5: #0099FF;
   --chart-active-dot: #000;
   --pattern-line: oklch(0% 0 0 / 0.08);
 }
 
 .dark {
-  --background: oklch(29.23% 0.0626 270.49);
+  --background: oklch(26.58% 0.0737 283.96);
   --secondary-background: oklch(23.93% 0 0);
   --foreground: oklch(92.49% 0 0);
   --main-foreground: oklch(0% 0 0);
-  --main: oklch(67.47% 0.1726 259.49);
+  --main: oklch(66.34% 0.1806 277.2);
   --border: oklch(0% 0 0);
   --ring: oklch(100% 0 0);
   --shadow: 4px 4px 0px 0px var(--border);
-  --chart-1: #5294ff;
-  --chart-2: #ff6669;
-  --chart-3: #e0b700;
-  --chart-4: #04c86d;
-  --chart-5: #7a83ff;
+  --chart-1: #7A83FF;
+  --chart-2: #E0B700;
+  --chart-3: #FF6669;
+  --chart-4: #00BD84;
+  --chart-5: #008AE5;
   --chart-active-dot: #fff;
   --pattern-line: oklch(100% 0 0 / 0.08);
 }
@@ -67,7 +67,7 @@
 
 @layer base {
   body {
-    @apply text-foreground bg-background;
+    @apply text-foreground font-base bg-background;
     background-image:
       linear-gradient(to right, var(--pattern-line) 1px, transparent 1px),
       linear-gradient(to bottom, var(--pattern-line) 1px, transparent 1px);
@@ -75,12 +75,7 @@
     background-attachment: fixed;
   }
 
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    @apply font-bold;
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading;
   }
 }
