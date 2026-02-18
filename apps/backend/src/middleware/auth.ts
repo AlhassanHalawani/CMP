@@ -77,7 +77,7 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
     req.user = user;
 
     next();
-  } catch (err) {
+  } catch (_err) {
     res.status(401).json({ error: 'Token verification failed' });
   }
 }

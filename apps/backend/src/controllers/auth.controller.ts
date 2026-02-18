@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
 import { createKeycloakUser } from '../services/keycloakAdmin.service';
+import { logAction } from '../services/audit.service';
 
 export async function signup(req: Request, res: Response): Promise<void> {
   const email: string = (req.body.email ?? '').trim().toLowerCase();
@@ -12,6 +13,13 @@ export async function signup(req: Request, res: Response): Promise<void> {
   const allowed = env.allowedSignupDomains;
 
   if (!allowed.includes(domain)) {
+    logger.warn(`Signup rejected – disallowed domain: ${email}`);
+    logAction({
+      actorId: null,
+      action: 'signup_rejected',
+      entityType: 'auth',
+      payload: { email, reason: 'disallowed_domain' },
+    });
     res.status(422).json({
       error: `Only @${allowed.join(' and @')} emails are allowed.`,
     });
@@ -21,13 +29,32 @@ export async function signup(req: Request, res: Response): Promise<void> {
   try {
     await createKeycloakUser({ email, name, password });
     logger.info(`New user registered: ${email}`);
+    logAction({
+      actorId: null,
+      action: 'signup_success',
+      entityType: 'auth',
+      payload: { email },
+    });
     res.status(201).json({ ok: true });
   } catch (err: any) {
     if (err?.status === 409) {
+      logger.warn(`Signup conflict – duplicate email: ${email}`);
+      logAction({
+        actorId: null,
+        action: 'signup_rejected',
+        entityType: 'auth',
+        payload: { email, reason: 'duplicate_email' },
+      });
       res.status(409).json({ error: 'An account with this email already exists.' });
       return;
     }
     logger.error(`Signup error for ${email}: ${err?.message}`);
+    logAction({
+      actorId: null,
+      action: 'signup_error',
+      entityType: 'auth',
+      payload: { email, reason: err?.message },
+    });
     res.status(500).json({ error: 'Registration failed. Please try again.' });
   }
 }

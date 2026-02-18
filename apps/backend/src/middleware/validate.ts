@@ -7,7 +7,8 @@ export function validate(validations: ValidationChain[]) {
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      res.status(422).json({ errors: errors.array() });
+      const arr = errors.array();
+      res.status(422).json({ error: arr[0].msg, errors: arr });
       return;
     }
     next();
