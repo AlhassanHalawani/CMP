@@ -117,10 +117,44 @@ kubectl apply -f infra/k8s/frontend/
 kubectl apply -f infra/k8s/ingress/
 ```
 
-Run migrations after the backend pod is up:
+Release with guarded build/push/rollout flow:
 
 ```bash
-kubectl exec -it deploy/cmp-backend -n cmp-prod -- npm run migrate
+# Required: GHCR username and a PAT with read:packages + write:packages
+export GH_USER=<your-gh-user>
+export CR_PAT=<new-pat>   # do not inline in command history
+
+# Optional overrides
+export NAMESPACE=cmp
+export ROLLBACK_ON_FAIL=true
+export ROLLOUT_TIMEOUT=240s
+export TAG=$(git rev-parse --short HEAD)-$(date +%Y%m%d%H%M)
+
+bash scripts/release-k3s.sh
+```
+
+Run migrations after backend rollout:
+
+```bash
+kubectl exec -it deploy/cmp-backend -n cmp -- npm run migrate
+```
+
+Troubleshooting:
+
+```bash
+# Check image tags exist in GHCR
+docker buildx imagetools inspect ghcr.io/$GH_USER/cmp-backend:$TAG
+docker buildx imagetools inspect ghcr.io/$GH_USER/cmp-frontend:$TAG
+
+# Check pull-secret wiring
+kubectl -n cmp get secret ghcr-creds
+kubectl -n cmp get deploy cmp-backend -o jsonpath='{.spec.template.spec.imagePullSecrets}'
+kubectl -n cmp get deploy cmp-frontend -o jsonpath='{.spec.template.spec.imagePullSecrets}'
+
+# Rollout diagnostics
+kubectl -n cmp get pods -o wide
+kubectl -n cmp describe pod <pod-name>
+kubectl -n cmp get events --sort-by=.metadata.creationTimestamp | tail -n 50
 ```
 
 ---

@@ -13,6 +13,8 @@ spec:
       labels:
         app: cmp-backend
     spec:
+      imagePullSecrets:
+        - name: ghcr-creds
       initContainers:
         - name: migrate
           image: cmp-backend:latest
