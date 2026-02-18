@@ -46,7 +46,8 @@
     "loading": "Loading...",
     "noData": "No data available",
     "viewAll": "View All",
-    "back": "Back"
+    "back": "Back",
+    "error": "Error"
   },
   "dashboard": {
     "welcome": "Welcome back",
@@ -77,8 +78,28 @@
     "title": "Attendance",
     "scanQr": "Scan QR Code",
     "generateQr": "Generate QR Code",
+    "refreshQr": "Refresh QR",
     "checkedIn": "Checked In",
-    "manualCheckIn": "Manual Check-In"
+    "manualCheckIn": "Manual Check-In",
+    "manage": "Manage Attendance",
+    "checkInTitle": "Check In",
+    "checkInBtn": "Check In",
+    "tokenPlaceholder": "Enter QR token or scan QR code",
+    "userIdPlaceholder": "User ID",
+    "checkInSuccess": "Successfully checked in!",
+    "alreadyCheckedIn": "You have already checked in for this event.",
+    "checkInError": "Check-in failed. Please try again.",
+    "qrGenerated": "QR Generated",
+    "qrGeneratedDesc": "Share this QR code with attendees.",
+    "qrError": "Failed to generate QR code.",
+    "manualSuccess": "Manual check-in recorded.",
+    "manualError": "Manual check-in failed.",
+    "attendeeList": "Attendee List",
+    "userId": "User ID",
+    "method": "Method",
+    "time": "Time",
+    "qrMethod": "QR",
+    "manualMethod": "Manual"
   },
   "achievements": {
     "title": "Achievements",
@@ -87,7 +108,15 @@
   "kpi": {
     "title": "KPI Dashboard",
     "metrics": "Metrics",
-    "leaderboard": "Leaderboard"
+    "leaderboard": "Leaderboard",
+    "filterBySemester": "Filter by Semester",
+    "allTime": "All Time",
+    "clubBreakdown": "Club Breakdown",
+    "selectClub": "Select Club",
+    "selectClubPrompt": "Select a club to view its KPI breakdown.",
+    "leaderboardChart": "Leaderboard Chart",
+    "rankings": "Rankings",
+    "metricsBreakdown": "Metrics Breakdown"
   },
   "admin": {
     "title": "Admin Panel",

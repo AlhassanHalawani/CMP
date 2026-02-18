@@ -214,27 +214,62 @@ All endpoints require authentication.
 
 Generate QR code for event check-in. **Admin or club_leader.**
 
+Event must be in `published` status.
+
 **Response:** `{ "token": "...", "qr": "<data-url>" }`
+
+| Status | Meaning |
+|--------|---------|
+| 200 | QR generated |
+| 400 | Event not published |
+| 404 | Event not found |
 
 ### POST /attendance/check-in
 
 Check in via QR token. **Auth required.**
 
+Requires a confirmed registration for the event. Event must be in `published` status.
+
 | Field | Type | Required |
 |-------|------|----------|
 | token | string | yes |
+
+| Status | Meaning |
+|--------|---------|
+| 201 | Checked in |
+| 400 | Invalid token / event not published |
+| 403 | Not registered for event |
+| 404 | Event not found |
+| 409 | Already checked in |
 
 ### POST /attendance/:eventId/manual
 
 Manual check-in. **Admin or club_leader.**
 
+Event must be in `published` status.
+
 | Field | Type | Required |
 |-------|------|----------|
 | user_id | integer | yes |
 
+| Status | Meaning |
+|--------|---------|
+| 201 | Checked in |
+| 400 | Invalid user_id / event not published |
+| 404 | Event not found |
+| 409 | Already checked in |
+
 ### GET /attendance/:eventId
 
 List attendance records. **Admin or club_leader.**
+
+**Response:** `{ "data": [...], "total": number }`
+
+### GET /attendance/:eventId/registrations
+
+List event registrations (for manual check-in lookup). **Admin or club_leader.**
+
+**Response:** `{ "data": [...], "total": number }`
 
 ---
 

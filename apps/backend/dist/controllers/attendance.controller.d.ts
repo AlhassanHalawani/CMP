@@ -4,3 +4,4 @@ export declare function generateEventQr(req: AuthRequest, res: Response): Promis
 export declare function checkIn(req: AuthRequest, res: Response): void;
 export declare function manualCheckIn(req: AuthRequest, res: Response): void;
 export declare function getAttendanceList(req: AuthRequest, res: Response): void;
+export declare function getEventRegistrations(req: AuthRequest, res: Response): void;

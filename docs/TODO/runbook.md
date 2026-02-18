@@ -131,6 +131,21 @@ external tools holding locks on the database file.
 - Development: console output (colorized)
 - Production: `logs/error.log` and `logs/combined.log` (JSON format)
 
+## Supervisor Role Provisioning
+
+The **supervisor** role is temporarily mapped to `club_leader` permissions in the
+backend RBAC system. To provision a user as a supervisor:
+
+1. Assign the `club_leader` role in Keycloak realm roles
+2. The backend `requireRole('admin', 'club_leader')` middleware will grant access
+3. Frontend sidebar shows KPI and attendance management for `club_leader`
+
+When a dedicated `supervisor` role is added in a future sprint:
+- Add `'supervisor'` to the role CHECK constraint in the users table
+- Update `requireRole()` calls to include `'supervisor'`
+- Update frontend `hasRole()` checks
+- Update Keycloak realm role mappings
+
 ## Email Verification — Deferred
 
 Email verification is not implemented in this release. Signup creates

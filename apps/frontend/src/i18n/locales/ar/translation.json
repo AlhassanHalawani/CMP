@@ -46,7 +46,8 @@
     "loading": "جارٍ التحميل...",
     "noData": "لا توجد بيانات",
     "viewAll": "عرض الكل",
-    "back": "رجوع"
+    "back": "رجوع",
+    "error": "خطأ"
   },
   "dashboard": {
     "welcome": "مرحباً بعودتك",
@@ -77,8 +78,28 @@
     "title": "الحضور",
     "scanQr": "مسح رمز QR",
     "generateQr": "إنشاء رمز QR",
+    "refreshQr": "تحديث رمز QR",
     "checkedIn": "تم التسجيل",
-    "manualCheckIn": "تسجيل يدوي"
+    "manualCheckIn": "تسجيل يدوي",
+    "manage": "إدارة الحضور",
+    "checkInTitle": "تسجيل الحضور",
+    "checkInBtn": "تسجيل",
+    "tokenPlaceholder": "أدخل رمز QR أو امسح الرمز",
+    "userIdPlaceholder": "رقم المستخدم",
+    "checkInSuccess": "تم تسجيل الحضور بنجاح!",
+    "alreadyCheckedIn": "لقد سجّلت حضورك مسبقاً لهذه الفعالية.",
+    "checkInError": "فشل تسجيل الحضور. حاول مرة أخرى.",
+    "qrGenerated": "تم إنشاء رمز QR",
+    "qrGeneratedDesc": "شارك رمز QR مع الحضور.",
+    "qrError": "فشل إنشاء رمز QR.",
+    "manualSuccess": "تم تسجيل الحضور اليدوي.",
+    "manualError": "فشل التسجيل اليدوي.",
+    "attendeeList": "قائمة الحضور",
+    "userId": "رقم المستخدم",
+    "method": "الطريقة",
+    "time": "الوقت",
+    "qrMethod": "QR",
+    "manualMethod": "يدوي"
   },
   "achievements": {
     "title": "الإنجازات",
@@ -87,7 +108,15 @@
   "kpi": {
     "title": "لوحة مؤشرات الأداء",
     "metrics": "المقاييس",
-    "leaderboard": "لوحة المتصدرين"
+    "leaderboard": "لوحة المتصدرين",
+    "filterBySemester": "تصفية حسب الفصل",
+    "allTime": "كل الوقت",
+    "clubBreakdown": "تفاصيل النادي",
+    "selectClub": "اختر نادي",
+    "selectClubPrompt": "اختر نادياً لعرض تفاصيل مؤشرات أدائه.",
+    "leaderboardChart": "رسم بياني للمتصدرين",
+    "rankings": "الترتيب",
+    "metricsBreakdown": "تفاصيل المقاييس"
   },
   "admin": {
     "title": "لوحة الإدارة",

@@ -52,6 +52,15 @@ export function createTestDb() {
       registered_at TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE(event_id, user_id)
     );
+    CREATE TABLE IF NOT EXISTS attendance (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      checked_in_at TEXT NOT NULL DEFAULT (datetime('now')),
+      method TEXT NOT NULL DEFAULT 'qr' CHECK (method IN ('qr', 'manual')),
+      qr_token TEXT,
+      UNIQUE(event_id, user_id)
+    );
     CREATE TABLE IF NOT EXISTS audit_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       actor_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
@@ -88,6 +97,29 @@ export function generateAdminToken(overrides: Record<string, any> = {}) {
     realm_access: { roles: ['admin'] },
     ...overrides,
   });
+}
+
+export function generateLeaderToken(overrides: Record<string, any> = {}) {
+  return generateTestToken({
+    sub: 'leader-keycloak-id',
+    email: 'leader@kau.edu.sa',
+    name: 'Club Leader',
+    realm_access: { roles: ['club_leader'] },
+    ...overrides,
+  });
+}
+
+/** Insert seed data for attendance tests: a user, club, published event, and registration */
+export function seedAttendanceData(db: Database.Database) {
+  db.exec(`
+    INSERT INTO users (keycloak_id, email, name, role) VALUES ('test-keycloak-id', 'test@stu.kau.edu.sa', 'Test User', 'student');
+    INSERT INTO users (keycloak_id, email, name, role) VALUES ('admin-keycloak-id', 'admin@kau.edu.sa', 'Admin User', 'admin');
+    INSERT INTO users (keycloak_id, email, name, role) VALUES ('leader-keycloak-id', 'leader@kau.edu.sa', 'Club Leader', 'club_leader');
+    INSERT INTO clubs (name, name_ar, leader_id) VALUES ('Test Club', 'نادي اختبار', 3);
+    INSERT INTO events (club_id, title, title_ar, starts_at, ends_at, status) VALUES (1, 'Test Event', 'فعالية اختبار', '2026-06-01 10:00:00', '2026-06-01 12:00:00', 'published');
+    INSERT INTO events (club_id, title, title_ar, starts_at, ends_at, status) VALUES (1, 'Draft Event', 'فعالية مسودة', '2026-07-01 10:00:00', '2026-07-01 12:00:00', 'draft');
+    INSERT INTO registrations (event_id, user_id, status) VALUES (1, 1, 'confirmed');
+  `);
 }
 
 export { TEST_JWT_SECRET };

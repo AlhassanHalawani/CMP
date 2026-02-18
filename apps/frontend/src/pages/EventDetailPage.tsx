@@ -17,8 +17,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { clubsApi } from '@/api/clubs';
 import { eventsApi } from '@/api/events';
+import { attendanceApi } from '@/api/attendance';
 import { EventFormDialog } from '@/components/events/EventFormDialog';
 import { useAppToast } from '@/contexts/ToastContext';
 
@@ -35,6 +37,9 @@ export function EventDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editError, setEditError] = useState('');
   const [deleteError, setDeleteError] = useState('');
+  const [checkInToken, setCheckInToken] = useState('');
+  const [checkInStatus, setCheckInStatus] = useState<'idle' | 'success' | 'error' | 'duplicate'>('idle');
+  const [checkInMessage, setCheckInMessage] = useState('');
   const canManageEvents = hasRole('admin') || hasRole('club_leader');
 
   const { data: event, isLoading } = useQuery({
@@ -84,6 +89,27 @@ export function EventDetailPage() {
     },
   });
 
+  const checkInMutation = useMutation({
+    mutationFn: () => attendanceApi.checkIn(checkInToken),
+    onSuccess: () => {
+      setCheckInStatus('success');
+      setCheckInMessage(t('attendance.checkInSuccess'));
+      setCheckInToken('');
+    },
+    onError: (error: unknown) => {
+      if (isAxiosError(error) && error.response?.status === 409) {
+        setCheckInStatus('duplicate');
+        setCheckInMessage(t('attendance.alreadyCheckedIn'));
+        return;
+      }
+      setCheckInStatus('error');
+      const message = isAxiosError(error)
+        ? error.response?.data?.error || t('attendance.checkInError')
+        : t('attendance.checkInError');
+      setCheckInMessage(message);
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: () => eventsApi.delete(eventId),
     onSuccess: async () => {
@@ -123,6 +149,9 @@ export function EventDetailPage() {
           <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
             {t('common.delete')}
           </Button>
+          <Link to={`/events/${eventId}/attendance`}>
+            <Button variant="secondary">{t('attendance.manage')}</Button>
+          </Link>
         </div>
       )}
 
@@ -175,9 +204,46 @@ export function EventDetailPage() {
       </Card>
 
       {event.status === 'published' && (
-        <Button onClick={() => registerMutation.mutate()} disabled={registerMutation.isPending}>
-          {registerMutation.isPending ? t('common.loading') : t('events.register')}
-        </Button>
+        <div className="flex flex-wrap gap-3 mb-6">
+          <Button onClick={() => registerMutation.mutate()} disabled={registerMutation.isPending}>
+            {registerMutation.isPending ? t('common.loading') : t('events.register')}
+          </Button>
+        </div>
+      )}
+
+      {/* Student check-in section */}
+      {event.status === 'published' && (
+        <Card className="mt-4">
+          <CardContent>
+            <h3 className="font-black mb-3">{t('attendance.checkInTitle')}</h3>
+            <div className="flex gap-3 mb-3">
+              <Input
+                placeholder={t('attendance.tokenPlaceholder')}
+                value={checkInToken}
+                onChange={(e) => {
+                  setCheckInToken(e.target.value);
+                  setCheckInStatus('idle');
+                  setCheckInMessage('');
+                }}
+              />
+              <Button
+                onClick={() => checkInMutation.mutate()}
+                disabled={checkInMutation.isPending || !checkInToken.trim()}
+              >
+                {checkInMutation.isPending ? t('common.loading') : t('attendance.checkInBtn')}
+              </Button>
+            </div>
+            {checkInStatus === 'success' && (
+              <p className="text-sm font-bold text-green-600">{checkInMessage}</p>
+            )}
+            {checkInStatus === 'duplicate' && (
+              <p className="text-sm font-bold text-yellow-600">{checkInMessage}</p>
+            )}
+            {checkInStatus === 'error' && (
+              <p className="text-sm font-bold text-red-600">{checkInMessage}</p>
+            )}
+          </CardContent>
+        </Card>
       )}
     </div>
   );

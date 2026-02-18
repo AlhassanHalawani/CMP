@@ -12,6 +12,8 @@ import { LeaderboardPage } from '@/pages/LeaderboardPage';
 import { NotificationsPage } from '@/pages/NotificationsPage';
 import { AdminPage } from '@/pages/AdminPage';
 import { ProfilePage } from '@/pages/ProfilePage';
+import { KpiPage } from '@/pages/KpiPage';
+import { EventAttendancePage } from '@/pages/EventAttendancePage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
 export default function App() {
@@ -26,8 +28,10 @@ export default function App() {
         <Route path="/clubs/:id" element={<ProtectedRoute><ClubDetailPage /></ProtectedRoute>} />
         <Route path="/events" element={<ProtectedRoute><EventsPage /></ProtectedRoute>} />
         <Route path="/events/:id" element={<ProtectedRoute><EventDetailPage /></ProtectedRoute>} />
+        <Route path="/events/:id/attendance" element={<ProtectedRoute roles={['admin', 'club_leader']}><EventAttendancePage /></ProtectedRoute>} />
         <Route path="/achievements" element={<ProtectedRoute><AchievementsPage /></ProtectedRoute>} />
         <Route path="/leaderboard" element={<ProtectedRoute><LeaderboardPage /></ProtectedRoute>} />
+        <Route path="/kpi" element={<ProtectedRoute roles={['admin', 'club_leader']}><KpiPage /></ProtectedRoute>} />
         <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminPage /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
