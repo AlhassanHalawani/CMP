@@ -17,6 +17,8 @@ const signupLimiter = rateLimit({
   message: { error: 'Too many signup attempts. Please try again later.' },
 });
 
+// Deprecated: frontend now uses Keycloak-hosted registration directly.
+// Keep this endpoint temporarily for compatibility with legacy clients.
 router.post(
   '/signup',
   signupLimiter,

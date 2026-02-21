@@ -8,6 +8,7 @@ resources:
   - storage/sqlite-pvc.yaml
   - storage/keycloak-pvc.yaml
   - keycloak/realm-configmap.yaml
+  - keycloak/theme-configmap.yaml
   - keycloak/service.yaml
   - keycloak/statefulset.yaml
   - backend/service.yaml

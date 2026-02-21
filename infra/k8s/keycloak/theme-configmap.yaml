@@ -1,0 +1,82 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cmp-keycloak-theme
+  namespace: cmp
+data:
+  theme.properties: |
+    parent=keycloak.v2
+    styles=css/styles.css
+  styles.css: |
+    :root {
+      --cmp-background: oklch(92.13% 0.0388 282.36);
+      --cmp-surface: oklch(100% 0 0);
+      --cmp-foreground: oklch(0% 0 0);
+      --cmp-main: oklch(66.34% 0.1806 277.2);
+      --cmp-border: oklch(0% 0 0);
+      --cmp-shadow: 4px 4px 0 0 var(--cmp-border);
+    }
+
+    body.login-pf,
+    body {
+      background: var(--cmp-background) !important;
+      color: var(--cmp-foreground) !important;
+      font-weight: 500;
+      background-image:
+        linear-gradient(to right, color-mix(in srgb, var(--cmp-border) 10%, transparent) 1px, transparent 1px),
+        linear-gradient(to bottom, color-mix(in srgb, var(--cmp-border) 10%, transparent) 1px, transparent 1px);
+      background-size: 56px 56px;
+    }
+
+    .kc-page-title,
+    #kc-page-title,
+    h1,
+    h2,
+    h3 {
+      font-weight: 800;
+    }
+
+    .kc-form-card,
+    .card-pf,
+    .pf-v5-c-card {
+      border: 2px solid var(--cmp-border) !important;
+      border-radius: 0 !important;
+      box-shadow: var(--cmp-shadow) !important;
+      background: var(--cmp-surface) !important;
+    }
+
+    button,
+    input,
+    select,
+    textarea,
+    .pf-v5-c-form-control,
+    .pf-v5-c-button {
+      border-radius: 0 !important;
+      border: 2px solid var(--cmp-border) !important;
+      box-shadow: none !important;
+    }
+
+    .pf-v5-c-button.pf-m-primary,
+    #kc-login,
+    #kc-register,
+    input[type="submit"] {
+      background: var(--cmp-main) !important;
+      color: var(--cmp-foreground) !important;
+      border: 2px solid var(--cmp-border) !important;
+      box-shadow: var(--cmp-shadow) !important;
+      font-weight: 700;
+    }
+
+    .pf-v5-c-button.pf-m-primary:hover,
+    #kc-login:hover,
+    #kc-register:hover,
+    input[type="submit"]:hover {
+      transform: translate(4px, 4px);
+      box-shadow: none !important;
+    }
+
+    a {
+      color: var(--cmp-foreground) !important;
+      font-weight: 700;
+      text-decoration: underline;
+    }

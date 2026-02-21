@@ -56,6 +56,8 @@ spec:
             - name: realm-import
               mountPath: /opt/keycloak/data/import/realm-export.json
               subPath: realm-export.json
+            - name: keycloak-theme
+              mountPath: /opt/keycloak/themes/cmp-neo/login
       volumes:
         - name: keycloak-data
           persistentVolumeClaim:
@@ -63,3 +65,11 @@ spec:
         - name: realm-import
           configMap:
             name: cmp-keycloak-realm
+        - name: keycloak-theme
+          configMap:
+            name: cmp-keycloak-theme
+            items:
+              - key: theme.properties
+                path: theme.properties
+              - key: styles.css
+                path: resources/css/styles.css

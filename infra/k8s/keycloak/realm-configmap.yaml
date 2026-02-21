@@ -9,8 +9,9 @@ data:
       "realm": "cmp",
       "enabled": true,
       "displayName": "CMP",
-      "registrationAllowed": false,
+      "registrationAllowed": true,
       "resetPasswordAllowed": true,
+      "loginTheme": "cmp-neo",
       "roles": {
         "realm": [
           {
