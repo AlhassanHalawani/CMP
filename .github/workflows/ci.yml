@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    name: Lint, Test & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run test
+        env:
+          NODE_ENV: test
+          DATABASE_PATH: ':memory:'
+          KEYCLOAK_URL: http://localhost:8080
+          KEYCLOAK_REALM: cmp
+          KEYCLOAK_CLIENT_ID: cmp-app
+          KEYCLOAK_CLIENT_SECRET: test-secret
+          JWT_SECRET: test-secret-min-32-chars-for-ci-runs
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_KEYCLOAK_URL: https://keycloak.fcitcmp.com
+          VITE_KEYCLOAK_REALM: cmp
+          VITE_KEYCLOAK_CLIENT_ID: cmp-app

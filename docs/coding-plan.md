@@ -16,8 +16,8 @@ This document is the sequential implementation plan for the FCIT Clubs Managemen
 | Phase 6 — Frontend Foundation | DONE | i18n (en+ar), Keycloak config, Auth/Theme/Language contexts, Tailwind v4 neobrutalism theme |
 | Phase 7 — UI Components | DONE | Button, Input, Card, Badge, Spinner, Dialog, Select, Tabs, Toast, DropdownMenu + Sidebar, Topbar, PageLayout, ProtectedRoute |
 | Phase 8 — Frontend Pages | DONE | 11 pages + 7 API client modules, all routes wired in App.tsx |
-| Phase 9 — Infra & DevOps | TODO | Docker Compose, Keycloak realm export, Dockerfile, and neobrutalism.dev UI source compliance gate |
-| Phase 10 — Documentation | TODO | Fill in 6 doc files |
+| Phase 9 — Infra & DevOps | DONE | Docker Compose, Keycloak Dockerfile, CI/CD workflows, UI compliance verified |
+| Phase 10 — Documentation | DONE | All 6 doc files written in docs/complete/ |
 
 ---
 
@@ -259,10 +259,10 @@ Create `src/api/` client files (one per domain) using axios — they read the Ke
 ## Phase 9 — Infra & DevOps
 
 ### 9.0 UI Source Compliance Gate (must be satisfied before closing Phase 9)
-- [ ] All visual shared components in `apps/frontend/src/components/ui/` are based on `https://www.neobrutalism.dev/` component patterns and tokens (`--background`, `--secondary-background`, `--foreground`, `--main`, `--main-foreground`, `--border`, `--overlay`, `--ring`, `--shadow`)
-- [ ] Legacy custom token names are removed from frontend styles
-- [ ] No page should implement ad-hoc visual primitives when an equivalent shared UI component exists
-- [ ] Add migration notes in docs to map local component names to neobrutalism.dev counterparts
+- [x] All visual shared components in `apps/frontend/src/components/ui/` are based on `https://www.neobrutalism.dev/` component patterns and tokens (`--background`, `--secondary-background`, `--foreground`, `--main`, `--main-foreground`, `--border`, `--overlay`, `--ring`, `--shadow`)
+- [x] Legacy custom token names are removed from frontend styles
+- [x] No page should implement ad-hoc visual primitives when an equivalent shared UI component exists
+- [x] Migration notes: local component names map directly to neobrutalism.dev counterparts — `Button` → Button, `Card` → Card, `Badge` → Badge, `Input` → Input, `Dialog` → Dialog, `Select` → Select, `Tabs` → Tabs, `Toast` → Toast, `DropdownMenu` → Dropdown Menu, `Spinner` → custom (no neobrutalism.dev equivalent)
 ### 9.1 Docker Compose (`infra/docker/docker-compose.yml`)
 Services:
 - `frontend` — Vite dev server on port 5173
@@ -277,7 +277,7 @@ Configure:
 - Default role: `student`
 
 ### 9.3 Keycloak Dockerfile (`infra/keycloak/Dockerfile`)
-Extend `quay.io/keycloak/keycloak` to copy realm export and start with `--import-realm`.
+- [x] Extends `quay.io/keycloak/keycloak:26.1`, copies realm export, starts with `--import-realm`.
 
 ---
 

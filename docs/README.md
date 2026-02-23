@@ -31,6 +31,7 @@ Based on `functional-requirement.md` and the current implementation/docs:
 - `docs/complete/architecture.md`
 - `docs/complete/attendance-qr-feature.md`
 - `docs/complete/chat-implementation-summary.md`
+- `docs/complete/club-and-event-management-crud-ui.md`
 - `docs/complete/database-schema.md`
 - `docs/complete/deployment-guide.md`
 - `docs/complete/keycloak-setup.md`
@@ -39,4 +40,4 @@ Based on `functional-requirement.md` and the current implementation/docs:
 
 ## TODO Docs
 
-- `docs/TODO/club-and-event-management-crud-ui.md`
+None — all docs are complete.

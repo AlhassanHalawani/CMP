@@ -1,0 +1,97 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Build ARM64 & Roll Out to k3s
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set image tag
+        id: tag
+        run: echo "TAG=$(git rev-parse --short HEAD)-$(date +%Y%m%d%H%M)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          platforms: linux/arm64
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push backend (ARM64)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/backend/Dockerfile
+          platforms: linux/arm64
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/cmp-backend:${{ steps.tag.outputs.TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push frontend (ARM64)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/frontend/Dockerfile
+          platforms: linux/arm64
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/cmp-frontend:${{ steps.tag.outputs.TAG }}
+          build-args: |
+            VITE_KEYCLOAK_URL=${{ secrets.VITE_KEYCLOAK_URL }}
+            VITE_KEYCLOAK_REALM=${{ secrets.VITE_KEYCLOAK_REALM }}
+            VITE_KEYCLOAK_CLIENT_ID=${{ secrets.VITE_KEYCLOAK_CLIENT_ID }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Refresh GHCR pull secret
+        run: |
+          kubectl -n cmp delete secret ghcr-creds --ignore-not-found
+          kubectl -n cmp create secret docker-registry ghcr-creds \
+            --docker-server=ghcr.io \
+            --docker-username=${{ github.repository_owner }} \
+            --docker-password=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Roll out backend
+        run: |
+          kubectl -n cmp set image deploy/cmp-backend \
+            backend=ghcr.io/${{ github.repository_owner }}/cmp-backend:${{ steps.tag.outputs.TAG }}
+          kubectl -n cmp rollout status deploy/cmp-backend --timeout=180s
+
+      - name: Roll out frontend
+        run: |
+          kubectl -n cmp set image deploy/cmp-frontend \
+            frontend=ghcr.io/${{ github.repository_owner }}/cmp-frontend:${{ steps.tag.outputs.TAG }}
+          kubectl -n cmp rollout status deploy/cmp-frontend --timeout=180s
+
+      - name: Verify deployment
+        run: |
+          kubectl -n cmp get deploy cmp-backend cmp-frontend -o wide
+          kubectl -n cmp get pods -o wide
