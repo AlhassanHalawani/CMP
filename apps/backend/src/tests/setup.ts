@@ -70,6 +70,25 @@ export function createTestDb() {
       payload TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+    CREATE TABLE IF NOT EXISTS kpi_metrics (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      club_id INTEGER NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+      semester_id INTEGER,
+      metric_key TEXT NOT NULL,
+      metric_value REAL NOT NULL,
+      recorded_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS achievements (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      club_id INTEGER NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      title_ar TEXT NOT NULL,
+      description TEXT,
+      description_ar TEXT,
+      awarded_at TEXT NOT NULL DEFAULT (datetime('now')),
+      semester_id INTEGER
+    );
   `);
 
   return testDb;
@@ -120,6 +139,61 @@ export function seedAttendanceData(db: Database.Database) {
     INSERT INTO events (club_id, title, title_ar, starts_at, ends_at, status) VALUES (1, 'Draft Event', 'فعالية مسودة', '2026-07-01 10:00:00', '2026-07-01 12:00:00', 'draft');
     INSERT INTO registrations (event_id, user_id, status) VALUES (1, 1, 'confirmed');
   `);
+}
+
+/**
+ * Seed data for ownership authorization tests.
+ *
+ * Users:
+ *   id=1  student        keycloak: test-keycloak-id
+ *   id=2  admin          keycloak: admin-keycloak-id
+ *   id=3  club_leader    keycloak: leader-keycloak-id     (owns club 1)
+ *   id=4  club_leader    keycloak: leader2-keycloak-id    (owns club 2)
+ *
+ * Clubs:
+ *   id=1  leader_id=3  (owned by leader1)
+ *   id=2  leader_id=4  (owned by leader2)
+ *
+ * Events:
+ *   id=1  club_id=1  published  (owned by leader1 via club)
+ *   id=2  club_id=1  draft      (owned by leader1 via club)
+ *   id=3  club_id=2  published  (owned by leader2 via club)
+ *
+ * Registrations:
+ *   user_id=1 registered for event 1
+ *
+ * KPI / Achievements:
+ *   kpi_metrics: one record for club 1
+ *   achievements: one record for club 1
+ */
+export function seedOwnershipData(db: Database.Database) {
+  db.exec(`
+    INSERT INTO users (keycloak_id, email, name, role) VALUES ('test-keycloak-id', 'test@stu.kau.edu.sa', 'Test User', 'student');
+    INSERT INTO users (keycloak_id, email, name, role) VALUES ('admin-keycloak-id', 'admin@kau.edu.sa', 'Admin User', 'admin');
+    INSERT INTO users (keycloak_id, email, name, role) VALUES ('leader-keycloak-id', 'leader@kau.edu.sa', 'Club Leader 1', 'club_leader');
+    INSERT INTO users (keycloak_id, email, name, role) VALUES ('leader2-keycloak-id', 'leader2@kau.edu.sa', 'Club Leader 2', 'club_leader');
+    INSERT INTO clubs (name, name_ar, leader_id) VALUES ('Club One', 'نادي واحد', 3);
+    INSERT INTO clubs (name, name_ar, leader_id) VALUES ('Club Two', 'نادي اثنين', 4);
+    INSERT INTO events (club_id, title, title_ar, starts_at, ends_at, status) VALUES (1, 'Club1 Event', 'فعالية 1', '2026-06-01 10:00:00', '2026-06-01 12:00:00', 'published');
+    INSERT INTO events (club_id, title, title_ar, starts_at, ends_at, status) VALUES (1, 'Club1 Draft', 'مسودة 1', '2026-07-01 10:00:00', '2026-07-01 12:00:00', 'draft');
+    INSERT INTO events (club_id, title, title_ar, starts_at, ends_at, status) VALUES (2, 'Club2 Event', 'فعالية 2', '2026-06-01 10:00:00', '2026-06-01 12:00:00', 'published');
+    INSERT INTO registrations (event_id, user_id, status) VALUES (1, 1, 'confirmed');
+    INSERT INTO kpi_metrics (club_id, metric_key, metric_value) VALUES (1, 'events_held', 1);
+    INSERT INTO achievements (user_id, club_id, title, title_ar) VALUES (1, 1, 'Test Award', 'جائزة');
+  `);
+}
+
+/**
+ * Generate a token for a second club leader (leader2) used in ownership tests.
+ */
+export function generateLeader2Token(overrides: Record<string, any> = {}) {
+  return generateTestToken({
+    sub: 'leader2-keycloak-id',
+    email: 'leader2@kau.edu.sa',
+    name: 'Club Leader 2',
+    realm_access: { roles: ['club_leader'] },
+    ...overrides,
+  });
 }
 
 export { TEST_JWT_SECRET };

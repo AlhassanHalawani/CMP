@@ -131,7 +131,49 @@ external tools holding locks on the database file.
 - Development: console output (colorized)
 - Production: `logs/error.log` and `logs/combined.log` (JSON format)
 
-## Supervisor Role Provisioning
+## Role Ownership — Operational Notes
+
+### Assigning club_leader to a club
+
+A `club_leader` user can only manage resources belonging to clubs where
+`clubs.leader_id` matches their local user ID. To grant a user leadership:
+
+1. Ensure the user has the `club_leader` role in Keycloak.
+2. In the admin UI (or via direct DB/API), set `clubs.leader_id` to the user's
+   local `users.id`.
+
+```bash
+# Find local user id
+sqlite3 apps/backend/data/cmp.db \
+  "SELECT id, email FROM users WHERE email = 'leader@example.com';"
+
+# Assign as club leader (admin API)
+curl -X PATCH -H "Authorization: Bearer <admin-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"leader_id": <user_id>}' \
+  "http://localhost:3000/api/clubs/<club_id>"
+```
+
+### Diagnosing 403 ownership errors
+
+A `club_leader` receiving `403` on a club/event/attendance/KPI/achievement
+endpoint indicates an ownership mismatch. Check:
+
+```bash
+# Verify club's leader_id matches the user's id
+sqlite3 apps/backend/data/cmp.db \
+  "SELECT c.id, c.name, c.leader_id, u.email
+   FROM clubs c LEFT JOIN users u ON u.id = c.leader_id
+   WHERE c.id = <club_id>;"
+
+# Verify event's club ownership
+sqlite3 apps/backend/data/cmp.db \
+  "SELECT e.id, e.title, c.leader_id
+   FROM events e JOIN clubs c ON e.club_id = c.id
+   WHERE e.id = <event_id>;"
+```
+
+### Supervisor Role Provisioning
 
 The **supervisor** role is temporarily mapped to `club_leader` permissions in the
 backend RBAC system. To provision a user as a supervisor:

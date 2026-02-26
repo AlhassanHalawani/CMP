@@ -1,6 +1,6 @@
 # FCIT CMP — API Reference
 
-> Auto-generated from implemented routes. Last updated: 2026-02-18.
+> Auto-generated from implemented routes. Last updated: 2026-02-26.
 
 ## Base URL
 
@@ -137,7 +137,17 @@ Create a club. **Admin only.**
 
 ### PATCH /clubs/:id
 
-Update a club. **Admin or club_leader.**
+Update a club. **Admin or club_leader (owner only).**
+
+Ownership rules:
+- `admin`: may update any club, including changing `leader_id`.
+- `club_leader`: may only update clubs where `clubs.leader_id === req.user.id`. Attempting to set `leader_id` returns **403** (only admins may reassign leadership).
+
+| Status | Meaning |
+|--------|---------|
+| 200 | Updated |
+| 403 | Not the club owner, or tried to set `leader_id` |
+| 404 | Club not found |
 
 ### DELETE /clubs/:id
 
@@ -166,7 +176,9 @@ Get a single event (public).
 
 ### POST /events
 
-Create an event. **Admin or club_leader.**
+Create an event. **Admin or club_leader (owned club only).**
+
+Ownership rule: `club_leader` must be the `leader_id` of the target `club_id`.
 
 | Field | Type | Required |
 |-------|------|----------|
@@ -181,13 +193,34 @@ Create an event. **Admin or club_leader.**
 | capacity | integer | no |
 | status | string | no (default: draft) |
 
+| Status | Meaning |
+|--------|---------|
+| 201 | Created |
+| 403 | Leader does not own `club_id` |
+
 ### PATCH /events/:id
 
-Update an event. **Admin or club_leader.**
+Update an event. **Admin or club_leader (owner only).**
+
+Ownership rule: `club_leader` must own the event's current club. If `club_id` is changed, leader must also own the target club.
+
+| Status | Meaning |
+|--------|---------|
+| 200 | Updated |
+| 403 | Leader does not own event (or target club) |
+| 404 | Event not found |
 
 ### DELETE /events/:id
 
-Delete an event. **Admin or club_leader.**
+Delete an event. **Admin or club_leader (owner only).**
+
+Ownership rule: `club_leader` must own the event's club.
+
+| Status | Meaning |
+|--------|---------|
+| 204 | Deleted |
+| 403 | Leader does not own event |
+| 404 | Event not found |
 
 ### POST /events/:id/register
 
@@ -212,9 +245,9 @@ All endpoints require authentication.
 
 ### POST /attendance/:eventId/qr
 
-Generate QR code for event check-in. **Admin or club_leader.**
+Generate QR code for event check-in. **Admin or club_leader (owner only).**
 
-Event must be in `published` status.
+Event must be in `published` status. Ownership rule: `club_leader` must own the event's club.
 
 **Response:** `{ "token": "...", "qr": "<data-url>" }`
 
@@ -222,11 +255,12 @@ Event must be in `published` status.
 |--------|---------|
 | 200 | QR generated |
 | 400 | Event not published |
+| 403 | Leader does not own event |
 | 404 | Event not found |
 
 ### POST /attendance/check-in
 
-Check in via QR token. **Auth required.**
+Check in via QR token. **Auth required (any role).**
 
 Requires a confirmed registration for the event. Event must be in `published` status.
 
@@ -244,9 +278,9 @@ Requires a confirmed registration for the event. Event must be in `published` st
 
 ### POST /attendance/:eventId/manual
 
-Manual check-in. **Admin or club_leader.**
+Manual check-in. **Admin or club_leader (owner only).**
 
-Event must be in `published` status.
+Event must be in `published` status. Ownership rule: `club_leader` must own the event's club.
 
 | Field | Type | Required |
 |-------|------|----------|
@@ -256,20 +290,37 @@ Event must be in `published` status.
 |--------|---------|
 | 201 | Checked in |
 | 400 | Invalid user_id / event not published |
+| 403 | Leader does not own event |
 | 404 | Event not found |
 | 409 | Already checked in |
 
 ### GET /attendance/:eventId
 
-List attendance records. **Admin or club_leader.**
+List attendance records. **Admin or club_leader (owner only).**
+
+Ownership rule: `club_leader` must own the event's club.
 
 **Response:** `{ "data": [...], "total": number }`
+
+| Status | Meaning |
+|--------|---------|
+| 200 | OK |
+| 403 | Leader does not own event |
+| 404 | Event not found |
 
 ### GET /attendance/:eventId/registrations
 
-List event registrations (for manual check-in lookup). **Admin or club_leader.**
+List event registrations (for manual check-in lookup). **Admin or club_leader (owner only).**
+
+Ownership rule: `club_leader` must own the event's club.
 
 **Response:** `{ "data": [...], "total": number }`
+
+| Status | Meaning |
+|--------|---------|
+| 200 | OK |
+| 403 | Leader does not own event |
+| 404 | Event not found |
 
 ---
 
@@ -289,7 +340,9 @@ List achievements for a club (public).
 
 ### POST /achievements
 
-Award an achievement. **Admin or club_leader.**
+Award an achievement. **Admin or club_leader (owned club only).**
+
+Ownership rule: `club_leader` must be the `leader_id` of `club_id`.
 
 | Field | Type | Required |
 |-------|------|----------|
@@ -301,9 +354,22 @@ Award an achievement. **Admin or club_leader.**
 | description_ar | string | no |
 | semester_id | integer | no |
 
+| Status | Meaning |
+|--------|---------|
+| 201 | Created |
+| 403 | Leader does not own `club_id` |
+
 ### DELETE /achievements/:id
 
-Delete an achievement. **Admin or club_leader.**
+Delete an achievement. **Admin or club_leader (owned club only).**
+
+Ownership rule: achievement's `club_id` must match a club where `leader_id === req.user.id`.
+
+| Status | Meaning |
+|--------|---------|
+| 204 | Deleted |
+| 403 | Leader does not own the achievement's club |
+| 404 | Achievement not found |
 
 ---
 
@@ -319,7 +385,9 @@ KPI summary for a club (public). Optional `semester_id` query.
 
 ### POST /kpi
 
-Record a KPI metric. **Admin or club_leader.**
+Record a KPI metric. **Admin or club_leader (owned club only).**
+
+Ownership rule: `club_leader` must be the `leader_id` of `club_id`.
 
 | Field | Type | Required |
 |-------|------|----------|
@@ -327,6 +395,11 @@ Record a KPI metric. **Admin or club_leader.**
 | semester_id | integer | no |
 | metric_key | string | yes |
 | metric_value | number | yes |
+
+| Status | Meaning |
+|--------|---------|
+| 201 | Created |
+| 403 | Leader does not own `club_id` |
 
 ---
 

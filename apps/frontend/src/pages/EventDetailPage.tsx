@@ -23,6 +23,7 @@ import { eventsApi } from '@/api/events';
 import { attendanceApi } from '@/api/attendance';
 import { EventFormDialog } from '@/components/events/EventFormDialog';
 import { useAppToast } from '@/contexts/ToastContext';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 export function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -40,7 +41,9 @@ export function EventDetailPage() {
   const [checkInToken, setCheckInToken] = useState('');
   const [checkInStatus, setCheckInStatus] = useState<'idle' | 'success' | 'error' | 'duplicate'>('idle');
   const [checkInMessage, setCheckInMessage] = useState('');
-  const canManageEvents = hasRole('admin') || hasRole('club_leader');
+  const isAdmin = hasRole('admin');
+  const isLeader = hasRole('club_leader');
+  const { currentUser } = useCurrentUser();
 
   const { data: event, isLoading } = useQuery({
     queryKey: ['events', eventId],
@@ -51,6 +54,16 @@ export function EventDetailPage() {
     queryKey: ['clubs', 'for-events-form'],
     queryFn: () => clubsApi.list({ limit: 200 }),
   });
+
+  // Check event ownership: find the club for this event, then check leader_id
+  const eventClub = clubsData?.data.find((c) => c.id === event?.club_id);
+  const isEventOwner = isLeader && currentUser !== undefined && eventClub?.leader_id === currentUser.id;
+  const canManageEvent = isAdmin || isEventOwner;
+
+  // For the edit form, leaders only see clubs they own
+  const editableClubs = isAdmin
+    ? (clubsData?.data ?? [])
+    : (clubsData?.data ?? []).filter((c) => c.leader_id === currentUser?.id);
 
   const registerMutation = useMutation({
     mutationFn: () => eventsApi.register(eventId),
@@ -141,7 +154,7 @@ export function EventDetailPage() {
         <Badge variant={event.status === 'published' ? 'secondary' : 'outline'}>{event.status}</Badge>
       </div>
 
-      {canManageEvents && (
+      {canManageEvent && (
         <div className="mb-6 flex gap-3">
           <Button variant="outline" onClick={() => setEditOpen(true)}>
             {t('common.edit')}
@@ -160,7 +173,7 @@ export function EventDetailPage() {
         onOpenChange={setEditOpen}
         mode="edit"
         initialValues={event}
-        clubs={clubsData?.data ?? []}
+        clubs={editableClubs}
         language={language}
         onSubmit={async (payload) => {
           await updateMutation.mutateAsync(payload);

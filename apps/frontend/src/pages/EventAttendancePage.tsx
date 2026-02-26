@@ -4,28 +4,42 @@ import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
+import { clubsApi } from '@/api/clubs';
 import { eventsApi } from '@/api/events';
 import { attendanceApi } from '@/api/attendance';
 import { useAppToast } from '@/contexts/ToastContext';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 export function EventAttendancePage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
   const { language } = useLanguage();
+  const { hasRole } = useAuth();
   const { showToast } = useAppToast();
   const queryClient = useQueryClient();
   const eventId = parseInt(id!);
+  const isAdmin = hasRole('admin');
+  const isLeader = hasRole('club_leader');
+  const { currentUser } = useCurrentUser();
 
   const [manualUserId, setManualUserId] = useState('');
 
   const { data: event, isLoading: eventLoading } = useQuery({
     queryKey: ['events', eventId],
     queryFn: () => eventsApi.get(eventId),
+  });
+
+  // Fetch the club for ownership check
+  const { data: eventClub } = useQuery({
+    queryKey: ['clubs', event?.club_id],
+    queryFn: () => clubsApi.get(event!.club_id),
+    enabled: !!event?.club_id,
   });
 
   const { data: attendanceData, isLoading: attendanceLoading } = useQuery({
@@ -67,7 +81,30 @@ export function EventAttendancePage() {
   if (eventLoading) return <div className="flex justify-center p-12"><Spinner size="lg" /></div>;
   if (!event) return <p>{t('common.noData')}</p>;
 
+  // Ownership check: leader must own the event's club to manage attendance
+  const isEventOwner = isLeader && currentUser !== undefined && eventClub?.leader_id === currentUser.id;
+  const canManageAttendance = isAdmin || isEventOwner;
+
   const eventTitle = language === 'ar' ? event.title_ar : event.title;
+
+  if (!canManageAttendance) {
+    return (
+      <div>
+        <Link to={`/events/${eventId}`} className="text-sm font-bold underline mb-4 inline-block">
+          {t('common.back')}
+        </Link>
+        <h1 className="mb-2 text-3xl font-black">{t('attendance.title')}</h1>
+        <p className="mb-6 text-sm font-bold text-[var(--foreground)]/70">{eventTitle}</p>
+        <Card>
+          <CardContent>
+            <p className="text-sm font-bold text-red-600">
+              You do not have permission to manage attendance for this event.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div>

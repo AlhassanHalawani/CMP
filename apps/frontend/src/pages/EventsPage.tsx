@@ -14,6 +14,7 @@ import { clubsApi } from '@/api/clubs';
 import { eventsApi, type Event } from '@/api/events';
 import { EventFormDialog } from '@/components/events/EventFormDialog';
 import { useAppToast } from '@/contexts/ToastContext';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 export function EventsPage() {
   const { t } = useTranslation();
@@ -21,7 +22,9 @@ export function EventsPage() {
   const { hasRole } = useAuth();
   const { showToast } = useAppToast();
   const queryClient = useQueryClient();
-  const canManageEvents = hasRole('admin') || hasRole('club_leader');
+  const isAdmin = hasRole('admin');
+  const isLeader = hasRole('club_leader');
+  const { currentUser } = useCurrentUser();
   const [createOpen, setCreateOpen] = useState(false);
   const [createError, setCreateError] = useState('');
 
@@ -57,6 +60,16 @@ export function EventsPage() {
 
   if (isLoading) return <div className="flex justify-center p-12"><Spinner size="lg" /></div>;
 
+  // Clubs available for the create form: admin sees all, leader sees only owned
+  const allClubs = clubsData?.data ?? [];
+  const ownedClubs = isLeader && currentUser
+    ? allClubs.filter((c) => c.leader_id === currentUser.id)
+    : allClubs;
+
+  // Leader can create only if they own at least one club
+  const canCreate = isAdmin || (isLeader && ownedClubs.length > 0);
+
+  const canManageEvents = isAdmin || isLeader;
   const sourceEvents = canManageEvents
     ? (allEvents?.data ?? [])
     : (allEvents?.data.filter((e) => e.status === 'published') ?? []);
@@ -67,7 +80,7 @@ export function EventsPage() {
     <div>
       <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-3xl font-black">{t('events.title')}</h1>
-        {canManageEvents && (
+        {canCreate && (
           <Button onClick={() => setCreateOpen(true)}>{t('events.createEvent')}</Button>
         )}
       </div>
@@ -76,7 +89,7 @@ export function EventsPage() {
         open={createOpen}
         onOpenChange={setCreateOpen}
         mode="create"
-        clubs={clubsData?.data ?? []}
+        clubs={ownedClubs}
         language={language}
         onSubmit={async (payload) => {
           await createMutation.mutateAsync(payload);

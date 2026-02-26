@@ -4,9 +4,12 @@ import { AttendanceModel } from '../models/attendance.model';
 import { EventModel } from '../models/event.model';
 import { RegistrationModel } from '../models/registration.model';
 import { generateQr } from '../services/qrcode.service';
+import { isAdmin, leaderOwnsEvent } from '../services/ownership.service';
 
 export async function generateEventQr(req: AuthRequest, res: Response) {
   const eventId = parseInt(req.params.eventId);
+  const user = req.user!;
+
   const event = EventModel.findById(eventId);
   if (!event) {
     res.status(404).json({ error: 'Event not found' });
@@ -16,6 +19,13 @@ export async function generateEventQr(req: AuthRequest, res: Response) {
     res.status(400).json({ error: 'QR generation is only available for published events' });
     return;
   }
+
+  // club_leader may only generate QR for events in clubs they lead
+  if (!isAdmin(user) && !leaderOwnsEvent(user.id, eventId)) {
+    res.status(403).json({ error: 'You do not have permission to manage attendance for this event' });
+    return;
+  }
+
   const token = AttendanceModel.generateQrToken(eventId);
   const qrDataUrl = await generateQr(token);
   res.json({ token, qr: qrDataUrl });
@@ -64,6 +74,8 @@ export function checkIn(req: AuthRequest, res: Response) {
 export function manualCheckIn(req: AuthRequest, res: Response) {
   const eventId = parseInt(req.params.eventId);
   const { user_id } = req.body;
+  const user = req.user!;
+
   if (!user_id || typeof user_id !== 'number') {
     res.status(400).json({ error: 'Valid user_id is required' });
     return;
@@ -77,6 +89,13 @@ export function manualCheckIn(req: AuthRequest, res: Response) {
     res.status(400).json({ error: 'Check-in is only available for published events' });
     return;
   }
+
+  // club_leader may only manually check in for events in clubs they lead
+  if (!isAdmin(user) && !leaderOwnsEvent(user.id, eventId)) {
+    res.status(403).json({ error: 'You do not have permission to manage attendance for this event' });
+    return;
+  }
+
   const existing = AttendanceModel.findByEventAndUser(eventId, user_id);
   if (existing) {
     res.status(409).json({ error: 'Already checked in' });
@@ -88,11 +107,20 @@ export function manualCheckIn(req: AuthRequest, res: Response) {
 
 export function getAttendanceList(req: AuthRequest, res: Response) {
   const eventId = parseInt(req.params.eventId);
+  const user = req.user!;
+
   const event = EventModel.findById(eventId);
   if (!event) {
     res.status(404).json({ error: 'Event not found' });
     return;
   }
+
+  // club_leader may only view attendance for events in clubs they lead
+  if (!isAdmin(user) && !leaderOwnsEvent(user.id, eventId)) {
+    res.status(403).json({ error: 'You do not have permission to view attendance for this event' });
+    return;
+  }
+
   const list = AttendanceModel.findByEvent(eventId);
   const count = AttendanceModel.countByEvent(eventId);
   res.json({ data: list, total: count });
@@ -100,11 +128,20 @@ export function getAttendanceList(req: AuthRequest, res: Response) {
 
 export function getEventRegistrations(req: AuthRequest, res: Response) {
   const eventId = parseInt(req.params.eventId);
+  const user = req.user!;
+
   const event = EventModel.findById(eventId);
   if (!event) {
     res.status(404).json({ error: 'Event not found' });
     return;
   }
+
+  // club_leader may only view registrations for events in clubs they lead
+  if (!isAdmin(user) && !leaderOwnsEvent(user.id, eventId)) {
+    res.status(403).json({ error: 'You do not have permission to view registrations for this event' });
+    return;
+  }
+
   const registrations = RegistrationModel.findByEvent(eventId);
   res.json({ data: registrations, total: registrations.length });
 }

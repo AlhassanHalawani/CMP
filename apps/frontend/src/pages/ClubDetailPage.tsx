@@ -21,6 +21,7 @@ import { clubsApi } from '@/api/clubs';
 import { eventsApi } from '@/api/events';
 import { ClubFormDialog } from '@/components/clubs/ClubFormDialog';
 import { useAppToast } from '@/contexts/ToastContext';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 export function ClubDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -35,7 +36,7 @@ export function ClubDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editError, setEditError] = useState('');
   const [deleteError, setDeleteError] = useState('');
-  const canManage = hasRole('admin') || hasRole('club_leader');
+  const { currentUser } = useCurrentUser();
   const isAdmin = hasRole('admin');
 
   const { data: club, isLoading } = useQuery({
@@ -47,6 +48,10 @@ export function ClubDetailPage() {
     queryKey: ['events', 'club', clubId],
     queryFn: () => eventsApi.list({ club_id: clubId }),
   });
+
+  // A club_leader can only edit their own club; admin can edit any
+  const isClubOwner = hasRole('club_leader') && club?.leader_id === currentUser?.id;
+  const canEdit = isAdmin || isClubOwner;
 
   const updateMutation = useMutation({
     mutationFn: (payload: Parameters<typeof clubsApi.update>[1]) => clubsApi.update(clubId, payload),
@@ -97,7 +102,7 @@ export function ClubDetailPage() {
       <h1 className="mb-2 text-3xl font-black">{language === 'ar' ? club.name_ar : club.name}</h1>
       <p className="mb-6 text-lg">{language === 'ar' ? club.description_ar : club.description}</p>
 
-      {canManage && (
+      {canEdit && (
         <div className="mb-6 flex gap-3">
           <Button variant="outline" onClick={() => setEditOpen(true)}>
             {t('common.edit')}

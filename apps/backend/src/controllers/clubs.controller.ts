@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { ClubModel } from '../models/club.model';
 import { logAction } from '../services/audit.service';
+import { isAdmin, leaderOwnsClub } from '../services/ownership.service';
 
 export function listClubs(req: Request, res: Response) {
   const limit = parseInt(req.query.limit as string) || 50;
@@ -29,13 +30,28 @@ export function createClub(req: AuthRequest, res: Response) {
 
 export function updateClub(req: AuthRequest, res: Response) {
   const id = parseInt(req.params.id);
+  const user = req.user!;
+
   const existing = ClubModel.findById(id);
   if (!existing) {
     res.status(404).json({ error: 'Club not found' });
     return;
   }
+
+  // club_leader may only update their own club
+  if (!isAdmin(user) && !leaderOwnsClub(user.id, id)) {
+    res.status(403).json({ error: 'You do not have permission to update this club' });
+    return;
+  }
+
+  // Only admin can change club leadership
+  if (!isAdmin(user) && 'leader_id' in req.body) {
+    res.status(403).json({ error: 'Only admins can change club leadership' });
+    return;
+  }
+
   const club = ClubModel.update(id, req.body);
-  logAction({ actorId: req.user!.id, action: 'update', entityType: 'club', entityId: id });
+  logAction({ actorId: user.id, action: 'update', entityType: 'club', entityId: id });
   res.json(club);
 }
 

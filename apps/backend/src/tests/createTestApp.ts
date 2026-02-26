@@ -3,8 +3,11 @@ import cors from 'cors';
 import helmet from 'helmet';
 
 import authRouter from '../routes/auth.routes';
+import clubsRouter from '../routes/clubs.routes';
 import eventsRouter from '../routes/events.routes';
 import attendanceRouter from '../routes/attendance.routes';
+import kpiRouter from '../routes/kpi.routes';
+import achievementsRouter from '../routes/achievements.routes';
 import { errorHandler } from '../middleware/errorHandler';
 
 /**
@@ -24,8 +27,11 @@ export function createTestApp() {
   });
 
   app.use('/api/auth', authRouter);
+  app.use('/api/clubs', clubsRouter);
   app.use('/api/events', eventsRouter);
   app.use('/api/attendance', attendanceRouter);
+  app.use('/api/kpi', kpiRouter);
+  app.use('/api/achievements', achievementsRouter);
 
   app.use(errorHandler);
 

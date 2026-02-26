@@ -1,8 +1,20 @@
 import { Request, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { KpiModel } from '../models/kpi.model';
+import { isAdmin, leaderOwnsClub } from '../services/ownership.service';
 
 export function recordMetric(req: AuthRequest, res: Response) {
+  const user = req.user!;
+  const clubId = req.body.club_id;
+
+  // club_leader can only record metrics for clubs they lead
+  if (!isAdmin(user)) {
+    if (!clubId || !leaderOwnsClub(user.id, clubId)) {
+      res.status(403).json({ error: 'You can only record metrics for clubs you lead' });
+      return;
+    }
+  }
+
   const metric = KpiModel.recordMetric(req.body);
   res.status(201).json(metric);
 }

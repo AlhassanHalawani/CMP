@@ -3,6 +3,7 @@ import { AuthRequest } from '../middleware/auth';
 import { AchievementModel } from '../models/achievement.model';
 import { generateAchievementReport } from '../services/pdf.service';
 import { logAction } from '../services/audit.service';
+import { isAdmin, leaderOwnsClub } from '../services/ownership.service';
 
 export function listForUser(req: Request, res: Response) {
   const userId = parseInt(req.params.userId);
@@ -17,9 +18,20 @@ export function listForClub(req: Request, res: Response) {
 }
 
 export function create(req: AuthRequest, res: Response) {
+  const user = req.user!;
+  const clubId = req.body.club_id;
+
+  // club_leader can only award achievements for clubs they lead
+  if (!isAdmin(user)) {
+    if (!clubId || !leaderOwnsClub(user.id, clubId)) {
+      res.status(403).json({ error: 'You can only award achievements for clubs you lead' });
+      return;
+    }
+  }
+
   const achievement = AchievementModel.create(req.body);
   logAction({
-    actorId: req.user!.id,
+    actorId: user.id,
     action: 'create',
     entityType: 'achievement',
     entityId: achievement.id,
@@ -29,12 +41,23 @@ export function create(req: AuthRequest, res: Response) {
 
 export function remove(req: AuthRequest, res: Response) {
   const id = parseInt(req.params.id);
-  const deleted = AchievementModel.delete(id);
-  if (!deleted) {
+  const user = req.user!;
+
+  // Load the achievement to check ownership before deleting
+  const achievement = AchievementModel.findById(id);
+  if (!achievement) {
     res.status(404).json({ error: 'Achievement not found' });
     return;
   }
-  logAction({ actorId: req.user!.id, action: 'delete', entityType: 'achievement', entityId: id });
+
+  // club_leader can only remove achievements from clubs they lead
+  if (!isAdmin(user) && !leaderOwnsClub(user.id, achievement.club_id)) {
+    res.status(403).json({ error: 'You do not have permission to remove this achievement' });
+    return;
+  }
+
+  AchievementModel.delete(id);
+  logAction({ actorId: user.id, action: 'delete', entityType: 'achievement', entityId: id });
   res.status(204).send();
 }
 

@@ -3,6 +3,7 @@ import { AuthRequest } from '../middleware/auth';
 import { EventModel } from '../models/event.model';
 import { RegistrationModel } from '../models/registration.model';
 import { logAction } from '../services/audit.service';
+import { isAdmin, leaderOwnsClub, leaderOwnsEvent } from '../services/ownership.service';
 
 export function listEvents(req: Request, res: Response) {
   const status = req.query.status as string | undefined;
@@ -24,32 +25,71 @@ export function getEvent(req: Request, res: Response) {
 }
 
 export function createEvent(req: AuthRequest, res: Response) {
-  const data = { ...req.body, created_by: req.user!.id };
+  const user = req.user!;
+  const clubId = req.body.club_id;
+
+  // club_leader can only create events in clubs they own
+  if (!isAdmin(user)) {
+    if (!clubId || !leaderOwnsClub(user.id, clubId)) {
+      res.status(403).json({ error: 'You can only create events in clubs you lead' });
+      return;
+    }
+  }
+
+  const data = { ...req.body, created_by: user.id };
   const event = EventModel.create(data);
-  logAction({ actorId: req.user!.id, action: 'create', entityType: 'event', entityId: event.id });
+  logAction({ actorId: user.id, action: 'create', entityType: 'event', entityId: event.id });
   res.status(201).json(event);
 }
 
 export function updateEvent(req: AuthRequest, res: Response) {
   const id = parseInt(req.params.id);
+  const user = req.user!;
+
   const existing = EventModel.findById(id);
   if (!existing) {
     res.status(404).json({ error: 'Event not found' });
     return;
   }
+
+  // club_leader may only update events in clubs they lead
+  if (!isAdmin(user)) {
+    if (!leaderOwnsEvent(user.id, id)) {
+      res.status(403).json({ error: 'You do not have permission to update this event' });
+      return;
+    }
+    // If moving to a different club, leader must also own the target club
+    if (req.body.club_id !== undefined && req.body.club_id !== existing.club_id) {
+      if (!leaderOwnsClub(user.id, req.body.club_id)) {
+        res.status(403).json({ error: 'You do not have permission to move this event to the target club' });
+        return;
+      }
+    }
+  }
+
   const event = EventModel.update(id, req.body);
-  logAction({ actorId: req.user!.id, action: 'update', entityType: 'event', entityId: id });
+  logAction({ actorId: user.id, action: 'update', entityType: 'event', entityId: id });
   res.json(event);
 }
 
 export function deleteEvent(req: AuthRequest, res: Response) {
   const id = parseInt(req.params.id);
-  const deleted = EventModel.delete(id);
-  if (!deleted) {
+  const user = req.user!;
+
+  const existing = EventModel.findById(id);
+  if (!existing) {
     res.status(404).json({ error: 'Event not found' });
     return;
   }
-  logAction({ actorId: req.user!.id, action: 'delete', entityType: 'event', entityId: id });
+
+  // club_leader may only delete events in clubs they lead
+  if (!isAdmin(user) && !leaderOwnsEvent(user.id, id)) {
+    res.status(403).json({ error: 'You do not have permission to delete this event' });
+    return;
+  }
+
+  EventModel.delete(id);
+  logAction({ actorId: user.id, action: 'delete', entityType: 'event', entityId: id });
   res.status(204).send();
 }
 

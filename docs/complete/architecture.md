@@ -70,10 +70,14 @@ Path alias: `@/` → `src/`.
 - `src/controllers/` — request/response handlers
 - `src/models/` — SQLite data-access layer (one file per table)
 - `src/middleware/` — auth, roles, validate, errorHandler
-- `src/services/` — audit, email, PDF, QR, Keycloak admin
+- `src/services/` — audit, email, PDF, QR, Keycloak admin, **ownership**
 - `src/config/` — env, database, keycloak
 - `src/utils/logger.ts` — Winston config
 - `migrations/` — ordered SQL migration files
+
+**Key frontend additions:**
+
+- `src/hooks/useCurrentUser.ts` — fetches current user's DB record (id, role) for ownership-aware UI
 
 ## Authentication Flow
 
@@ -95,6 +99,26 @@ Three roles: `student` (default), `club_leader`, `admin`.
 
 Roles are extracted from Keycloak realm and resource access claims.
 The `requireRole()` middleware enforces role-based access.
+
+### Ownership-based Authorization (club_leader)
+
+Beyond role-level access, `club_leader` requests are further restricted
+to resources they own. Ownership is resolved by the
+`src/services/ownership.service.ts` helpers:
+
+| Helper | Rule |
+|--------|------|
+| `leaderOwnsClub(userId, clubId)` | `clubs.leader_id === userId` |
+| `leaderOwnsEvent(userId, eventId)` | join events→clubs; `clubs.leader_id === userId` |
+| `canManageClub(user, clubId)` | admin bypass OR `leaderOwnsClub` |
+| `canManageEvent(user, eventId)` | admin bypass OR `leaderOwnsEvent` |
+
+**Ownership is NOT based on `events.created_by`** — it is always
+determined by the club's `leader_id`.
+
+Controllers enforce ownership before executing write/sensitive-read
+operations, returning `403` with `{ "error": "..." }` on violation.
+Admins bypass all ownership checks.
 
 ## Database
 
