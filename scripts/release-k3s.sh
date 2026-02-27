@@ -5,11 +5,14 @@ NAMESPACE="${NAMESPACE:-cmp}"
 GH_USER="${GH_USER:-}"
 CR_PAT="${CR_PAT:-}"
 TAG="${TAG:-$(git rev-parse --short HEAD)-$(date +%Y%m%d%H%M)}"
-ROLLBACK_ON_FAIL="${ROLLBACK_ON_FAIL:-false}"
+ROLLBACK_ON_FAIL="${ROLLBACK_ON_FAIL:-true}"
 ROLLOUT_TIMEOUT="${ROLLOUT_TIMEOUT:-180s}"
 KEYCLOAK_URL="${VITE_KEYCLOAK_URL:-https://keycloak.fcitcmp.com}"
 KEYCLOAK_REALM="${VITE_KEYCLOAK_REALM:-cmp}"
 KEYCLOAK_CLIENT_ID="${VITE_KEYCLOAK_CLIENT_ID:-cmp-app}"
+BUILD_RETRIES="${BUILD_RETRIES:-3}"
+BUILD_RETRY_DELAY="${BUILD_RETRY_DELAY:-5}"
+ALLOW_DIRTY_GIT="${ALLOW_DIRTY_GIT:-false}"
 
 BACKEND_IMAGE="ghcr.io/${GH_USER}/cmp-backend:${TAG}"
 FRONTEND_IMAGE="ghcr.io/${GH_USER}/cmp-frontend:${TAG}"
@@ -31,6 +34,39 @@ validate_env() {
     echo "error: CR_PAT is required (use env var; do not inline in shell history)" >&2
     exit 1
   fi
+}
+
+ensure_clean_git() {
+  if [[ "$ALLOW_DIRTY_GIT" == "true" ]]; then
+    return 0
+  fi
+
+  if ! git diff --quiet || ! git diff --cached --quiet; then
+    echo "error: git working tree is dirty; commit/stash changes first (or set ALLOW_DIRTY_GIT=true)" >&2
+    exit 1
+  fi
+}
+
+retry_cmd() {
+  local attempts="$1"
+  local delay="$2"
+  shift 2
+
+  local n=1
+  while true; do
+    if "$@"; then
+      return 0
+    fi
+
+    if [[ "$n" -ge "$attempts" ]]; then
+      echo "error: command failed after ${attempts} attempts: $*" >&2
+      return 1
+    fi
+
+    echo "warning: command failed (attempt ${n}/${attempts}); retrying in ${delay}s: $*" >&2
+    n=$((n + 1))
+    sleep "$delay"
+  done
 }
 
 diagnostics() {
@@ -82,19 +118,20 @@ require_cmd docker
 require_cmd kubectl
 require_cmd git
 validate_env
+ensure_clean_git
 
 echo "Using tag: ${TAG}"
 
 echo "$CR_PAT" | docker login ghcr.io -u "$GH_USER" --password-stdin
 
 echo "Building and pushing backend: ${BACKEND_IMAGE}"
-docker buildx build --platform linux/arm64 \
+retry_cmd "$BUILD_RETRIES" "$BUILD_RETRY_DELAY" docker buildx build --platform linux/arm64 \
   -f apps/backend/Dockerfile \
   -t "$BACKEND_IMAGE" \
   --push .
 
 echo "Building and pushing frontend: ${FRONTEND_IMAGE}"
-docker buildx build --platform linux/arm64 \
+retry_cmd "$BUILD_RETRIES" "$BUILD_RETRY_DELAY" docker buildx build --platform linux/arm64 \
   -f apps/frontend/Dockerfile \
   -t "$FRONTEND_IMAGE" \
   --build-arg VITE_KEYCLOAK_URL="$KEYCLOAK_URL" \

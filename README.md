@@ -126,9 +126,11 @@ export CR_PAT=<new-pat>   # do not inline in command history
 
 # Optional overrides
 export NAMESPACE=cmp
-export ROLLBACK_ON_FAIL=true
 export ROLLOUT_TIMEOUT=240s
 export TAG=$(git rev-parse --short HEAD)-$(date +%Y%m%d%H%M)
+export BUILD_RETRIES=4
+export BUILD_RETRY_DELAY=8
+export ALLOW_DIRTY_GIT=true   # default is false; keep false for safer releases
 
 bash scripts/release-k3s.sh
 ```
