@@ -4,7 +4,7 @@ ENV NODE_ENV=production
 
 COPY package*.json ./
 COPY apps/backend/package.json apps/backend/package.json
-RUN npm ci --workspace=apps/backend --include-workspace-root
+RUN npm ci --workspace=apps/backend --include-workspace-root --include=dev
 COPY apps/backend apps/backend
 
 WORKDIR /app/apps/backend
