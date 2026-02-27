@@ -93,9 +93,15 @@ rollback_if_enabled() {
     return 0
   fi
 
-  if [[ -n "${PREV_BACKEND_IMAGE:-}" ]]; then
-    echo "Rolling back backend to ${PREV_BACKEND_IMAGE}" >&2
-    kubectl -n "$NAMESPACE" set image deploy/cmp-backend backend="$PREV_BACKEND_IMAGE" --record=false || true
+  if [[ -n "${PREV_BACKEND_IMAGE:-}" || -n "${PREV_MIGRATE_IMAGE:-}" ]]; then
+    echo "Rolling back backend images" >&2
+    if [[ -z "${PREV_MIGRATE_IMAGE:-}" ]]; then
+      PREV_MIGRATE_IMAGE="$PREV_BACKEND_IMAGE"
+    fi
+    kubectl -n "$NAMESPACE" set image deploy/cmp-backend \
+      backend="$PREV_BACKEND_IMAGE" \
+      migrate="$PREV_MIGRATE_IMAGE" \
+      --record=false || true
   fi
 
   if [[ -n "${PREV_FRONTEND_IMAGE:-}" ]]; then
@@ -155,10 +161,14 @@ kubectl -n "$NAMESPACE" patch deploy cmp-backend --type=merge -p '{"spec":{"temp
 kubectl -n "$NAMESPACE" patch deploy cmp-frontend --type=merge -p '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"ghcr-creds"}]}}}}'
 
 PREV_BACKEND_IMAGE="$(kubectl -n "$NAMESPACE" get deploy cmp-backend -o jsonpath='{.spec.template.spec.containers[?(@.name=="backend")].image}')"
+PREV_MIGRATE_IMAGE="$(kubectl -n "$NAMESPACE" get deploy cmp-backend -o jsonpath='{.spec.template.spec.initContainers[?(@.name=="migrate")].image}')"
 PREV_FRONTEND_IMAGE="$(kubectl -n "$NAMESPACE" get deploy cmp-frontend -o jsonpath='{.spec.template.spec.containers[?(@.name=="frontend")].image}')"
 
 echo "Updating deployment images"
-kubectl -n "$NAMESPACE" set image deploy/cmp-backend backend="$BACKEND_IMAGE" --record=false
+kubectl -n "$NAMESPACE" set image deploy/cmp-backend \
+  backend="$BACKEND_IMAGE" \
+  migrate="$BACKEND_IMAGE" \
+  --record=false
 kubectl -n "$NAMESPACE" set image deploy/cmp-frontend frontend="$FRONTEND_IMAGE" --record=false
 
 echo "Waiting for rollout"

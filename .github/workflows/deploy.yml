@@ -82,7 +82,8 @@ jobs:
       - name: Roll out backend
         run: |
           kubectl -n cmp set image deploy/cmp-backend \
-            backend=ghcr.io/${{ github.repository_owner }}/cmp-backend:${{ steps.tag.outputs.TAG }}
+            backend=ghcr.io/${{ github.repository_owner }}/cmp-backend:${{ steps.tag.outputs.TAG }} \
+            migrate=ghcr.io/${{ github.repository_owner }}/cmp-backend:${{ steps.tag.outputs.TAG }}
           kubectl -n cmp rollout status deploy/cmp-backend --timeout=180s
 
       - name: Roll out frontend
