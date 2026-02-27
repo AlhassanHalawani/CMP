@@ -30,6 +30,43 @@ async function getAdminToken() {
     tokenExpiresAt = now + data.expires_in * 1000;
     return cachedToken;
 }
+function extractUserIdFromLocationHeader(location) {
+    if (!location)
+        return null;
+    const trimmed = location.trim();
+    const userId = trimmed.split('/').pop();
+    return userId || null;
+}
+async function getRealmRole(token, roleName) {
+    const roleUrl = `${env_1.env.keycloak.url}/admin/realms/${env_1.env.keycloak.realm}/roles/${encodeURIComponent(roleName)}`;
+    const roleRes = await fetch(roleUrl, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+    });
+    if (!roleRes.ok) {
+        const text = await roleRes.text();
+        throw new Error(`Failed to fetch Keycloak role "${roleName}": ${roleRes.status} ${text}`);
+    }
+    return (await roleRes.json());
+}
+async function assignRealmRoleToUser(token, userId, role) {
+    const mappingUrl = `${env_1.env.keycloak.url}/admin/realms/${env_1.env.keycloak.realm}/users/${userId}/role-mappings/realm`;
+    const mappingRes = await fetch(mappingUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify([{ id: role.id, name: role.name }]),
+    });
+    if (!mappingRes.ok) {
+        const text = await mappingRes.text();
+        throw new Error(`Failed to assign role "${role.name}" to Keycloak user: ${mappingRes.status} ${text}`);
+    }
+}
 async function createKeycloakUser(payload) {
     const token = await getAdminToken();
     const url = `${env_1.env.keycloak.url}/admin/realms/${env_1.env.keycloak.realm}/users`;
@@ -51,6 +88,7 @@ async function createKeycloakUser(payload) {
             ],
         }),
     });
+    const createdUserId = extractUserIdFromLocationHeader(res.headers.get('location'));
     if (res.status === 409) {
         const err = new Error('Email already in use.');
         err.status = 409;
@@ -61,5 +99,10 @@ async function createKeycloakUser(payload) {
         logger_1.logger.error(`Keycloak user creation failed: ${res.status} ${text}`);
         throw new Error(`Failed to create user in Keycloak: ${res.status}`);
     }
+    if (!createdUserId) {
+        throw new Error('Keycloak user was created but no user ID was returned in Location header.');
+    }
+    const studentRole = await getRealmRole(token, 'student');
+    await assignRealmRoleToUser(token, createdUserId, studentRole);
 }
 //# sourceMappingURL=keycloakAdmin.service.js.map

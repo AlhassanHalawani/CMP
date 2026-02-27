@@ -7,6 +7,7 @@ exports.updateClub = updateClub;
 exports.deleteClub = deleteClub;
 const club_model_1 = require("../models/club.model");
 const audit_service_1 = require("../services/audit.service");
+const ownership_service_1 = require("../services/ownership.service");
 function listClubs(req, res) {
     const limit = parseInt(req.query.limit) || 50;
     const offset = parseInt(req.query.offset) || 0;
@@ -30,13 +31,24 @@ function createClub(req, res) {
 }
 function updateClub(req, res) {
     const id = parseInt(req.params.id);
+    const user = req.user;
     const existing = club_model_1.ClubModel.findById(id);
     if (!existing) {
         res.status(404).json({ error: 'Club not found' });
         return;
     }
+    // club_leader may only update their own club
+    if (!(0, ownership_service_1.isAdmin)(user) && !(0, ownership_service_1.leaderOwnsClub)(user.id, id)) {
+        res.status(403).json({ error: 'You do not have permission to update this club' });
+        return;
+    }
+    // Only admin can change club leadership
+    if (!(0, ownership_service_1.isAdmin)(user) && 'leader_id' in req.body) {
+        res.status(403).json({ error: 'Only admins can change club leadership' });
+        return;
+    }
     const club = club_model_1.ClubModel.update(id, req.body);
-    (0, audit_service_1.logAction)({ actorId: req.user.id, action: 'update', entityType: 'club', entityId: id });
+    (0, audit_service_1.logAction)({ actorId: user.id, action: 'update', entityType: 'club', entityId: id });
     res.json(club);
 }
 function deleteClub(req, res) {

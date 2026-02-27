@@ -19,6 +19,8 @@ const signupLimiter = (0, express_rate_limit_1.default)({
     legacyHeaders: false,
     message: { error: 'Too many signup attempts. Please try again later.' },
 });
+// Deprecated: frontend now uses Keycloak-hosted registration directly.
+// Keep this endpoint temporarily for compatibility with legacy clients.
 router.post('/signup', signupLimiter, (0, validate_1.validate)([
     (0, express_validator_1.body)('email')
         .isEmail()
