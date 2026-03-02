@@ -13,6 +13,7 @@ export interface Event {
   capacity: number | null;
   status: 'draft' | 'submitted' | 'published' | 'rejected' | 'cancelled' | 'completed';
   rejection_notes: string | null;
+  members_only: number;
   created_by: number | null;
   created_at: string;
 }
@@ -63,8 +64,8 @@ export const EventModel = {
   create(data: Omit<Event, 'id' | 'created_at'>): Event {
     const result = db
       .prepare(
-        `INSERT INTO events (club_id, title, title_ar, description, description_ar, location, starts_at, ends_at, capacity, status, created_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO events (club_id, title, title_ar, description, description_ar, location, starts_at, ends_at, capacity, status, members_only, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         data.club_id,
@@ -77,6 +78,7 @@ export const EventModel = {
         data.ends_at,
         data.capacity,
         data.status,
+        data.members_only ?? 0,
         data.created_by
       );
     return EventModel.findById(result.lastInsertRowid as number)!;

@@ -3,6 +3,7 @@ import { AuthRequest } from '../middleware/auth';
 import { EventModel } from '../models/event.model';
 import { RegistrationModel } from '../models/registration.model';
 import { ClubModel } from '../models/club.model';
+import { MembershipModel } from '../models/membership.model';
 import { logAction } from '../services/audit.service';
 import { isAdmin, leaderOwnsClub, leaderOwnsEvent } from '../services/ownership.service';
 import { notify, notifyRole } from '../services/notifications.service';
@@ -214,6 +215,13 @@ export async function registerForEvent(req: AuthRequest, res: Response) {
   if (event.status !== 'published') {
     res.status(400).json({ error: 'Event is not open for registration' });
     return;
+  }
+  if (event.members_only) {
+    const membership = MembershipModel.findByClubAndUser(event.club_id, req.user!.id);
+    if (!membership || membership.status !== 'active') {
+      res.status(403).json({ error: 'This event is open to club members only.' });
+      return;
+    }
   }
   const existing = RegistrationModel.findByEventAndUser(eventId, req.user!.id);
   if (existing && existing.status !== 'cancelled') {

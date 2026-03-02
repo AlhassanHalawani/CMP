@@ -25,6 +25,14 @@ echo "Tag: ${TAG}"
 echo "Backend:  ${BACKEND_IMAGE}"
 echo "Frontend: ${FRONTEND_IMAGE}"
 
+echo "Ensuring ARM64 build support..."
+docker run --privileged --rm tonistiigi/binfmt --install arm64 >/dev/null 2>&1 || true
+if ! docker buildx inspect arm-builder >/dev/null 2>&1; then
+  docker buildx create --name arm-builder --driver docker-container
+fi
+docker buildx use arm-builder
+docker buildx inspect --bootstrap 2>&1 | grep -q "linux/arm64" || { echo "error: ARM64 platform not available" >&2; exit 1; }
+
 echo "$CR_PAT" | docker login ghcr.io -u "$GH_USER" --password-stdin
 
 echo "Building and pushing backend (linux/arm64)..."

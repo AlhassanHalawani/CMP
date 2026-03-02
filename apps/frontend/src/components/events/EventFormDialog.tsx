@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 
 type EventPayload = {
   club_id: number;
@@ -22,6 +23,7 @@ type EventPayload = {
   starts_at: string;
   ends_at: string;
   capacity: number | null;
+  members_only: number;
   status: 'draft' | 'submitted' | 'published' | 'rejected' | 'cancelled' | 'completed';
 };
 
@@ -94,6 +96,7 @@ export function EventFormDialog({
 }: EventFormDialogProps) {
   const { t } = useTranslation();
   const [values, setValues] = useState<EventFormValues>(emptyValues);
+  const [membersOnly, setMembersOnly] = useState(false);
   const [localError, setLocalError] = useState('');
 
   const populatedValues = useMemo<EventFormValues>(
@@ -115,9 +118,10 @@ export function EventFormDialog({
   useEffect(() => {
     if (open) {
       setValues(populatedValues);
+      setMembersOnly(!!initialValues?.members_only);
       setLocalError('');
     }
-  }, [open, populatedValues]);
+  }, [open, populatedValues, initialValues?.members_only]);
 
   const title = mode === 'create' ? t('events.createEvent') : `${t('common.edit')} ${t('nav.events')}`;
 
@@ -154,6 +158,7 @@ export function EventFormDialog({
       starts_at: values.starts_at,
       ends_at: values.ends_at,
       capacity: values.capacity.trim() ? Number(values.capacity) : null,
+      members_only: membersOnly ? 1 : 0,
       status: values.status,
     });
   };
@@ -227,6 +232,11 @@ export function EventFormDialog({
                 <SelectItem value="completed">completed</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Switch id="members-only" checked={membersOnly} onCheckedChange={setMembersOnly} />
+            <label htmlFor="members-only" className="text-sm font-medium cursor-pointer">Members only</label>
           </div>
 
           {(localError || errorMessage) && <p className="text-sm font-bold text-red-600">{localError || errorMessage}</p>}
