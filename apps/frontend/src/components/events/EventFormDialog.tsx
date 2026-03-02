@@ -22,7 +22,7 @@ type EventPayload = {
   starts_at: string;
   ends_at: string;
   capacity: number | null;
-  status: 'draft' | 'published' | 'cancelled' | 'completed';
+  status: 'draft' | 'submitted' | 'published' | 'rejected' | 'cancelled' | 'completed';
 };
 
 type EventFormValues = {

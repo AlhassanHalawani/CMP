@@ -12,5 +12,9 @@ router.patch('/:id', auth_1.authenticate, (0, roles_1.requireRole)('admin', 'clu
 router.delete('/:id', auth_1.authenticate, (0, roles_1.requireRole)('admin', 'club_leader'), events_controller_1.deleteEvent);
 router.post('/:id/register', auth_1.authenticate, events_controller_1.registerForEvent);
 router.post('/:id/cancel', auth_1.authenticate, events_controller_1.cancelRegistration);
+// Event approval workflow
+router.post('/:id/submit', auth_1.authenticate, (0, roles_1.requireRole)('club_leader'), events_controller_1.submitEvent);
+router.post('/:id/approve', auth_1.authenticate, (0, roles_1.requireRole)('admin'), events_controller_1.approveEvent);
+router.post('/:id/reject', auth_1.authenticate, (0, roles_1.requireRole)('admin'), events_controller_1.rejectEvent);
 exports.default = router;
 //# sourceMappingURL=events.routes.js.map

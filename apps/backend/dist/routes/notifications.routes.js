@@ -5,6 +5,9 @@ const auth_1 = require("../middleware/auth");
 const notifications_controller_1 = require("../controllers/notifications.controller");
 const router = (0, express_1.Router)();
 router.use(auth_1.authenticate);
+// Preference routes first to avoid /:id catching /preferences
+router.get('/preferences', notifications_controller_1.getPreferences);
+router.patch('/preferences', notifications_controller_1.updatePreference);
 router.get('/', notifications_controller_1.list);
 router.patch('/:id/read', notifications_controller_1.markRead);
 router.patch('/read-all', notifications_controller_1.markAllRead);

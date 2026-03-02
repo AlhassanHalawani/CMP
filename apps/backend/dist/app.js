@@ -18,6 +18,7 @@ const achievements_routes_1 = __importDefault(require("./routes/achievements.rou
 const kpi_routes_1 = __importDefault(require("./routes/kpi.routes"));
 const notifications_routes_1 = __importDefault(require("./routes/notifications.routes"));
 const admin_routes_1 = __importDefault(require("./routes/admin.routes"));
+const event_reminders_job_1 = require("./jobs/event-reminders.job");
 // ensure db is initialized on startup
 require("./config/database");
 const app = (0, express_1.default)();
@@ -41,6 +42,8 @@ app.use('/api/notifications', notifications_routes_1.default);
 app.use('/api/admin', admin_routes_1.default);
 // --- error handler (must be last) ---
 app.use(errorHandler_1.errorHandler);
+// --- background jobs ---
+(0, event_reminders_job_1.startEventReminderJob)();
 // --- start server ---
 app.listen(env_1.env.port, () => {
     logger_1.logger.info(`CMP backend running on port ${env_1.env.port} [${env_1.env.nodeEnv}]`);

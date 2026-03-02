@@ -5,17 +5,27 @@ exports.getEvent = getEvent;
 exports.createEvent = createEvent;
 exports.updateEvent = updateEvent;
 exports.deleteEvent = deleteEvent;
+exports.submitEvent = submitEvent;
+exports.approveEvent = approveEvent;
+exports.rejectEvent = rejectEvent;
 exports.registerForEvent = registerForEvent;
 exports.cancelRegistration = cancelRegistration;
 const event_model_1 = require("../models/event.model");
 const registration_model_1 = require("../models/registration.model");
+const club_model_1 = require("../models/club.model");
 const audit_service_1 = require("../services/audit.service");
 const ownership_service_1 = require("../services/ownership.service");
+const notifications_service_1 = require("../services/notifications.service");
 function listEvents(req, res) {
-    const status = req.query.status;
+    const authReq = req;
+    let status = req.query.status;
     const clubId = req.query.club_id ? parseInt(req.query.club_id) : undefined;
     const limit = parseInt(req.query.limit) || 50;
     const offset = parseInt(req.query.offset) || 0;
+    // Students (and unauthenticated callers) only see published events
+    if (!authReq.user || authReq.user.role === 'student') {
+        status = 'published';
+    }
     const events = event_model_1.EventModel.list({ status, clubId, limit, offset });
     const total = event_model_1.EventModel.count({ status, clubId });
     res.json({ data: events, total });
@@ -37,6 +47,8 @@ function createEvent(req, res) {
             res.status(403).json({ error: 'You can only create events in clubs you lead' });
             return;
         }
+        // Leaders always start in draft — strip any status from body
+        req.body.status = 'draft';
     }
     const data = { ...req.body, created_by: user.id };
     const event = event_model_1.EventModel.create(data);
@@ -64,6 +76,9 @@ function updateEvent(req, res) {
                 return;
             }
         }
+        // Leaders cannot change status through PATCH — use /submit endpoint
+        delete req.body.status;
+        delete req.body.rejection_notes;
     }
     const event = event_model_1.EventModel.update(id, req.body);
     (0, audit_service_1.logAction)({ actorId: user.id, action: 'update', entityType: 'event', entityId: id });
@@ -86,7 +101,88 @@ function deleteEvent(req, res) {
     (0, audit_service_1.logAction)({ actorId: user.id, action: 'delete', entityType: 'event', entityId: id });
     res.status(204).send();
 }
-function registerForEvent(req, res) {
+async function submitEvent(req, res) {
+    const id = parseInt(req.params.id);
+    const user = req.user;
+    const event = event_model_1.EventModel.findById(id);
+    if (!event) {
+        res.status(404).json({ error: 'Event not found' });
+        return;
+    }
+    if (!(0, ownership_service_1.leaderOwnsEvent)(user.id, id)) {
+        res.status(403).json({ error: 'You do not have permission to submit this event' });
+        return;
+    }
+    if (!['draft', 'rejected'].includes(event.status)) {
+        res.status(400).json({ error: 'Only draft or rejected events can be submitted for review' });
+        return;
+    }
+    const updated = event_model_1.EventModel.update(id, { status: 'submitted', rejection_notes: null });
+    (0, audit_service_1.logAction)({ actorId: user.id, action: 'submit_event', entityType: 'event', entityId: id });
+    await (0, notifications_service_1.notifyRole)('admin', {
+        eventType: 'event_submitted',
+        title: 'New Event Pending Approval',
+        body: `Event "${event.title}" has been submitted for review.`,
+        type: 'info',
+    });
+    res.json(updated);
+}
+async function approveEvent(req, res) {
+    const id = parseInt(req.params.id);
+    const event = event_model_1.EventModel.findById(id);
+    if (!event) {
+        res.status(404).json({ error: 'Event not found' });
+        return;
+    }
+    if (event.status !== 'submitted') {
+        res.status(400).json({ error: 'Only submitted events can be approved' });
+        return;
+    }
+    const updated = event_model_1.EventModel.update(id, { status: 'published', rejection_notes: null });
+    (0, audit_service_1.logAction)({ actorId: req.user.id, action: 'approve_event', entityType: 'event', entityId: id });
+    const club = club_model_1.ClubModel.findById(event.club_id);
+    if (club?.leader_id) {
+        await (0, notifications_service_1.notify)({
+            userId: club.leader_id,
+            eventType: 'event_approved',
+            title: 'Event Approved',
+            body: `Your event "${event.title}" has been approved and is now published.`,
+            type: 'success',
+        });
+    }
+    res.json(updated);
+}
+async function rejectEvent(req, res) {
+    const id = parseInt(req.params.id);
+    const { notes } = req.body;
+    if (!notes || typeof notes !== 'string' || !notes.trim()) {
+        res.status(400).json({ error: 'Rejection notes are required' });
+        return;
+    }
+    const event = event_model_1.EventModel.findById(id);
+    if (!event) {
+        res.status(404).json({ error: 'Event not found' });
+        return;
+    }
+    if (event.status !== 'submitted') {
+        res.status(400).json({ error: 'Only submitted events can be rejected' });
+        return;
+    }
+    const updated = event_model_1.EventModel.update(id, { status: 'rejected', rejection_notes: notes.trim() });
+    (0, audit_service_1.logAction)({ actorId: req.user.id, action: 'reject_event', entityType: 'event', entityId: id });
+    const club = club_model_1.ClubModel.findById(event.club_id);
+    if (club?.leader_id) {
+        await (0, notifications_service_1.notify)({
+            userId: club.leader_id,
+            eventType: 'event_rejected',
+            title: 'Event Rejected',
+            body: `Your event "${event.title}" was rejected. Notes: ${notes.trim()}`,
+            type: 'error',
+        });
+    }
+    res.json(updated);
+}
+async function registerForEvent(req, res) {
     const eventId = parseInt(req.params.id);
     const event = event_model_1.EventModel.findById(eventId);
     if (!event) {
@@ -110,6 +206,13 @@ function registerForEvent(req, res) {
         }
     }
     const registration = registration_model_1.RegistrationModel.create({ event_id: eventId, user_id: req.user.id });
+    await (0, notifications_service_1.notify)({
+        userId: req.user.id,
+        eventType: 'registration_confirmed',
+        title: 'Registration Confirmed',
+        body: `You are registered for "${event.title}" on ${event.starts_at}.`,
+        type: 'success',
+    });
     res.status(201).json(registration);
 }
 function cancelRegistration(req, res) {
