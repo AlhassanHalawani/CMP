@@ -14,6 +14,7 @@ import achievementsRouter from './routes/achievements.routes';
 import kpiRouter from './routes/kpi.routes';
 import notificationsRouter from './routes/notifications.routes';
 import adminRouter from './routes/admin.routes';
+import { startEventReminderJob } from './jobs/event-reminders.job';
 
 // ensure db is initialized on startup
 import './config/database';
@@ -43,6 +44,9 @@ app.use('/api/admin', adminRouter);
 
 // --- error handler (must be last) ---
 app.use(errorHandler);
+
+// --- background jobs ---
+startEventReminderJob();
 
 // --- start server ---
 app.listen(env.port, () => {

@@ -9,21 +9,42 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { clubsApi } from '@/api/clubs';
 import { eventsApi } from '@/api/events';
 import { attendanceApi } from '@/api/attendance';
 import { EventFormDialog } from '@/components/events/EventFormDialog';
 import { useAppToast } from '@/contexts/ToastContext';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+
+const STATUS_BADGE_CLASS: Record<string, string> = {
+  draft: 'bg-secondary-background text-foreground',
+  submitted: 'bg-blue-500 text-white',
+  published: 'bg-green-600 text-white',
+  rejected: 'bg-red-600 text-white',
+  cancelled: 'bg-secondary-background text-foreground',
+  completed: 'bg-secondary-background text-foreground',
+};
 
 export function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -36,6 +57,8 @@ export function EventDetailPage() {
   const eventId = parseInt(id!);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectNotes, setRejectNotes] = useState('');
   const [editError, setEditError] = useState('');
   const [deleteError, setDeleteError] = useState('');
   const [checkInToken, setCheckInToken] = useState('');
@@ -142,6 +165,52 @@ export function EventDetailPage() {
     },
   });
 
+  const submitMutation = useMutation({
+    mutationFn: () => eventsApi.submit(eventId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['events', eventId] });
+      showToast('Submitted', 'Event submitted for admin review.');
+    },
+    onError: (error: unknown) => {
+      const message = isAxiosError(error)
+        ? error.response?.data?.error || 'Failed to submit event.'
+        : 'Failed to submit event.';
+      showToast('Submit failed', message);
+    },
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: () => eventsApi.approve(eventId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['events', eventId] });
+      await queryClient.invalidateQueries({ queryKey: ['events'] });
+      showToast('Approved', 'Event is now published.');
+    },
+    onError: (error: unknown) => {
+      const message = isAxiosError(error)
+        ? error.response?.data?.error || 'Failed to approve event.'
+        : 'Failed to approve event.';
+      showToast('Approve failed', message);
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: () => eventsApi.reject(eventId, rejectNotes),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['events', eventId] });
+      await queryClient.invalidateQueries({ queryKey: ['events'] });
+      setRejectOpen(false);
+      setRejectNotes('');
+      showToast('Rejected', 'Event has been rejected.');
+    },
+    onError: (error: unknown) => {
+      const message = isAxiosError(error)
+        ? error.response?.data?.error || 'Failed to reject event.'
+        : 'Failed to reject event.';
+      showToast('Reject failed', message);
+    },
+  });
+
   if (isLoading) return <div className="flex justify-center p-12"><Spinner size="lg" /></div>;
   if (!event) return <p>{t('common.noData')}</p>;
 
@@ -151,8 +220,61 @@ export function EventDetailPage() {
 
       <div className="mb-4 flex items-center gap-3">
         <h1 className="text-3xl font-black">{language === 'ar' ? event.title_ar : event.title}</h1>
-        <Badge variant={event.status === 'published' ? 'secondary' : 'outline'}>{event.status}</Badge>
+        <Badge variant="outline" className={STATUS_BADGE_CLASS[event.status] ?? ''}>
+          {event.status}
+        </Badge>
       </div>
+
+      {/* Rejection notes shown to club leader */}
+      {event.status === 'rejected' && event.rejection_notes && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertTitle>Rejected</AlertTitle>
+          <AlertDescription>{event.rejection_notes}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Admin workflow actions for submitted events */}
+      {isAdmin && event.status === 'submitted' && (
+        <div className="mb-6 flex gap-3">
+          <Button
+            variant="default"
+            onClick={() => approveMutation.mutate()}
+            disabled={approveMutation.isPending}
+          >
+            {approveMutation.isPending ? t('common.loading') : 'Approve'}
+          </Button>
+          <Button variant="destructive" onClick={() => setRejectOpen(true)}>
+            Reject
+          </Button>
+        </div>
+      )}
+
+      {/* Club leader submit action for draft / rejected events */}
+      {isEventOwner && (event.status === 'draft' || event.status === 'rejected') && (
+        <div className="mb-6">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="default" disabled={submitMutation.isPending}>
+                {submitMutation.isPending ? t('common.loading') : 'Submit for Review'}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Submit event for review?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  An admin will review and approve or reject this event. Once submitted you cannot edit it until it is reviewed.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => submitMutation.mutate()}>
+                  Submit
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      )}
 
       {canManageEvent && (
         <div className="mb-6 flex gap-3">
@@ -182,12 +304,13 @@ export function EventDetailPage() {
         errorMessage={editError}
       />
 
+      {/* Delete confirmation dialog */}
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('common.delete')} {language === 'ar' ? event.title_ar : event.title}</DialogTitle>
-            <DialogDescription>This action cannot be undone.</DialogDescription>
           </DialogHeader>
+          <p className="text-sm">This action cannot be undone.</p>
           {deleteError && <p className="text-sm font-bold text-red-600">{deleteError}</p>}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteOpen(false)} disabled={deleteMutation.isPending}>
@@ -199,6 +322,36 @@ export function EventDetailPage() {
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending ? t('common.loading') : t('common.confirm')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject dialog — admin enters notes */}
+      <Dialog
+        open={rejectOpen}
+        onOpenChange={(open) => { setRejectOpen(open); if (!open) setRejectNotes(''); }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Event</DialogTitle>
+          </DialogHeader>
+          <Textarea
+            placeholder="Provide a reason for rejection..."
+            value={rejectNotes}
+            onChange={(e) => setRejectNotes(e.target.value)}
+            className="min-h-[120px]"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejectOpen(false)} disabled={rejectMutation.isPending}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => rejectMutation.mutate()}
+              disabled={!rejectNotes.trim() || rejectMutation.isPending}
+            >
+              {rejectMutation.isPending ? t('common.loading') : 'Confirm Reject'}
             </Button>
           </DialogFooter>
         </DialogContent>

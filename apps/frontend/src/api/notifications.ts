@@ -10,9 +10,19 @@ export interface Notification {
   created_at: string;
 }
 
+export interface NotificationPreference {
+  event_type: string;
+  channel: 'in_app' | 'email';
+  enabled: number;
+}
+
 export const notificationsApi = {
   list: (params?: { limit?: number; offset?: number }) =>
     api.get<{ data: Notification[]; unread: number }>('/notifications', { params }).then((r) => r.data),
   markRead: (id: number) => api.patch(`/notifications/${id}/read`),
   markAllRead: () => api.patch('/notifications/read-all'),
+  getPreferences: () =>
+    api.get<NotificationPreference[]>('/notifications/preferences').then((r) => r.data),
+  updatePreference: (data: { event_type: string; channel: 'in_app' | 'email'; enabled: boolean }) =>
+    api.patch('/notifications/preferences', data),
 };

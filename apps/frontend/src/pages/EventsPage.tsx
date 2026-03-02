@@ -33,6 +33,12 @@ export function EventsPage() {
     queryFn: () => eventsApi.list({ limit: 50 }),
   });
 
+  const { data: submittedEvents } = useQuery({
+    queryKey: ['events', 'submitted'],
+    queryFn: () => eventsApi.list({ status: 'submitted', limit: 50 }),
+    enabled: isAdmin,
+  });
+
   const { data: clubsData } = useQuery({
     queryKey: ['clubs', 'for-events-form'],
     queryFn: () => clubsApi.list({ limit: 200 }),
@@ -102,6 +108,11 @@ export function EventsPage() {
         <TabsList>
           <TabsTrigger value="upcoming">{t('events.upcoming')} ({upcoming.length})</TabsTrigger>
           <TabsTrigger value="past">{t('events.past')} ({past.length})</TabsTrigger>
+          {isAdmin && (
+            <TabsTrigger value="pending">
+              Pending Approval ({submittedEvents?.data.length ?? 0})
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="upcoming">
@@ -110,6 +121,11 @@ export function EventsPage() {
         <TabsContent value="past">
           <EventGrid events={past} language={language} />
         </TabsContent>
+        {isAdmin && (
+          <TabsContent value="pending">
+            <EventGrid events={submittedEvents?.data ?? []} language={language} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

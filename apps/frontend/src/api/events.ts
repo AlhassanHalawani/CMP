@@ -11,7 +11,8 @@ export interface Event {
   starts_at: string;
   ends_at: string;
   capacity: number | null;
-  status: 'draft' | 'published' | 'cancelled' | 'completed';
+  status: 'draft' | 'submitted' | 'published' | 'rejected' | 'cancelled' | 'completed';
+  rejection_notes: string | null;
   created_by: number | null;
   created_at: string;
 }
@@ -25,4 +26,8 @@ export const eventsApi = {
   delete: (id: number) => api.delete(`/events/${id}`),
   register: (id: number) => api.post(`/events/${id}/register`).then((r) => r.data),
   cancelRegistration: (id: number) => api.post(`/events/${id}/cancel`).then((r) => r.data),
+  submit: (id: number) => api.post<Event>(`/events/${id}/submit`).then((r) => r.data),
+  approve: (id: number) => api.post<Event>(`/events/${id}/approve`).then((r) => r.data),
+  reject: (id: number, notes: string) =>
+    api.post<Event>(`/events/${id}/reject`, { notes }).then((r) => r.data),
 };

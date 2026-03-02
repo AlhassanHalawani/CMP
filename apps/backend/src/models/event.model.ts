@@ -11,7 +11,8 @@ export interface Event {
   starts_at: string;
   ends_at: string;
   capacity: number | null;
-  status: 'draft' | 'published' | 'cancelled' | 'completed';
+  status: 'draft' | 'submitted' | 'published' | 'rejected' | 'cancelled' | 'completed';
+  rejection_notes: string | null;
   created_by: number | null;
   created_at: string;
 }
