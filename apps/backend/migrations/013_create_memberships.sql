@@ -11,5 +11,3 @@ CREATE TABLE memberships (
 CREATE INDEX idx_memberships_club   ON memberships(club_id);
 CREATE INDEX idx_memberships_user   ON memberships(user_id);
 CREATE INDEX idx_memberships_status ON memberships(status);
-
-ALTER TABLE events ADD COLUMN members_only INTEGER NOT NULL DEFAULT 0;
