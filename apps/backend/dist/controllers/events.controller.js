@@ -13,6 +13,7 @@ exports.cancelRegistration = cancelRegistration;
 const event_model_1 = require("../models/event.model");
 const registration_model_1 = require("../models/registration.model");
 const club_model_1 = require("../models/club.model");
+const membership_model_1 = require("../models/membership.model");
 const audit_service_1 = require("../services/audit.service");
 const ownership_service_1 = require("../services/ownership.service");
 const notifications_service_1 = require("../services/notifications.service");
@@ -192,6 +193,13 @@ async function registerForEvent(req, res) {
     if (event.status !== 'published') {
         res.status(400).json({ error: 'Event is not open for registration' });
         return;
+    }
+    if (event.members_only) {
+        const membership = membership_model_1.MembershipModel.findByClubAndUser(event.club_id, req.user.id);
+        if (!membership || membership.status !== 'active') {
+            res.status(403).json({ error: 'This event is open to club members only.' });
+            return;
+        }
     }
     const existing = registration_model_1.RegistrationModel.findByEventAndUser(eventId, req.user.id);
     if (existing && existing.status !== 'cancelled') {

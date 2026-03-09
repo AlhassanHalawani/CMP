@@ -13,6 +13,7 @@ export interface Event {
   capacity: number | null;
   status: 'draft' | 'submitted' | 'published' | 'rejected' | 'cancelled' | 'completed';
   rejection_notes: string | null;
+  members_only: number;
   created_by: number | null;
   created_at: string;
 }
