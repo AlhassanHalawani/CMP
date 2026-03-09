@@ -45,14 +45,25 @@ for (const file of files) {
     continue;
   }
 
-  const run = db.transaction(() => {
-    db.exec(sql);
-    db.prepare('INSERT INTO _migrations (name) VALUES (?)').run(file);
-  });
-
-  run();
+  try {
+    const run = db.transaction(() => {
+      db.exec(sql);
+      db.prepare('INSERT INTO _migrations (name) VALUES (?)').run(file);
+    });
+    run();
+    console.log(`  applied: ${file}`);
+  } catch (err: any) {
+    // Idempotency: if a column already exists (e.g. from a previously-buggy
+    // migration that ran the same ALTER TABLE), record the migration as done
+    // and continue rather than crashing.
+    if (err?.message?.includes('duplicate column name')) {
+      db.prepare('INSERT INTO _migrations (name) VALUES (?)').run(file);
+      console.warn(`  applied (column already existed): ${file}`);
+    } else {
+      throw err;
+    }
+  }
   count++;
-  console.log(`  applied: ${file}`);
 }
 
 console.log(`\nMigrations complete. ${count} applied, ${files.length - count} skipped.`);
