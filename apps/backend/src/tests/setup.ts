@@ -42,6 +42,7 @@ export function createTestDb() {
       capacity INTEGER,
       status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'submitted', 'published', 'rejected', 'cancelled', 'completed')),
       rejection_notes TEXT,
+      members_only INTEGER NOT NULL DEFAULT 0,
       created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
