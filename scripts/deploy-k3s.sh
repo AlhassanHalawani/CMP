@@ -32,6 +32,13 @@ kubectl -n "$NAMESPACE" create secret docker-registry ghcr-creds \
   --docker-username="$GH_USER" \
   --docker-password="$CR_PAT"
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+echo "Applying deployment manifests..."
+kubectl apply -f "$REPO_ROOT/infra/k8s/backend/deployment.yaml"
+kubectl apply -f "$REPO_ROOT/infra/k8s/frontend/deployment.yaml"
+
 echo "Updating deployment images..."
 kubectl -n "$NAMESPACE" set image deploy/cmp-backend \
   backend="$BACKEND_IMAGE" \
