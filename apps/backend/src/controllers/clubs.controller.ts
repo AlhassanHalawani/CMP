@@ -4,6 +4,7 @@ import { Request, Response } from 'express';
 import multer from 'multer';
 import { AuthRequest } from '../middleware/auth';
 import { ClubModel } from '../models/club.model';
+import { UserModel } from '../models/user.model';
 import { db } from '../config/database';
 import { logAction } from '../services/audit.service';
 import { isAdmin, leaderOwnsClub } from '../services/ownership.service';
@@ -122,6 +123,64 @@ export function getClubStats(req: Request, res: Response) {
     .get(clubId) as { active_members: number };
 
   res.json({ published_events, total_attendance, achievements_awarded, active_members });
+}
+
+/**
+ * POST /api/clubs/:id/assign-leader  (admin only)
+ * Body: { user_id: number }
+ * Atomically:
+ *   1. Sets club.leader_id = user_id
+ *   2. Promotes the new user to club_leader role
+ *   3. Demotes the previous leader back to student if they no longer lead any club
+ */
+export function assignClubLeader(req: AuthRequest, res: Response) {
+  const clubId = parseInt(req.params.id);
+  const newLeaderId: number | undefined = req.body.user_id;
+
+  if (!newLeaderId) {
+    res.status(400).json({ error: 'user_id is required' });
+    return;
+  }
+
+  const club = ClubModel.findById(clubId);
+  if (!club) {
+    res.status(404).json({ error: 'Club not found' });
+    return;
+  }
+
+  const newLeader = UserModel.findById(newLeaderId);
+  if (!newLeader) {
+    res.status(404).json({ error: 'User not found' });
+    return;
+  }
+
+  const previousLeaderId = club.leader_id;
+
+  db.transaction(() => {
+    // Assign the leader
+    ClubModel.update(clubId, { leader_id: newLeaderId });
+    // Promote new leader
+    UserModel.updateRole(newLeaderId, 'club_leader');
+    // Demote previous leader if they no longer lead any other club
+    if (previousLeaderId && previousLeaderId !== newLeaderId) {
+      const stillLeads = (db.prepare(
+        'SELECT COUNT(*) as cnt FROM clubs WHERE leader_id = ? AND id != ?'
+      ).get(previousLeaderId, clubId) as { cnt: number }).cnt;
+      if (stillLeads === 0) {
+        UserModel.updateRole(previousLeaderId, 'student');
+      }
+    }
+  })();
+
+  logAction({
+    actorId: req.user!.id,
+    action: 'assign_club_leader',
+    entityType: 'club',
+    entityId: clubId,
+    payload: { new_leader_id: newLeaderId, previous_leader_id: previousLeaderId },
+  });
+
+  res.json(ClubModel.findById(clubId));
 }
 
 export function uploadLogo(req: AuthRequest, res: Response) {

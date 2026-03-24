@@ -10,11 +10,13 @@ exports.createClub = createClub;
 exports.updateClub = updateClub;
 exports.deleteClub = deleteClub;
 exports.getClubStats = getClubStats;
+exports.assignClubLeader = assignClubLeader;
 exports.uploadLogo = uploadLogo;
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const multer_1 = __importDefault(require("multer"));
 const club_model_1 = require("../models/club.model");
+const user_model_1 = require("../models/user.model");
 const database_1 = require("../config/database");
 const audit_service_1 = require("../services/audit.service");
 const ownership_service_1 = require("../services/ownership.service");
@@ -112,6 +114,54 @@ function getClubStats(req, res) {
         .prepare(`SELECT COUNT(*) AS active_members FROM memberships WHERE club_id = ? AND status = 'active'`)
         .get(clubId);
     res.json({ published_events, total_attendance, achievements_awarded, active_members });
+}
+/**
+ * POST /api/clubs/:id/assign-leader  (admin only)
+ * Body: { user_id: number }
+ * Atomically:
+ *   1. Sets club.leader_id = user_id
+ *   2. Promotes the new user to club_leader role
+ *   3. Demotes the previous leader back to student if they no longer lead any club
+ */
+function assignClubLeader(req, res) {
+    const clubId = parseInt(req.params.id);
+    const newLeaderId = req.body.user_id;
+    if (!newLeaderId) {
+        res.status(400).json({ error: 'user_id is required' });
+        return;
+    }
+    const club = club_model_1.ClubModel.findById(clubId);
+    if (!club) {
+        res.status(404).json({ error: 'Club not found' });
+        return;
+    }
+    const newLeader = user_model_1.UserModel.findById(newLeaderId);
+    if (!newLeader) {
+        res.status(404).json({ error: 'User not found' });
+        return;
+    }
+    const previousLeaderId = club.leader_id;
+    database_1.db.transaction(() => {
+        // Assign the leader
+        club_model_1.ClubModel.update(clubId, { leader_id: newLeaderId });
+        // Promote new leader
+        user_model_1.UserModel.updateRole(newLeaderId, 'club_leader');
+        // Demote previous leader if they no longer lead any other club
+        if (previousLeaderId && previousLeaderId !== newLeaderId) {
+            const stillLeads = database_1.db.prepare('SELECT COUNT(*) as cnt FROM clubs WHERE leader_id = ? AND id != ?').get(previousLeaderId, clubId).cnt;
+            if (stillLeads === 0) {
+                user_model_1.UserModel.updateRole(previousLeaderId, 'student');
+            }
+        }
+    })();
+    (0, audit_service_1.logAction)({
+        actorId: req.user.id,
+        action: 'assign_club_leader',
+        entityType: 'club',
+        entityId: clubId,
+        payload: { new_leader_id: newLeaderId, previous_leader_id: previousLeaderId },
+    });
+    res.json(club_model_1.ClubModel.findById(clubId));
 }
 function uploadLogo(req, res) {
     const id = parseInt(req.params.id);

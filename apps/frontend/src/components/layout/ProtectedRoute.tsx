@@ -2,6 +2,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Spinner } from '@/components/ui/spinner';
 import { PageLayout } from './PageLayout';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -27,5 +28,9 @@ export function ProtectedRoute({ children, roles }: ProtectedRouteProps) {
     return <Navigate to="/" replace />;
   }
 
-  return <PageLayout>{children}</PageLayout>;
+  return (
+    <PageLayout>
+      <ErrorBoundary>{children}</ErrorBoundary>
+    </PageLayout>
+  );
 }

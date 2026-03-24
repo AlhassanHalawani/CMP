@@ -14,6 +14,7 @@ import achievementsRouter from './routes/achievements.routes';
 import kpiRouter from './routes/kpi.routes';
 import notificationsRouter from './routes/notifications.routes';
 import adminRouter from './routes/admin.routes';
+import leaderRequestsRouter from './routes/leader-requests.routes';
 import { startEventReminderJob } from './jobs/event-reminders.job';
 
 // ensure db is initialized on startup
@@ -44,6 +45,7 @@ app.use('/api/achievements', achievementsRouter);
 app.use('/api/kpi', kpiRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/leader-requests', leaderRequestsRouter);
 
 // --- error handler (must be last) ---
 app.use(errorHandler);

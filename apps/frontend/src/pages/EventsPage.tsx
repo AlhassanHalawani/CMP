@@ -28,6 +28,7 @@ import { eventsApi, type Event } from '@/api/events';
 import { EventFormDialog } from '@/components/events/EventFormDialog';
 import { useAppToast } from '@/contexts/ToastContext';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { PageError } from '@/components/ErrorBoundary';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -81,7 +82,7 @@ export function EventsPage() {
     ends_before: dateRange?.to?.toISOString(),
   };
 
-  const { data: allEvents, isLoading } = useQuery({
+  const { data: allEvents, isLoading, isError, error } = useQuery({
     queryKey: ['events', queryParams],
     queryFn: () => eventsApi.list(queryParams),
   });
@@ -123,6 +124,7 @@ export function EventsPage() {
   });
 
   if (isLoading) return <div className="flex justify-center p-12"><Spinner size="lg" /></div>;
+  if (isError) return <PageError message={(error as any)?.response?.data?.error ?? (error as Error)?.message} />;
 
   // Clubs available for the create form
   const allClubs = clubsData?.data ?? [];

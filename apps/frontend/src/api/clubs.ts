@@ -31,4 +31,6 @@ export const clubsApi = {
     fd.append('logo', file);
     return api.post<Club>(`/clubs/${id}/logo`, fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then((r) => r.data);
   },
+  assignLeader: (clubId: number, userId: number) =>
+    api.post<Club>(`/clubs/${clubId}/assign-leader`, { user_id: userId }).then((r) => r.data),
 };
