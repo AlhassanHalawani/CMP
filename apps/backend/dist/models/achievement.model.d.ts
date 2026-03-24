@@ -14,5 +14,9 @@ export declare const AchievementModel: {
     findByUser(userId: number): Achievement[];
     findByClub(clubId: number): Achievement[];
     create(data: Omit<Achievement, "id" | "awarded_at">): Achievement;
+    findByUserFiltered(userId: number, opts: {
+        semesterId?: number;
+        clubId?: number;
+    }): Achievement[];
     delete(id: number): boolean;
 };

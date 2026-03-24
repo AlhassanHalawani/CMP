@@ -39,5 +39,20 @@ exports.AttendanceModel = {
     countByEvent(eventId) {
         return database_1.db.prepare('SELECT COUNT(*) as count FROM attendance WHERE event_id = ?').get(eventId).count;
     },
+    findByUserWithEvents(userId, opts) {
+        let sql = `
+      SELECT e.title AS event_title, e.starts_at AS event_date, a.checked_in_at, a.method
+      FROM attendance a
+      JOIN events e ON e.id = a.event_id
+      WHERE a.user_id = ?
+    `;
+        const params = [userId];
+        if (opts.semesterStartsAt && opts.semesterEndsAt) {
+            sql += ' AND e.starts_at >= ? AND e.starts_at <= ?';
+            params.push(opts.semesterStartsAt, opts.semesterEndsAt);
+        }
+        sql += ' ORDER BY e.starts_at DESC';
+        return database_1.db.prepare(sql).all(...params);
+    },
 };
 //# sourceMappingURL=attendance.model.js.map

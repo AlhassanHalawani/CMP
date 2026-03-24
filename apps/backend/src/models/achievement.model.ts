@@ -46,6 +46,15 @@ export const AchievementModel = {
     return AchievementModel.findById(result.lastInsertRowid as number)!;
   },
 
+  findByUserFiltered(userId: number, opts: { semesterId?: number; clubId?: number }): Achievement[] {
+    let sql = 'SELECT * FROM achievements WHERE user_id = ?';
+    const params: any[] = [userId];
+    if (opts.semesterId) { sql += ' AND semester_id = ?'; params.push(opts.semesterId); }
+    if (opts.clubId)     { sql += ' AND club_id = ?';    params.push(opts.clubId); }
+    sql += ' ORDER BY awarded_at DESC';
+    return db.prepare(sql).all(...params) as Achievement[];
+  },
+
   delete(id: number): boolean {
     const result = db.prepare('DELETE FROM achievements WHERE id = ?').run(id);
     return result.changes > 0;

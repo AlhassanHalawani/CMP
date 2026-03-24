@@ -21,4 +21,13 @@ export declare const AttendanceModel: {
         token: string;
     } | null;
     countByEvent(eventId: number): number;
+    findByUserWithEvents(userId: number, opts: {
+        semesterStartsAt?: string;
+        semesterEndsAt?: string;
+    }): Array<{
+        event_title: string;
+        event_date: string;
+        checked_in_at: string;
+        method: "qr" | "manual";
+    }>;
 };

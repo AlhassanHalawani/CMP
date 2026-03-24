@@ -105,7 +105,12 @@
   },
   "achievements": {
     "title": "Achievements",
-    "downloadReport": "Download Report"
+    "reportTitle": "Download Report",
+    "downloadReport": "Download PDF",
+    "semester": "Semester",
+    "club": "Club",
+    "allTerms": "All Terms",
+    "allClubs": "All Clubs"
   },
   "kpi": {
     "title": "KPI Dashboard",

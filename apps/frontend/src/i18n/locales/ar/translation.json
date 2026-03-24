@@ -105,7 +105,12 @@
   },
   "achievements": {
     "title": "الإنجازات",
-    "downloadReport": "تحميل التقرير"
+    "reportTitle": "تحميل التقرير",
+    "downloadReport": "تحميل PDF",
+    "semester": "الفصل الدراسي",
+    "club": "النادي",
+    "allTerms": "جميع الفصول",
+    "allClubs": "جميع الأندية"
   },
   "kpi": {
     "title": "لوحة مؤشرات الأداء",

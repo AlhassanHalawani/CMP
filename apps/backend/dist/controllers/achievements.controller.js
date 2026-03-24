@@ -58,7 +58,10 @@ function remove(req, res) {
 }
 async function downloadReport(req, res) {
     const userId = parseInt(req.params.userId);
-    const pdfBuffer = await (0, pdf_service_1.generateAchievementReport)(userId);
+    const semesterId = req.query.semester_id ? parseInt(req.query.semester_id) : undefined;
+    const clubId = req.query.club_id ? parseInt(req.query.club_id) : undefined;
+    const reportDate = typeof req.query.report_date === 'string' ? req.query.report_date : undefined;
+    const pdfBuffer = await (0, pdf_service_1.generateAchievementReport)(userId, { semesterId, clubId, reportDate });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=achievements-${userId}.pdf`);
     res.send(pdfBuffer);

@@ -3,8 +3,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.recordMetric = recordMetric;
 exports.getClubSummary = getClubSummary;
 exports.getLeaderboard = getLeaderboard;
+exports.computeKpi = computeKpi;
 const kpi_model_1 = require("../models/kpi.model");
 const ownership_service_1 = require("../services/ownership.service");
+const pdf_service_1 = require("../services/pdf.service");
+const database_1 = require("../config/database");
 function recordMetric(req, res) {
     const user = req.user;
     const clubId = req.body.club_id;
@@ -24,9 +27,55 @@ function getClubSummary(req, res) {
     const summary = kpi_model_1.KpiModel.getClubSummary(clubId, semesterId);
     res.json({ data: summary });
 }
-function getLeaderboard(req, res) {
+async function getLeaderboard(req, res) {
     const semesterId = req.query.semester_id ? parseInt(req.query.semester_id) : undefined;
-    const leaderboard = kpi_model_1.KpiModel.getLeaderboard(semesterId);
+    const department = req.query.department;
+    const format = req.query.format;
+    const leaderboard = kpi_model_1.KpiModel.getLeaderboard(semesterId, department);
+    if (format === 'csv') {
+        const rows = [['Rank', 'Club', 'Department', 'Attendance', 'Achievements', 'Members', 'Total Score']];
+        for (const club of leaderboard) {
+            rows.push([
+                String(club.rank),
+                club.club_name,
+                club.department ?? '',
+                String(club.attendance_count),
+                String(club.achievement_count),
+                String(club.member_count),
+                String(club.total_score),
+            ]);
+        }
+        const csv = rows.map((r) => r.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\n');
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename=kpi-leaderboard.csv');
+        return res.send(csv);
+    }
+    if (format === 'pdf') {
+        let semesterName = 'All Time';
+        if (semesterId) {
+            const s = database_1.db.prepare('SELECT name FROM semesters WHERE id = ?').get(semesterId);
+            if (s)
+                semesterName = s.name;
+        }
+        const pdfBuffer = await (0, pdf_service_1.generateKpiReport)(leaderboard, semesterName);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'attachment; filename=kpi-leaderboard.pdf');
+        return res.send(pdfBuffer);
+    }
     res.json({ data: leaderboard });
+}
+function computeKpi(req, res) {
+    const semesterId = parseInt(req.body.semester_id);
+    if (!semesterId || isNaN(semesterId)) {
+        res.status(400).json({ error: 'semester_id is required' });
+        return;
+    }
+    try {
+        const clubsUpdated = kpi_model_1.KpiModel.computeKpi(semesterId);
+        res.json({ computed: true, semester_id: semesterId, clubs_updated: clubsUpdated });
+    }
+    catch (err) {
+        res.status(404).json({ error: err.message });
+    }
 }
 //# sourceMappingURL=kpi.controller.js.map

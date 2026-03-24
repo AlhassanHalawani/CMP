@@ -22,6 +22,20 @@ exports.AchievementModel = {
             .run(data.user_id, data.club_id, data.title, data.title_ar, data.description, data.description_ar, data.semester_id);
         return exports.AchievementModel.findById(result.lastInsertRowid);
     },
+    findByUserFiltered(userId, opts) {
+        let sql = 'SELECT * FROM achievements WHERE user_id = ?';
+        const params = [userId];
+        if (opts.semesterId) {
+            sql += ' AND semester_id = ?';
+            params.push(opts.semesterId);
+        }
+        if (opts.clubId) {
+            sql += ' AND club_id = ?';
+            params.push(opts.clubId);
+        }
+        sql += ' ORDER BY awarded_at DESC';
+        return database_1.db.prepare(sql).all(...params);
+    },
     delete(id) {
         const result = database_1.db.prepare('DELETE FROM achievements WHERE id = ?').run(id);
         return result.changes > 0;
