@@ -1,8 +1,33 @@
+import path from 'path';
+import fs from 'fs';
 import { Request, Response } from 'express';
+import multer from 'multer';
 import { AuthRequest } from '../middleware/auth';
 import { ClubModel } from '../models/club.model';
+import { db } from '../config/database';
 import { logAction } from '../services/audit.service';
 import { isAdmin, leaderOwnsClub } from '../services/ownership.service';
+
+const uploadsDir = path.resolve('./data/uploads/logos');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: uploadsDir,
+  filename: (_req, file, cb) => cb(null, `club-${Date.now()}${path.extname(file.originalname)}`),
+});
+
+export const logoUpload = multer({
+  storage,
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)) {
+      return cb(new Error('Only JPEG, PNG, and WebP images are allowed'));
+    }
+    cb(null, true);
+  },
+});
 
 export function listClubs(req: Request, res: Response) {
   const limit = parseInt(req.query.limit as string) || 50;
@@ -64,4 +89,63 @@ export function deleteClub(req: AuthRequest, res: Response) {
   }
   logAction({ actorId: req.user!.id, action: 'delete', entityType: 'club', entityId: id });
   res.status(204).send();
+}
+
+export function getClubStats(req: Request, res: Response) {
+  const clubId = parseInt(req.params.id);
+
+  const club = ClubModel.findById(clubId);
+  if (!club) {
+    res.status(404).json({ error: 'Club not found' });
+    return;
+  }
+
+  const { published_events } = db
+    .prepare(`SELECT COUNT(*) AS published_events FROM events WHERE club_id = ? AND status = 'published'`)
+    .get(clubId) as { published_events: number };
+
+  const { total_attendance } = db
+    .prepare(
+      `SELECT COUNT(a.id) AS total_attendance
+       FROM attendance a
+       JOIN events e ON e.id = a.event_id
+       WHERE e.club_id = ? AND e.status = 'published'`
+    )
+    .get(clubId) as { total_attendance: number };
+
+  const { achievements_awarded } = db
+    .prepare(`SELECT COUNT(*) AS achievements_awarded FROM achievements WHERE club_id = ?`)
+    .get(clubId) as { achievements_awarded: number };
+
+  const { active_members } = db
+    .prepare(`SELECT COUNT(*) AS active_members FROM memberships WHERE club_id = ? AND status = 'active'`)
+    .get(clubId) as { active_members: number };
+
+  res.json({ published_events, total_attendance, achievements_awarded, active_members });
+}
+
+export function uploadLogo(req: AuthRequest, res: Response) {
+  const id = parseInt(req.params.id);
+  const user = req.user!;
+
+  const existing = ClubModel.findById(id);
+  if (!existing) {
+    res.status(404).json({ error: 'Club not found' });
+    return;
+  }
+
+  if (!isAdmin(user) && !leaderOwnsClub(user.id, id)) {
+    res.status(403).json({ error: 'You do not have permission to update this club' });
+    return;
+  }
+
+  if (!req.file) {
+    res.status(400).json({ error: 'No file uploaded' });
+    return;
+  }
+
+  const logo_url = `/uploads/logos/${req.file.filename}`;
+  const club = ClubModel.update(id, { logo_url });
+  logAction({ actorId: user.id, action: 'update', entityType: 'club', entityId: id });
+  res.json(club);
 }

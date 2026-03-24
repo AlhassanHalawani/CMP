@@ -1,7 +1,11 @@
 import { Request, Response } from 'express';
+import multer from 'multer';
 import { AuthRequest } from '../middleware/auth';
+export declare const logoUpload: multer.Multer;
 export declare function listClubs(req: Request, res: Response): void;
 export declare function getClub(req: Request, res: Response): void;
 export declare function createClub(req: AuthRequest, res: Response): void;
 export declare function updateClub(req: AuthRequest, res: Response): void;
 export declare function deleteClub(req: AuthRequest, res: Response): void;
+export declare function getClubStats(req: Request, res: Response): void;
+export declare function uploadLogo(req: AuthRequest, res: Response): void;

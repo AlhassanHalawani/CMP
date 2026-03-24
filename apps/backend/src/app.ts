@@ -26,6 +26,9 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json());
 
+// --- static uploads ---
+app.use('/uploads', express.static('./data/uploads'));
+
 // --- health check ---
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

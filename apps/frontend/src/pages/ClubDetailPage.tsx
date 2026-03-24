@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -31,6 +31,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Spinner } from '@/components/ui/spinner';
+import { ImageCard } from '@/components/ui/image-card';
 import { clubsApi } from '@/api/clubs';
 import { eventsApi } from '@/api/events';
 import { membershipsApi, type MembershipWithUser } from '@/api/memberships';
@@ -152,6 +153,7 @@ export function ClubDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editError, setEditError] = useState('');
   const [deleteError, setDeleteError] = useState('');
+  const logoInputRef = useRef<HTMLInputElement>(null);
   const { currentUser } = useCurrentUser();
   const isAdmin = hasRole('admin');
   const isLeader = hasRole('club_leader');
@@ -166,6 +168,16 @@ export function ClubDetailPage() {
     queryFn: () => eventsApi.list({ club_id: clubId }),
   });
 
+  const { data: stats } = useQuery({
+    queryKey: ['clubs', clubId, 'stats'],
+    queryFn: () => clubsApi.getStats(clubId),
+  });
+
+  const { data: recentEventsData } = useQuery({
+    queryKey: ['events', 'club', clubId, 'recent'],
+    queryFn: () => eventsApi.list({ club_id: clubId, status: 'published', limit: 3 }),
+  });
+
   const { data: myMembership, isLoading: membershipLoading } = useQuery({
     queryKey: ['clubs', clubId, 'membership', 'me'],
     queryFn: () => membershipsApi.getMyMembership(clubId),
@@ -176,6 +188,15 @@ export function ClubDetailPage() {
   const canEdit = isAdmin || isClubOwner;
   const canManageMembers = isAdmin || isClubOwner;
   const showJoinLeave = !isAdmin && !isClubOwner;
+
+  const logoUploadMutation = useMutation({
+    mutationFn: (file: File) => clubsApi.uploadLogo(clubId, file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clubs', clubId] });
+      showToast('Logo updated', 'Club logo has been saved.');
+    },
+    onError: () => showToast('Error', 'Failed to upload logo.'),
+  });
 
   const joinMutation = useMutation({
     mutationFn: () => membershipsApi.join(clubId),
@@ -233,13 +254,60 @@ export function ClubDetailPage() {
 
   const memberStatus = myMembership?.status;
   const clubName = language === 'ar' ? club.name_ar : club.name;
+  const initials = club.name
+    .split(' ')
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase();
+
+  const recentEvents = recentEventsData?.data ?? [];
 
   return (
     <div>
       <Link to="/clubs" className="text-sm font-bold underline mb-4 inline-block">{t('common.back')}</Link>
-      <h1 className="mb-2 text-3xl font-black">{clubName}</h1>
-      <p className="mb-6 text-lg">{language === 'ar' ? club.description_ar : club.description}</p>
 
+      {/* Club header */}
+      <div className="flex items-start gap-4 mb-6">
+        <div className="relative group">
+          <Avatar className="size-20">
+            <AvatarImage src={club.logo_url ?? undefined} alt={clubName} />
+            <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
+          </Avatar>
+          {canEdit && (
+            <>
+              <button
+                className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                onClick={() => logoInputRef.current?.click()}
+                disabled={logoUploadMutation.isPending}
+                title="Change logo"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="size-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </button>
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) logoUploadMutation.mutate(file);
+                  e.target.value = '';
+                }}
+              />
+            </>
+          )}
+        </div>
+        <div className="flex-1">
+          <h1 className="mb-1 text-3xl font-black">{clubName}</h1>
+          <p className="text-lg">{language === 'ar' ? club.description_ar : club.description}</p>
+        </div>
+      </div>
+
+      {/* Action buttons */}
       <div className="mb-6 flex flex-wrap gap-3 items-center">
         {canEdit && (
           <>
@@ -300,6 +368,61 @@ export function ClubDetailPage() {
           </>
         )}
       </div>
+
+      {/* Verified stats */}
+      {stats && (
+        <div className="grid grid-cols-2 gap-3 mb-8 md:grid-cols-4">
+          <Card>
+            <CardHeader className="pb-1">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Published Events</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-black">{stats.published_events}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-1">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Attendance</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-black">{stats.total_attendance}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-1">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Achievements</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-black">{stats.achievements_awarded}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-1">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Active Members</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-black">{stats.active_members}</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Recent events showcase */}
+      {recentEvents.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-xl font-bold mb-3">Recent Events</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+            {recentEvents.map((event) => (
+              <Link key={event.id} to={`/events/${event.id}`}>
+                <ImageCard
+                  imageUrl={club.logo_url ?? `https://placehold.co/400x300?text=${encodeURIComponent(club.name)}`}
+                  caption={language === 'ar' ? event.title_ar : event.title}
+                />
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       <ClubFormDialog
         open={editOpen}
