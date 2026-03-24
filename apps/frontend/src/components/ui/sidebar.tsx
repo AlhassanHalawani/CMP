@@ -235,7 +235,7 @@ function Sidebar({
         <div
           data-sidebar="sidebar"
           data-slot="sidebar-inner"
-          className="bg-secondary-background flex h-full w-full flex-col"
+          className="bg-secondary-background text-foreground flex h-full w-full flex-col"
         >
           {children}
         </div>
