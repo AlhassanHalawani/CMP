@@ -16,27 +16,46 @@ export interface Event {
   members_only: number;
   created_by: number | null;
   created_at: string;
+  checkin_open: number;       // 0 | 1
+  checkin_finalized: number;  // 0 | 1
+  category: string | null;
+  registration_count?: number; // computed via subquery
 }
+
+const REG_COUNT_SQL = `(SELECT COUNT(*) FROM registrations WHERE event_id = events.id AND status != 'cancelled') AS registration_count`;
 
 export const EventModel = {
   findById(id: number): Event | undefined {
-    return db.prepare('SELECT * FROM events WHERE id = ?').get(id) as Event | undefined;
+    return db
+      .prepare(`SELECT *, ${REG_COUNT_SQL} FROM events WHERE id = ?`)
+      .get(id) as Event | undefined;
   },
 
   listByClub(clubId: number): Event[] {
-    return db.prepare('SELECT * FROM events WHERE club_id = ? ORDER BY starts_at DESC').all(clubId) as Event[];
+    return db
+      .prepare(`SELECT *, ${REG_COUNT_SQL} FROM events WHERE club_id = ? ORDER BY starts_at DESC`)
+      .all(clubId) as Event[];
   },
 
   listUpcoming(limit = 10): Event[] {
     return db
       .prepare(
-        "SELECT * FROM events WHERE status = 'published' AND starts_at > datetime('now') ORDER BY starts_at ASC LIMIT ?"
+        `SELECT *, ${REG_COUNT_SQL} FROM events WHERE status = 'published' AND starts_at > datetime('now') ORDER BY starts_at ASC LIMIT ?`
       )
       .all(limit) as Event[];
   },
 
-  list(params?: { status?: string; clubId?: number; limit?: number; offset?: number }): Event[] {
-    let sql = 'SELECT * FROM events';
+  list(params?: {
+    status?: string;
+    clubId?: number;
+    limit?: number;
+    offset?: number;
+    category?: string;
+    location?: string;
+    startsAfter?: string;
+    endsBefore?: string;
+  }): Event[] {
+    let sql = `SELECT *, ${REG_COUNT_SQL} FROM events`;
     const conditions: string[] = [];
     const values: any[] = [];
 
@@ -47,6 +66,22 @@ export const EventModel = {
     if (params?.clubId) {
       conditions.push('club_id = ?');
       values.push(params.clubId);
+    }
+    if (params?.category) {
+      conditions.push('category = ?');
+      values.push(params.category);
+    }
+    if (params?.location) {
+      conditions.push('location LIKE ?');
+      values.push(`%${params.location}%`);
+    }
+    if (params?.startsAfter) {
+      conditions.push('starts_at >= ?');
+      values.push(params.startsAfter);
+    }
+    if (params?.endsBefore) {
+      conditions.push('starts_at <= ?');
+      values.push(params.endsBefore);
     }
     if (conditions.length) sql += ' WHERE ' + conditions.join(' AND ');
     sql += ' ORDER BY starts_at DESC';
@@ -61,11 +96,11 @@ export const EventModel = {
     return db.prepare(sql).all(...values) as Event[];
   },
 
-  create(data: Omit<Event, 'id' | 'created_at'>): Event {
+  create(data: Omit<Event, 'id' | 'created_at' | 'registration_count'>): Event {
     const result = db
       .prepare(
-        `INSERT INTO events (club_id, title, title_ar, description, description_ar, location, starts_at, ends_at, capacity, status, members_only, created_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO events (club_id, title, title_ar, description, description_ar, location, starts_at, ends_at, capacity, status, members_only, created_by, category)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         data.club_id,
@@ -79,12 +114,13 @@ export const EventModel = {
         data.capacity,
         data.status,
         data.members_only ?? 0,
-        data.created_by
+        data.created_by,
+        data.category ?? null
       );
     return EventModel.findById(result.lastInsertRowid as number)!;
   },
 
-  update(id: number, data: Partial<Omit<Event, 'id' | 'created_at'>>): Event | undefined {
+  update(id: number, data: Partial<Omit<Event, 'id' | 'created_at' | 'registration_count'>>): Event | undefined {
     const fields: string[] = [];
     const values: any[] = [];
     for (const [key, value] of Object.entries(data)) {
@@ -102,7 +138,14 @@ export const EventModel = {
     return result.changes > 0;
   },
 
-  count(params?: { clubId?: number; status?: string }): number {
+  count(params?: {
+    clubId?: number;
+    status?: string;
+    category?: string;
+    location?: string;
+    startsAfter?: string;
+    endsBefore?: string;
+  }): number {
     let sql = 'SELECT COUNT(*) as count FROM events';
     const conditions: string[] = [];
     const values: any[] = [];
@@ -114,7 +157,31 @@ export const EventModel = {
       conditions.push('status = ?');
       values.push(params.status);
     }
+    if (params?.category) {
+      conditions.push('category = ?');
+      values.push(params.category);
+    }
+    if (params?.location) {
+      conditions.push('location LIKE ?');
+      values.push(`%${params.location}%`);
+    }
+    if (params?.startsAfter) {
+      conditions.push('starts_at >= ?');
+      values.push(params.startsAfter);
+    }
+    if (params?.endsBefore) {
+      conditions.push('starts_at <= ?');
+      values.push(params.endsBefore);
+    }
     if (conditions.length) sql += ' WHERE ' + conditions.join(' AND ');
     return (db.prepare(sql).get(...values) as any).count;
+  },
+
+  listDistinctCategories(): string[] {
+    return (
+      db
+        .prepare("SELECT DISTINCT category FROM events WHERE category IS NOT NULL AND category != '' ORDER BY category")
+        .all() as { category: string }[]
+    ).map((r) => r.category);
   },
 };

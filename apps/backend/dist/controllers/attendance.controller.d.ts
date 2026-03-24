@@ -5,3 +5,6 @@ export declare function checkIn(req: AuthRequest, res: Response): void;
 export declare function manualCheckIn(req: AuthRequest, res: Response): void;
 export declare function getAttendanceList(req: AuthRequest, res: Response): void;
 export declare function getEventRegistrations(req: AuthRequest, res: Response): void;
+export declare function openCheckin(req: AuthRequest, res: Response): void;
+export declare function closeCheckin(req: AuthRequest, res: Response): void;
+export declare function finalizeCheckin(req: AuthRequest, res: Response): void;

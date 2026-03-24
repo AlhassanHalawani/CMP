@@ -1,6 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.listEvents = listEvents;
+exports.listEventCategories = listEventCategories;
+exports.exportEventIcs = exportEventIcs;
+exports.exportCalendarIcs = exportCalendarIcs;
 exports.getEvent = getEvent;
 exports.createEvent = createEvent;
 exports.updateEvent = updateEvent;
@@ -23,13 +26,84 @@ function listEvents(req, res) {
     const clubId = req.query.club_id ? parseInt(req.query.club_id) : undefined;
     const limit = parseInt(req.query.limit) || 50;
     const offset = parseInt(req.query.offset) || 0;
+    const category = req.query.category;
+    const location = req.query.location;
+    const startsAfter = req.query.starts_after;
+    const endsBefore = req.query.ends_before;
     // Students (and unauthenticated callers) only see published events
     if (!authReq.user || authReq.user.role === 'student') {
         status = 'published';
     }
-    const events = event_model_1.EventModel.list({ status, clubId, limit, offset });
-    const total = event_model_1.EventModel.count({ status, clubId });
+    const filterParams = { status, clubId, limit, offset, category, location, startsAfter, endsBefore };
+    const events = event_model_1.EventModel.list(filterParams);
+    const total = event_model_1.EventModel.count({ status, clubId, category, location, startsAfter, endsBefore });
     res.json({ data: events, total });
+}
+function listEventCategories(_req, res) {
+    const categories = event_model_1.EventModel.listDistinctCategories();
+    res.json(categories);
+}
+function toIcsDate(iso) {
+    return new Date(iso).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+}
+function buildIcsEvent(event) {
+    if (!event)
+        return '';
+    const uid = `event-${event.id}@fcit-cmp`;
+    const summary = event.title.replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
+    const description = (event.description ?? '').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
+    const location = (event.location ?? '').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
+    return [
+        'BEGIN:VEVENT',
+        `UID:${uid}`,
+        `DTSTAMP:${toIcsDate(new Date().toISOString())}`,
+        `DTSTART:${toIcsDate(event.starts_at)}`,
+        `DTEND:${toIcsDate(event.ends_at)}`,
+        `SUMMARY:${summary}`,
+        description ? `DESCRIPTION:${description}` : '',
+        location ? `LOCATION:${location}` : '',
+        'END:VEVENT',
+    ]
+        .filter(Boolean)
+        .join('\r\n');
+}
+function exportEventIcs(req, res) {
+    const event = event_model_1.EventModel.findById(parseInt(req.params.id));
+    if (!event || event.status !== 'published') {
+        res.status(404).json({ error: 'Event not found' });
+        return;
+    }
+    const slug = event.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40);
+    const ics = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//FCIT CMP//EN',
+        'CALSCALE:GREGORIAN',
+        'METHOD:PUBLISH',
+        buildIcsEvent(event),
+        'END:VCALENDAR',
+    ].join('\r\n');
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${slug}.ics"`);
+    res.send(ics);
+}
+function exportCalendarIcs(req, res) {
+    const clubId = req.query.club_id ? parseInt(req.query.club_id) : undefined;
+    const category = req.query.category;
+    const events = event_model_1.EventModel.list({ status: 'published', clubId, category, limit: 500 });
+    const vevents = events.map(buildIcsEvent).join('\r\n');
+    const ics = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//FCIT CMP//EN',
+        'CALSCALE:GREGORIAN',
+        'METHOD:PUBLISH',
+        vevents,
+        'END:VCALENDAR',
+    ].join('\r\n');
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="fcit-cmp-events.ics"');
+    res.send(ics);
 }
 function getEvent(req, res) {
     const event = event_model_1.EventModel.findById(parseInt(req.params.id));

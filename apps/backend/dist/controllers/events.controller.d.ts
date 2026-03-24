@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 export declare function listEvents(req: Request, res: Response): void;
+export declare function listEventCategories(_req: Request, res: Response): void;
+export declare function exportEventIcs(req: Request, res: Response): void;
+export declare function exportCalendarIcs(req: Request, res: Response): void;
 export declare function getEvent(req: Request, res: Response): void;
 export declare function createEvent(req: AuthRequest, res: Response): void;
 export declare function updateEvent(req: AuthRequest, res: Response): void;

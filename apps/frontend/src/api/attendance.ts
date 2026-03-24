@@ -23,4 +23,10 @@ export const attendanceApi = {
     api.post<Attendance>(`/attendance/${eventId}/manual`, { user_id }).then((r) => r.data),
   listAttendance: (eventId: number) =>
     api.get<{ data: Attendance[]; total: number }>(`/attendance/${eventId}`).then((r) => r.data),
+  openCheckin: (eventId: number) =>
+    api.post(`/attendance/${eventId}/open`).then((r) => r.data),
+  closeCheckin: (eventId: number) =>
+    api.post(`/attendance/${eventId}/close`).then((r) => r.data),
+  finalizeCheckin: (eventId: number) =>
+    api.post(`/attendance/${eventId}/finalize`).then((r) => r.data),
 };

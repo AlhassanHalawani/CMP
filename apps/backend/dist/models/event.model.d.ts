@@ -14,6 +14,10 @@ export interface Event {
     members_only: number;
     created_by: number | null;
     created_at: string;
+    checkin_open: number;
+    checkin_finalized: number;
+    category: string | null;
+    registration_count?: number;
 }
 export declare const EventModel: {
     findById(id: number): Event | undefined;
@@ -24,12 +28,21 @@ export declare const EventModel: {
         clubId?: number;
         limit?: number;
         offset?: number;
+        category?: string;
+        location?: string;
+        startsAfter?: string;
+        endsBefore?: string;
     }): Event[];
-    create(data: Omit<Event, "id" | "created_at">): Event;
-    update(id: number, data: Partial<Omit<Event, "id" | "created_at">>): Event | undefined;
+    create(data: Omit<Event, "id" | "created_at" | "registration_count">): Event;
+    update(id: number, data: Partial<Omit<Event, "id" | "created_at" | "registration_count">>): Event | undefined;
     delete(id: number): boolean;
     count(params?: {
         clubId?: number;
         status?: string;
+        category?: string;
+        location?: string;
+        startsAfter?: string;
+        endsBefore?: string;
     }): number;
+    listDistinctCategories(): string[];
 };

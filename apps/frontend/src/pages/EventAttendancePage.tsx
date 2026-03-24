@@ -10,6 +10,19 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
+import { Switch } from '@/components/ui/switch';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from '@/components/ui/alert-dialog';
 import { clubsApi } from '@/api/clubs';
 import { eventsApi } from '@/api/events';
 import { attendanceApi } from '@/api/attendance';
@@ -78,6 +91,48 @@ export function EventAttendancePage() {
     },
   });
 
+  const openCheckinMutation = useMutation({
+    mutationFn: () => attendanceApi.openCheckin(eventId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['events', eventId] });
+      showToast('Check-in opened', 'The check-in window is now open.');
+    },
+    onError: (error: unknown) => {
+      const message = isAxiosError(error)
+        ? error.response?.data?.error || t('common.error')
+        : t('common.error');
+      showToast(t('common.error'), message);
+    },
+  });
+
+  const closeCheckinMutation = useMutation({
+    mutationFn: () => attendanceApi.closeCheckin(eventId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['events', eventId] });
+      showToast('Check-in closed', 'The check-in window is now closed.');
+    },
+    onError: (error: unknown) => {
+      const message = isAxiosError(error)
+        ? error.response?.data?.error || t('common.error')
+        : t('common.error');
+      showToast(t('common.error'), message);
+    },
+  });
+
+  const finalizeCheckinMutation = useMutation({
+    mutationFn: () => attendanceApi.finalizeCheckin(eventId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['events', eventId] });
+      showToast('Session finalized', 'Attendance has been permanently locked.');
+    },
+    onError: (error: unknown) => {
+      const message = isAxiosError(error)
+        ? error.response?.data?.error || t('common.error')
+        : t('common.error');
+      showToast(t('common.error'), message);
+    },
+  });
+
   if (eventLoading) return <div className="flex justify-center p-12"><Spinner size="lg" /></div>;
   if (!event) return <p>{t('common.noData')}</p>;
 
@@ -86,6 +141,11 @@ export function EventAttendancePage() {
   const canManageAttendance = isAdmin || isEventOwner;
 
   const eventTitle = language === 'ar' ? event.title_ar : event.title;
+
+  const checkinOpen: boolean = !!event.checkin_open;
+  const checkinFinalized: boolean = !!event.checkin_finalized;
+
+  const isCheckinTogglePending = openCheckinMutation.isPending || closeCheckinMutation.isPending;
 
   if (!canManageAttendance) {
     return (
@@ -112,8 +172,76 @@ export function EventAttendancePage() {
         {t('common.back')}
       </Link>
 
-      <h1 className="mb-2 text-3xl font-black">{t('attendance.title')}</h1>
+      <div className="flex items-center gap-3 mb-2">
+        <h1 className="text-3xl font-black">{t('attendance.title')}</h1>
+        {checkinFinalized ? (
+          <Badge variant="secondary">Finalized</Badge>
+        ) : checkinOpen ? (
+          <Badge variant="accent">Check-in Open</Badge>
+        ) : (
+          <Badge variant="neutral" className="border-red-500 text-red-600">Check-in Closed</Badge>
+        )}
+      </div>
       <p className="mb-6 text-sm font-bold text-[var(--foreground)]/70">{eventTitle}</p>
+
+      {/* Check-in window controls */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Check-in Window</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="flex items-center gap-3">
+            <Switch
+              checked={checkinOpen}
+              disabled={checkinFinalized || isCheckinTogglePending}
+              onCheckedChange={(checked) => {
+                if (checked) {
+                  openCheckinMutation.mutate();
+                } else {
+                  closeCheckinMutation.mutate();
+                }
+              }}
+            />
+            <span className="text-sm font-bold">
+              {checkinOpen ? 'Open' : 'Closed'}
+            </span>
+          </div>
+
+          {checkinFinalized ? (
+            <Alert variant="destructive">
+              <AlertDescription>
+                This session has been finalized. No further check-ins are allowed.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="destructive"
+                  disabled={finalizeCheckinMutation.isPending}
+                  className="w-fit"
+                >
+                  Finalize Session
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Finalize Attendance?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently lock attendance. Cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => finalizeCheckinMutation.mutate()}>
+                    Finalize
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* QR Generation */}
@@ -155,17 +283,25 @@ export function EventAttendancePage() {
           <CardHeader>
             <CardTitle>{t('attendance.manualCheckIn')}</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-col gap-3">
+            {!checkinOpen && !checkinFinalized && (
+              <Alert>
+                <AlertDescription>
+                  The check-in window is closed. Open it before allowing manual check-ins.
+                </AlertDescription>
+              </Alert>
+            )}
             <div className="flex gap-3">
               <Input
                 type="number"
                 placeholder={t('attendance.userIdPlaceholder')}
                 value={manualUserId}
                 onChange={(e) => setManualUserId(e.target.value)}
+                disabled={checkinFinalized || !checkinOpen}
               />
               <Button
                 onClick={() => manualCheckInMutation.mutate()}
-                disabled={manualCheckInMutation.isPending || !manualUserId}
+                disabled={manualCheckInMutation.isPending || !manualUserId || checkinFinalized || !checkinOpen}
               >
                 {manualCheckInMutation.isPending ? t('common.loading') : t('attendance.checkInBtn')}
               </Button>

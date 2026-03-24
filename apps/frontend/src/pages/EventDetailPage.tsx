@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
+import { Download } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
@@ -218,11 +219,14 @@ export function EventDetailPage() {
     <div>
       <Link to="/events" className="text-sm font-bold underline mb-4 inline-block">{t('common.back')}</Link>
 
-      <div className="mb-4 flex items-center gap-3">
+      <div className="mb-4 flex items-center gap-3 flex-wrap">
         <h1 className="text-3xl font-black">{language === 'ar' ? event.title_ar : event.title}</h1>
         <Badge variant="outline" className={STATUS_BADGE_CLASS[event.status] ?? ''}>
           {event.status}
         </Badge>
+        {event.category && (
+          <Badge variant="outline">{event.category}</Badge>
+        )}
       </div>
 
       {/* Rejection notes shown to club leader */}
@@ -362,7 +366,16 @@ export function EventDetailPage() {
           <p className="mb-4">{language === 'ar' ? event.description_ar : event.description}</p>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div><strong>Location:</strong> {event.location || '—'}</div>
-            <div><strong>Capacity:</strong> {event.capacity || 'Unlimited'}</div>
+            <div>
+              <strong>Seats:</strong>{' '}
+              {event.capacity
+                ? (() => {
+                    const used = event.registration_count ?? 0;
+                    const left = event.capacity - used;
+                    return left <= 0 ? 'Full' : `${left} / ${event.capacity} remaining`;
+                  })()
+                : 'Unlimited'}
+            </div>
             <div><strong>Start:</strong> {new Date(event.starts_at).toLocaleString()}</div>
             <div><strong>End:</strong> {new Date(event.ends_at).toLocaleString()}</div>
           </div>
@@ -374,6 +387,12 @@ export function EventDetailPage() {
           <Button onClick={() => registerMutation.mutate()} disabled={registerMutation.isPending}>
             {registerMutation.isPending ? t('common.loading') : t('events.register')}
           </Button>
+          <a href={eventsApi.icsUrl(eventId)} download>
+            <Button variant="outline">
+              <Download className="size-4 mr-1" />
+              Add to Calendar
+            </Button>
+          </a>
         </div>
       )}
 

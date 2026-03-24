@@ -2,20 +2,25 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EventModel = void 0;
 const database_1 = require("../config/database");
+const REG_COUNT_SQL = `(SELECT COUNT(*) FROM registrations WHERE event_id = events.id AND status != 'cancelled') AS registration_count`;
 exports.EventModel = {
     findById(id) {
-        return database_1.db.prepare('SELECT * FROM events WHERE id = ?').get(id);
+        return database_1.db
+            .prepare(`SELECT *, ${REG_COUNT_SQL} FROM events WHERE id = ?`)
+            .get(id);
     },
     listByClub(clubId) {
-        return database_1.db.prepare('SELECT * FROM events WHERE club_id = ? ORDER BY starts_at DESC').all(clubId);
+        return database_1.db
+            .prepare(`SELECT *, ${REG_COUNT_SQL} FROM events WHERE club_id = ? ORDER BY starts_at DESC`)
+            .all(clubId);
     },
     listUpcoming(limit = 10) {
         return database_1.db
-            .prepare("SELECT * FROM events WHERE status = 'published' AND starts_at > datetime('now') ORDER BY starts_at ASC LIMIT ?")
+            .prepare(`SELECT *, ${REG_COUNT_SQL} FROM events WHERE status = 'published' AND starts_at > datetime('now') ORDER BY starts_at ASC LIMIT ?`)
             .all(limit);
     },
     list(params) {
-        let sql = 'SELECT * FROM events';
+        let sql = `SELECT *, ${REG_COUNT_SQL} FROM events`;
         const conditions = [];
         const values = [];
         if (params?.status) {
@@ -25,6 +30,22 @@ exports.EventModel = {
         if (params?.clubId) {
             conditions.push('club_id = ?');
             values.push(params.clubId);
+        }
+        if (params?.category) {
+            conditions.push('category = ?');
+            values.push(params.category);
+        }
+        if (params?.location) {
+            conditions.push('location LIKE ?');
+            values.push(`%${params.location}%`);
+        }
+        if (params?.startsAfter) {
+            conditions.push('starts_at >= ?');
+            values.push(params.startsAfter);
+        }
+        if (params?.endsBefore) {
+            conditions.push('starts_at <= ?');
+            values.push(params.endsBefore);
         }
         if (conditions.length)
             sql += ' WHERE ' + conditions.join(' AND ');
@@ -41,9 +62,9 @@ exports.EventModel = {
     },
     create(data) {
         const result = database_1.db
-            .prepare(`INSERT INTO events (club_id, title, title_ar, description, description_ar, location, starts_at, ends_at, capacity, status, members_only, created_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-            .run(data.club_id, data.title, data.title_ar, data.description, data.description_ar, data.location, data.starts_at, data.ends_at, data.capacity, data.status, data.members_only ?? 0, data.created_by);
+            .prepare(`INSERT INTO events (club_id, title, title_ar, description, description_ar, location, starts_at, ends_at, capacity, status, members_only, created_by, category)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+            .run(data.club_id, data.title, data.title_ar, data.description, data.description_ar, data.location, data.starts_at, data.ends_at, data.capacity, data.status, data.members_only ?? 0, data.created_by, data.category ?? null);
         return exports.EventModel.findById(result.lastInsertRowid);
     },
     update(id, data) {
@@ -75,9 +96,30 @@ exports.EventModel = {
             conditions.push('status = ?');
             values.push(params.status);
         }
+        if (params?.category) {
+            conditions.push('category = ?');
+            values.push(params.category);
+        }
+        if (params?.location) {
+            conditions.push('location LIKE ?');
+            values.push(`%${params.location}%`);
+        }
+        if (params?.startsAfter) {
+            conditions.push('starts_at >= ?');
+            values.push(params.startsAfter);
+        }
+        if (params?.endsBefore) {
+            conditions.push('starts_at <= ?');
+            values.push(params.endsBefore);
+        }
         if (conditions.length)
             sql += ' WHERE ' + conditions.join(' AND ');
         return database_1.db.prepare(sql).get(...values).count;
+    },
+    listDistinctCategories() {
+        return database_1.db
+            .prepare("SELECT DISTINCT category FROM events WHERE category IS NOT NULL AND category != '' ORDER BY category")
+            .all().map((r) => r.category);
     },
 };
 //# sourceMappingURL=event.model.js.map

@@ -44,7 +44,10 @@ export function createTestDb() {
       rejection_notes TEXT,
       members_only INTEGER NOT NULL DEFAULT 0,
       created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      checkin_open INTEGER NOT NULL DEFAULT 0,
+      checkin_finalized INTEGER NOT NULL DEFAULT 0,
+      category TEXT
     );
     CREATE TABLE IF NOT EXISTS notifications (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -154,7 +157,7 @@ export function seedAttendanceData(db: Database.Database) {
     INSERT INTO users (keycloak_id, email, name, role) VALUES ('admin-keycloak-id', 'admin@kau.edu.sa', 'Admin User', 'admin');
     INSERT INTO users (keycloak_id, email, name, role) VALUES ('leader-keycloak-id', 'leader@kau.edu.sa', 'Club Leader', 'club_leader');
     INSERT INTO clubs (name, name_ar, leader_id) VALUES ('Test Club', 'نادي اختبار', 3);
-    INSERT INTO events (club_id, title, title_ar, starts_at, ends_at, status) VALUES (1, 'Test Event', 'فعالية اختبار', '2026-06-01 10:00:00', '2026-06-01 12:00:00', 'published');
+    INSERT INTO events (club_id, title, title_ar, starts_at, ends_at, status, checkin_open) VALUES (1, 'Test Event', 'فعالية اختبار', '2026-06-01 10:00:00', '2026-06-01 12:00:00', 'published', 1);
     INSERT INTO events (club_id, title, title_ar, starts_at, ends_at, status) VALUES (1, 'Draft Event', 'فعالية مسودة', '2026-07-01 10:00:00', '2026-07-01 12:00:00', 'draft');
     INSERT INTO registrations (event_id, user_id, status) VALUES (1, 1, 'confirmed');
   `);
@@ -193,9 +196,9 @@ export function seedOwnershipData(db: Database.Database) {
     INSERT INTO users (keycloak_id, email, name, role) VALUES ('leader2-keycloak-id', 'leader2@kau.edu.sa', 'Club Leader 2', 'club_leader');
     INSERT INTO clubs (name, name_ar, leader_id) VALUES ('Club One', 'نادي واحد', 3);
     INSERT INTO clubs (name, name_ar, leader_id) VALUES ('Club Two', 'نادي اثنين', 4);
-    INSERT INTO events (club_id, title, title_ar, starts_at, ends_at, status) VALUES (1, 'Club1 Event', 'فعالية 1', '2026-06-01 10:00:00', '2026-06-01 12:00:00', 'published');
+    INSERT INTO events (club_id, title, title_ar, starts_at, ends_at, status, checkin_open) VALUES (1, 'Club1 Event', 'فعالية 1', '2026-06-01 10:00:00', '2026-06-01 12:00:00', 'published', 1);
     INSERT INTO events (club_id, title, title_ar, starts_at, ends_at, status) VALUES (1, 'Club1 Draft', 'مسودة 1', '2026-07-01 10:00:00', '2026-07-01 12:00:00', 'draft');
-    INSERT INTO events (club_id, title, title_ar, starts_at, ends_at, status) VALUES (2, 'Club2 Event', 'فعالية 2', '2026-06-01 10:00:00', '2026-06-01 12:00:00', 'published');
+    INSERT INTO events (club_id, title, title_ar, starts_at, ends_at, status, checkin_open) VALUES (2, 'Club2 Event', 'فعالية 2', '2026-06-01 10:00:00', '2026-06-01 12:00:00', 'published', 1);
     INSERT INTO registrations (event_id, user_id, status) VALUES (1, 1, 'confirmed');
     INSERT INTO kpi_metrics (club_id, metric_key, metric_value) VALUES (1, 'events_held', 1);
     INSERT INTO achievements (user_id, club_id, title, title_ar) VALUES (1, 1, 'Test Award', 'جائزة');

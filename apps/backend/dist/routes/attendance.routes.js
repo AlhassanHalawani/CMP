@@ -11,5 +11,8 @@ router.post('/check-in', attendance_controller_1.checkIn);
 router.post('/:eventId/manual', (0, roles_1.requireRole)('admin', 'club_leader'), attendance_controller_1.manualCheckIn);
 router.get('/:eventId', (0, roles_1.requireRole)('admin', 'club_leader'), attendance_controller_1.getAttendanceList);
 router.get('/:eventId/registrations', (0, roles_1.requireRole)('admin', 'club_leader'), attendance_controller_1.getEventRegistrations);
+router.post('/:eventId/open', (0, roles_1.requireRole)('admin', 'club_leader'), attendance_controller_1.openCheckin);
+router.post('/:eventId/close', (0, roles_1.requireRole)('admin', 'club_leader'), attendance_controller_1.closeCheckin);
+router.post('/:eventId/finalize', (0, roles_1.requireRole)('admin', 'club_leader'), attendance_controller_1.finalizeCheckin);
 exports.default = router;
 //# sourceMappingURL=attendance.routes.js.map

@@ -3,6 +3,7 @@ import { authenticate } from '../middleware/auth';
 import { requireRole } from '../middleware/roles';
 import {
   listEvents,
+  listEventCategories,
   getEvent,
   createEvent,
   updateEvent,
@@ -12,9 +13,15 @@ import {
   submitEvent,
   approveEvent,
   rejectEvent,
+  exportEventIcs,
+  exportCalendarIcs,
 } from '../controllers/events.controller';
 
 const router = Router();
+
+// ICS / calendar export — must come before /:id routes
+router.get('/calendar.ics', exportCalendarIcs);
+router.get('/categories', listEventCategories);
 
 router.get('/', listEvents);
 router.get('/:id', getEvent);
@@ -23,6 +30,9 @@ router.patch('/:id', authenticate, requireRole('admin', 'club_leader'), updateEv
 router.delete('/:id', authenticate, requireRole('admin', 'club_leader'), deleteEvent);
 router.post('/:id/register', authenticate, registerForEvent);
 router.post('/:id/cancel', authenticate, cancelRegistration);
+
+// ICS export for individual event
+router.get('/:id/ics', exportEventIcs);
 
 // Event approval workflow
 router.post('/:id/submit', authenticate, requireRole('club_leader'), submitEvent);

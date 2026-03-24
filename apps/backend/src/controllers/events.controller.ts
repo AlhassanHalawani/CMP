@@ -14,15 +14,90 @@ export function listEvents(req: Request, res: Response) {
   const clubId = req.query.club_id ? parseInt(req.query.club_id as string) : undefined;
   const limit = parseInt(req.query.limit as string) || 50;
   const offset = parseInt(req.query.offset as string) || 0;
+  const category = req.query.category as string | undefined;
+  const location = req.query.location as string | undefined;
+  const startsAfter = req.query.starts_after as string | undefined;
+  const endsBefore = req.query.ends_before as string | undefined;
 
   // Students (and unauthenticated callers) only see published events
   if (!authReq.user || authReq.user.role === 'student') {
     status = 'published';
   }
 
-  const events = EventModel.list({ status, clubId, limit, offset });
-  const total = EventModel.count({ status, clubId });
+  const filterParams = { status, clubId, limit, offset, category, location, startsAfter, endsBefore };
+  const events = EventModel.list(filterParams);
+  const total = EventModel.count({ status, clubId, category, location, startsAfter, endsBefore });
   res.json({ data: events, total });
+}
+
+export function listEventCategories(_req: Request, res: Response) {
+  const categories = EventModel.listDistinctCategories();
+  res.json(categories);
+}
+
+function toIcsDate(iso: string): string {
+  return new Date(iso).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+}
+
+function buildIcsEvent(event: ReturnType<typeof EventModel.findById>): string {
+  if (!event) return '';
+  const uid = `event-${event.id}@fcit-cmp`;
+  const summary = event.title.replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
+  const description = (event.description ?? '').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
+  const location = (event.location ?? '').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
+  return [
+    'BEGIN:VEVENT',
+    `UID:${uid}`,
+    `DTSTAMP:${toIcsDate(new Date().toISOString())}`,
+    `DTSTART:${toIcsDate(event.starts_at)}`,
+    `DTEND:${toIcsDate(event.ends_at)}`,
+    `SUMMARY:${summary}`,
+    description ? `DESCRIPTION:${description}` : '',
+    location ? `LOCATION:${location}` : '',
+    'END:VEVENT',
+  ]
+    .filter(Boolean)
+    .join('\r\n');
+}
+
+export function exportEventIcs(req: Request, res: Response) {
+  const event = EventModel.findById(parseInt(req.params.id));
+  if (!event || event.status !== 'published') {
+    res.status(404).json({ error: 'Event not found' });
+    return;
+  }
+  const slug = event.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40);
+  const ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//FCIT CMP//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    buildIcsEvent(event),
+    'END:VCALENDAR',
+  ].join('\r\n');
+  res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${slug}.ics"`);
+  res.send(ics);
+}
+
+export function exportCalendarIcs(req: Request, res: Response) {
+  const clubId = req.query.club_id ? parseInt(req.query.club_id as string) : undefined;
+  const category = req.query.category as string | undefined;
+  const events = EventModel.list({ status: 'published', clubId, category, limit: 500 });
+  const vevents = events.map(buildIcsEvent).join('\r\n');
+  const ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//FCIT CMP//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    vevents,
+    'END:VCALENDAR',
+  ].join('\r\n');
+  res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="fcit-cmp-events.ics"');
+  res.send(ics);
 }
 
 export function getEvent(req: Request, res: Response) {
