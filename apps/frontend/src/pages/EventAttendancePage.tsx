@@ -12,6 +12,15 @@ import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from '@/components/ui/table';
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -310,48 +319,119 @@ export function EventAttendancePage() {
         </Card>
       </div>
 
-      {/* Attendance List */}
+      {/* Summary + Export */}
+      {attendanceData?.summary && (
+        <Card className="mt-6">
+          <CardContent className="pt-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-wrap gap-6 text-sm font-bold">
+                <span>Total Registered: <span className="font-black">{attendanceData.summary.total_registered}</span></span>
+                <span>Present: <span className="font-black text-green-600">{attendanceData.summary.present}</span></span>
+                <span>No-show: <span className="font-black text-red-500">{attendanceData.summary.no_show}</span></span>
+                <span>Attendance Rate: <span className="font-black">{attendanceData.summary.attendance_rate}%</span></span>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => attendanceApi.downloadAttendanceCsv(eventId)}>
+                  Export CSV
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => attendanceApi.downloadAttendancePdf(eventId)}>
+                  Export PDF
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Attendance Tabs */}
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>
-            {t('attendance.attendeeList')}
-            {attendanceData && (
-              <Badge variant="secondary" className="ml-3">
-                {attendanceData.total} {t('events.attendees')}
-              </Badge>
-            )}
-          </CardTitle>
+          <CardTitle>{t('attendance.attendeeList')}</CardTitle>
         </CardHeader>
         <CardContent>
           {attendanceLoading ? (
             <Spinner />
-          ) : !attendanceData?.data.length ? (
-            <p className="text-sm">{t('common.noData')}</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b-2 border-[var(--border)]">
-                    <th className="text-left py-2 font-bold">{t('attendance.userId')}</th>
-                    <th className="text-left py-2 font-bold">{t('attendance.method')}</th>
-                    <th className="text-left py-2 font-bold">{t('attendance.time')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {attendanceData.data.map((record) => (
-                    <tr key={record.id} className="border-b border-[var(--border)]/30">
-                      <td className="py-2">{record.user_id}</td>
-                      <td className="py-2">
-                        <Badge variant={record.method === 'qr' ? 'accent' : 'secondary'}>
-                          {record.method === 'qr' ? t('attendance.qrMethod') : t('attendance.manualMethod')}
-                        </Badge>
-                      </td>
-                      <td className="py-2">{new Date(record.checked_in_at).toLocaleString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Tabs defaultValue="present">
+              <TabsList className="mb-4">
+                <TabsTrigger value="present">
+                  Present
+                  {attendanceData?.summary && (
+                    <Badge variant="secondary" className="ml-2">{attendanceData.summary.present}</Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="noshows">
+                  No-shows
+                  {attendanceData?.summary && (
+                    <Badge variant="secondary" className="ml-2">{attendanceData.summary.no_show}</Badge>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="present">
+                {!attendanceData?.data.filter((r) => r.attendance_status === 'present').length ? (
+                  <p className="text-sm">{t('common.noData')}</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>{t('attendance.time')}</TableHead>
+                        <TableHead>{t('attendance.method')}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {attendanceData.data
+                        .filter((r) => r.attendance_status === 'present')
+                        .map((record, i) => (
+                          <TableRow key={i}>
+                            <TableCell>{record.name}</TableCell>
+                            <TableCell>{record.email}</TableCell>
+                            <TableCell><Badge variant="accent">Present</Badge></TableCell>
+                            <TableCell>{record.checked_in_at ? new Date(record.checked_in_at).toLocaleString() : '—'}</TableCell>
+                            <TableCell>
+                              <Badge variant={record.method === 'qr' ? 'accent' : 'secondary'}>
+                                {record.method === 'qr' ? t('attendance.qrMethod') : t('attendance.manualMethod')}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </TabsContent>
+
+              <TabsContent value="noshows">
+                {!attendanceData?.data.filter((r) => r.attendance_status === 'no_show').length ? (
+                  <p className="text-sm">{t('common.noData')}</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Registered At</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {attendanceData.data
+                        .filter((r) => r.attendance_status === 'no_show')
+                        .map((record, i) => (
+                          <TableRow key={i}>
+                            <TableCell>{record.name}</TableCell>
+                            <TableCell>{record.email}</TableCell>
+                            <TableCell><Badge variant="neutral">No-show</Badge></TableCell>
+                            <TableCell>{record.registered_at ? new Date(record.registered_at).toLocaleString() : '—'}</TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </TabsContent>
+            </Tabs>
           )}
         </CardContent>
       </Card>

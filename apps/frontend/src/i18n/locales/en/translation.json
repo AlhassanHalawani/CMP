@@ -12,6 +12,7 @@
     "leaderboard": "Leaderboard",
     "notifications": "Notifications",
     "admin": "Admin",
+    "reports": "Reports",
     "profile": "Profile"
   },
   "auth": {

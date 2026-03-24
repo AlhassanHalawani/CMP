@@ -21,6 +21,26 @@ export declare const AttendanceModel: {
         token: string;
     } | null;
     countByEvent(eventId: number): number;
+    findPresentWithUsers(eventId: number): Array<{
+        name: string;
+        email: string;
+        checked_in_at: string;
+        method: "qr" | "manual";
+    }>;
+    findNoShowsWithUsers(eventId: number): Array<{
+        name: string;
+        email: string;
+        registered_at: string;
+    }>;
+    findClubReport(clubId: number, startsAfter: string, endsBefore: string): Array<{
+        event_title: string;
+        event_starts_at: string;
+        name: string;
+        email: string;
+        status: "Present" | "No-show";
+        checked_in_at: string | null;
+        method: string | null;
+    }>;
     findByUserWithEvents(userId: number, opts: {
         semesterStartsAt?: string;
         semesterEndsAt?: string;

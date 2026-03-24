@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.generateAttendanceReport = generateAttendanceReport;
 exports.generateAchievementReport = generateAchievementReport;
 exports.generateKpiReport = generateKpiReport;
 const pdfkit_1 = __importDefault(require("pdfkit"));
@@ -12,6 +13,96 @@ const achievement_model_1 = require("../models/achievement.model");
 const attendance_model_1 = require("../models/attendance.model");
 const user_model_1 = require("../models/user.model");
 const semester_model_1 = require("../models/semester.model");
+async function generateAttendanceReport(event, clubName, present, noShows) {
+    const totalRegistered = present.length + noShows.length;
+    const attendanceRate = totalRegistered > 0 ? Math.round((present.length / totalRegistered) * 100) : 0;
+    return new Promise((resolve, reject) => {
+        const doc = new pdfkit_1.default({ margin: 50 });
+        const chunks = [];
+        doc.on('data', (chunk) => chunks.push(chunk));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        doc.on('error', reject);
+        // ── Header ──────────────────────────────────────────────────────────────
+        doc.fontSize(18).font('Helvetica-Bold').text('Attendance Report', { align: 'center' });
+        doc.moveDown(0.3);
+        doc.fontSize(13).font('Helvetica').text(event.title, { align: 'center' });
+        doc.moveDown(0.2);
+        doc.fontSize(10).fillColor('#666')
+            .text(`Date: ${event.starts_at.slice(0, 10)}   |   Club: ${clubName}`, { align: 'center' });
+        doc.fontSize(9).text(`Generated: ${new Date().toISOString().slice(0, 10)}`, { align: 'center' });
+        doc.fillColor('#000').moveDown(1);
+        doc.moveTo(50, doc.y).lineTo(560, doc.y).strokeColor('#ccc').stroke();
+        doc.moveDown(1);
+        // ── Summary ──────────────────────────────────────────────────────────────
+        doc.fontSize(13).font('Helvetica-Bold').text('Summary');
+        doc.moveDown(0.3);
+        doc.fontSize(10).font('Helvetica');
+        doc.text(`Total Registered: ${totalRegistered}`);
+        doc.text(`Present: ${present.length}`);
+        doc.text(`No-show: ${noShows.length}`);
+        doc.text(`Attendance Rate: ${attendanceRate}%`);
+        doc.moveDown(1.5);
+        // ── Present Table ────────────────────────────────────────────────────────
+        doc.fontSize(13).font('Helvetica-Bold').text('Present');
+        doc.moveDown(0.5);
+        if (present.length === 0) {
+            doc.fontSize(10).font('Helvetica').fillColor('#666').text('No attendees.');
+            doc.fillColor('#000');
+        }
+        else {
+            const colX = [50, 200, 350, 430];
+            const headers = ['Name', 'Email', 'Check-in Time', 'Method'];
+            doc.fontSize(9).font('Helvetica-Bold').fillColor('#000');
+            headers.forEach((h, i) => doc.text(h, colX[i], doc.y, { width: (colX[i + 1] ?? 560) - colX[i] - 5, continued: i < headers.length - 1 }));
+            doc.moveDown(0.3);
+            doc.moveTo(50, doc.y).lineTo(560, doc.y).strokeColor('#ccc').stroke();
+            doc.moveDown(0.3);
+            for (const r of present) {
+                const y = doc.y;
+                doc.fontSize(9).font('Helvetica').fillColor('#000');
+                const cells = [
+                    r.name.slice(0, 22),
+                    r.email.slice(0, 28),
+                    r.checked_in_at ? r.checked_in_at.slice(0, 16) : '—',
+                    r.method,
+                ];
+                cells.forEach((c, i) => doc.text(c, colX[i], y, { width: (colX[i + 1] ?? 560) - colX[i] - 5, continued: i < cells.length - 1 }));
+                doc.moveDown(0.5);
+            }
+        }
+        doc.moveDown(1);
+        // ── No-show Table ────────────────────────────────────────────────────────
+        doc.fontSize(13).font('Helvetica-Bold').fillColor('#000').text('No-shows');
+        doc.moveDown(0.5);
+        if (noShows.length === 0) {
+            doc.fontSize(10).font('Helvetica').fillColor('#666').text('No no-shows.');
+            doc.fillColor('#000');
+        }
+        else {
+            const colX = [50, 220, 380];
+            const headers = ['Name', 'Email', 'Registered At'];
+            doc.fontSize(9).font('Helvetica-Bold').fillColor('#000');
+            headers.forEach((h, i) => doc.text(h, colX[i], doc.y, { width: (colX[i + 1] ?? 560) - colX[i] - 5, continued: i < headers.length - 1 }));
+            doc.moveDown(0.3);
+            doc.moveTo(50, doc.y).lineTo(560, doc.y).strokeColor('#ccc').stroke();
+            doc.moveDown(0.3);
+            for (const r of noShows) {
+                const y = doc.y;
+                doc.fontSize(9).font('Helvetica').fillColor('#000');
+                const cells = [
+                    r.name.slice(0, 25),
+                    r.email.slice(0, 30),
+                    r.registered_at ? r.registered_at.slice(0, 16) : '—',
+                ];
+                cells.forEach((c, i) => doc.text(c, colX[i], y, { width: (colX[i + 1] ?? 560) - colX[i] - 5, continued: i < cells.length - 1 }));
+                doc.moveDown(0.5);
+            }
+        }
+        doc.moveDown(2);
+        doc.fontSize(8).fillColor('#999').text('Generated by CMP — Clubs Management Platform', { align: 'center' });
+        doc.end();
+    });
+}
 async function generateAchievementReport(userId, opts = {}) {
     const user = user_model_1.UserModel.findById(userId);
     const semester = opts.semesterId ? semester_model_1.SemesterModel.findById(opts.semesterId) : undefined;

@@ -6,6 +6,8 @@ const roles_1 = require("../middleware/roles");
 const attendance_controller_1 = require("../controllers/attendance.controller");
 const router = (0, express_1.Router)();
 router.use(auth_1.authenticate);
+// Club-level date-range report — must be before /:eventId to avoid param conflict
+router.get('/', (0, roles_1.requireRole)('admin', 'club_leader'), attendance_controller_1.getClubAttendanceReport);
 router.post('/:eventId/qr', (0, roles_1.requireRole)('admin', 'club_leader'), attendance_controller_1.generateEventQr);
 router.post('/check-in', attendance_controller_1.checkIn);
 router.post('/:eventId/manual', (0, roles_1.requireRole)('admin', 'club_leader'), attendance_controller_1.manualCheckIn);

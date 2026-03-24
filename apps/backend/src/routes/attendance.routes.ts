@@ -6,6 +6,7 @@ import {
   checkIn,
   manualCheckIn,
   getAttendanceList,
+  getClubAttendanceReport,
   getEventRegistrations,
   openCheckin,
   closeCheckin,
@@ -15,6 +16,9 @@ import {
 const router = Router();
 
 router.use(authenticate);
+
+// Club-level date-range report — must be before /:eventId to avoid param conflict
+router.get('/', requireRole('admin', 'club_leader'), getClubAttendanceReport);
 
 router.post('/:eventId/qr', requireRole('admin', 'club_leader'), generateEventQr);
 router.post('/check-in', checkIn);

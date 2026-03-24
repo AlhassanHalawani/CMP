@@ -1,7 +1,17 @@
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
-import { cn } from '@/lib/utils';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarRail,
+} from '@/components/ui/sidebar';
 
 const navItems = [
   { path: '/', labelKey: 'nav.dashboard', roles: [] },
@@ -10,11 +20,12 @@ const navItems = [
   { path: '/achievements', labelKey: 'nav.achievements', roles: [] },
   { path: '/leaderboard', labelKey: 'nav.leaderboard', roles: [] },
   { path: '/kpi', labelKey: 'nav.kpi', roles: ['admin', 'club_leader'] },
+  { path: '/reports', labelKey: 'nav.reports', roles: ['admin', 'club_leader'] },
   { path: '/notifications', labelKey: 'nav.notifications', roles: [] },
   { path: '/admin', labelKey: 'nav.admin', roles: ['admin'] },
 ];
 
-export function Sidebar() {
+export function AppSidebar() {
   const { t } = useTranslation();
   const { hasRole } = useAuth();
 
@@ -23,29 +34,43 @@ export function Sidebar() {
   );
 
   return (
-    <aside className="w-64 min-h-screen border-r-2 border-[var(--border)] bg-[var(--background)] p-4 flex flex-col">
-      <div className="mb-6 border-b-2 border-[var(--border)] pb-4">
-        <h1 className="text-xl font-black">{t('app.shortTitle')}</h1>
-        <p className="text-xs font-bold text-[var(--main)]">{t('app.title')}</p>
-      </div>
-      <nav className="flex flex-col gap-1">
-        {visibleItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) =>
-              cn(
-                'px-3 py-2 font-bold border-2 border-transparent transition-all',
-                isActive
-                  ? 'border-[var(--border)] bg-[var(--overlay)] shadow-[2px_2px_0px_0px_var(--border)]'
-                  : 'hover:border-[var(--border)] hover:bg-[var(--overlay)]'
-              )
-            }
-          >
-            {t(item.labelKey)}
-          </NavLink>
-        ))}
-      </nav>
-    </aside>
+    <Sidebar collapsible="icon">
+      <SidebarHeader>
+        <div className="px-2 py-1">
+          <p className="text-base font-black group-data-[collapsible=icon]:hidden">
+            {t('app.shortTitle')}
+          </p>
+          <p className="text-xs font-bold text-[var(--main)] group-data-[collapsible=icon]:hidden">
+            {t('app.title')}
+          </p>
+        </div>
+      </SidebarHeader>
+
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {visibleItems.map((item) => (
+                <SidebarMenuItem key={item.path}>
+                  <SidebarMenuButton asChild tooltip={t(item.labelKey)}>
+                    <NavLink
+                      to={item.path}
+                      end={item.path === '/'}
+                      className={({ isActive }) =>
+                        isActive ? 'bg-main text-main-foreground outline-border outline-2' : ''
+                      }
+                    >
+                      <span>{t(item.labelKey)}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      <SidebarRail />
+    </Sidebar>
   );
 }

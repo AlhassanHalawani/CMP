@@ -2,8 +2,10 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { AttendanceModel } from '../models/attendance.model';
 import { EventModel } from '../models/event.model';
+import { ClubModel } from '../models/club.model';
 import { RegistrationModel } from '../models/registration.model';
 import { generateQr } from '../services/qrcode.service';
+import { generateAttendanceReport } from '../services/pdf.service';
 import { isAdmin, leaderOwnsEvent } from '../services/ownership.service';
 import { logAction } from '../services/audit.service';
 
@@ -130,9 +132,11 @@ export function manualCheckIn(req: AuthRequest, res: Response) {
   res.status(201).json(attendance);
 }
 
-export function getAttendanceList(req: AuthRequest, res: Response) {
+export async function getAttendanceList(req: AuthRequest, res: Response) {
   const eventId = parseInt(req.params.eventId);
   const user = req.user!;
+  const format = (req.query.format as string) || 'json';
+  const status = (req.query.status as string) || 'all';
 
   const event = EventModel.findById(eventId);
   if (!event) {
@@ -146,9 +150,107 @@ export function getAttendanceList(req: AuthRequest, res: Response) {
     return;
   }
 
-  const list = AttendanceModel.findByEvent(eventId);
-  const count = AttendanceModel.countByEvent(eventId);
-  res.json({ data: list, total: count });
+  const present = AttendanceModel.findPresentWithUsers(eventId);
+  const noShows = AttendanceModel.findNoShowsWithUsers(eventId);
+  const totalRegistered = present.length + noShows.length;
+  const attendanceRate = totalRegistered > 0 ? Math.round((present.length / totalRegistered) * 100) : 0;
+
+  if (format === 'csv') {
+    const rows = [['Name', 'Email', 'Status', 'Time', 'Method']];
+    if (status !== 'no_show') {
+      present.forEach((r) => rows.push([r.name, r.email, 'Present', r.checked_in_at, r.method]));
+    }
+    if (status !== 'present') {
+      noShows.forEach((r) => rows.push([r.name, r.email, 'No-show', r.registered_at, '—']));
+    }
+    const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=attendance-event-${eventId}.csv`);
+    return res.send(csv);
+  }
+
+  if (format === 'pdf') {
+    const club = ClubModel.findById(event.club_id);
+    const pdf = await generateAttendanceReport(event, club?.name ?? '', present, noShows);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=attendance-event-${eventId}.pdf`);
+    return res.send(pdf);
+  }
+
+  // JSON (default)
+  const data =
+    status === 'present'
+      ? present
+      : status === 'no_show'
+      ? noShows
+      : [...present.map((r) => ({ ...r, attendance_status: 'present' })), ...noShows.map((r) => ({ ...r, attendance_status: 'no_show' }))];
+
+  res.json({
+    data,
+    summary: { total_registered: totalRegistered, present: present.length, no_show: noShows.length, attendance_rate: attendanceRate },
+  });
+}
+
+export async function getClubAttendanceReport(req: AuthRequest, res: Response) {
+  const user = req.user!;
+  const clubId = parseInt(req.query.club_id as string);
+  const startsAfter = req.query.starts_after as string;
+  const endsBefore = req.query.ends_before as string;
+  const format = (req.query.format as string) || 'json';
+
+  if (!clubId || !startsAfter || !endsBefore) {
+    res.status(400).json({ error: 'club_id, starts_after, and ends_before are required' });
+    return;
+  }
+
+  const club = ClubModel.findById(clubId);
+  if (!club) {
+    res.status(404).json({ error: 'Club not found' });
+    return;
+  }
+
+  // club_leader scoped to own club
+  if (!isAdmin(user) && club.leader_id !== user.id) {
+    res.status(403).json({ error: 'You do not have permission to access this club\'s data' });
+    return;
+  }
+
+  const rows = AttendanceModel.findClubReport(clubId, startsAfter, endsBefore);
+
+  if (format === 'csv') {
+    const csvRows = [['Event', 'Event Date', 'Name', 'Email', 'Status', 'Check-in Time', 'Method']];
+    rows.forEach((r) =>
+      csvRows.push([
+        r.event_title,
+        r.event_starts_at.slice(0, 10),
+        r.name,
+        r.email,
+        r.status,
+        r.checked_in_at ?? '',
+        r.method ?? '',
+      ])
+    );
+    const csv = csvRows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=attendance-club-${clubId}.csv`);
+    return res.send(csv);
+  }
+
+  if (format === 'pdf') {
+    const present = rows.filter((r) => r.status === 'Present').map((r) => ({
+      name: r.name, email: r.email, checked_in_at: r.checked_in_at ?? '', method: r.method ?? 'manual' as 'qr' | 'manual',
+    }));
+    const noShows = rows.filter((r) => r.status === 'No-show').map((r) => ({
+      name: r.name, email: r.email, registered_at: '',
+    }));
+    const fakeEvent = { title: `${club.name} — ${startsAfter} to ${endsBefore}`, starts_at: startsAfter } as any;
+    const pdf = await generateAttendanceReport(fakeEvent, club.name, present, noShows);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=attendance-club-${clubId}.pdf`);
+    return res.send(pdf);
+  }
+
+  res.json({ data: rows, total: rows.length });
 }
 
 export function getEventRegistrations(req: AuthRequest, res: Response) {

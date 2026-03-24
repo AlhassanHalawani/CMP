@@ -39,6 +39,49 @@ exports.AttendanceModel = {
     countByEvent(eventId) {
         return database_1.db.prepare('SELECT COUNT(*) as count FROM attendance WHERE event_id = ?').get(eventId).count;
     },
+    findPresentWithUsers(eventId) {
+        return database_1.db
+            .prepare(`
+        SELECT u.name, u.email, a.checked_in_at, a.method
+        FROM attendance a
+        JOIN users u ON u.id = a.user_id
+        WHERE a.event_id = ?
+        ORDER BY a.checked_in_at
+      `)
+            .all(eventId);
+    },
+    findNoShowsWithUsers(eventId) {
+        return database_1.db
+            .prepare(`
+        SELECT u.name, u.email, r.registered_at
+        FROM registrations r
+        JOIN users u ON u.id = r.user_id
+        LEFT JOIN attendance a ON a.event_id = r.event_id AND a.user_id = r.user_id
+        WHERE r.event_id = ? AND r.status = 'confirmed' AND a.id IS NULL
+        ORDER BY u.name
+      `)
+            .all(eventId);
+    },
+    findClubReport(clubId, startsAfter, endsBefore) {
+        return database_1.db
+            .prepare(`
+        SELECT e.title AS event_title, e.starts_at AS event_starts_at,
+               u.name, u.email,
+               CASE WHEN a.id IS NOT NULL THEN 'Present' ELSE 'No-show' END AS status,
+               a.checked_in_at, a.method
+        FROM registrations r
+        JOIN events e ON e.id = r.event_id
+        JOIN users u ON u.id = r.user_id
+        LEFT JOIN attendance a ON a.event_id = r.event_id AND a.user_id = r.user_id
+        WHERE e.club_id = ?
+          AND e.status = 'published'
+          AND e.starts_at >= ?
+          AND e.ends_at <= ?
+          AND r.status = 'confirmed'
+        ORDER BY e.starts_at, u.name
+      `)
+            .all(clubId, startsAfter, endsBefore);
+    },
     findByUserWithEvents(userId, opts) {
         let sql = `
       SELECT e.title AS event_title, e.starts_at AS event_date, a.checked_in_at, a.method
