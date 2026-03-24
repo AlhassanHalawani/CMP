@@ -256,7 +256,7 @@ describe('Attendance API', () => {
         .set('Authorization', `Bearer ${token}`);
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty('data');
-      expect(res.body).toHaveProperty('total');
+      expect(res.body).toHaveProperty('summary');
     });
 
     it('returns 404 for non-existent event', async () => {
