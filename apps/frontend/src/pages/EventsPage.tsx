@@ -47,6 +47,11 @@ function isSameDay(a: Date, b: Date) {
   );
 }
 
+// ─── sentinels ──────────────────────────────────────────────────────────────
+
+const ALL_CATEGORIES = '__all_categories__';
+const ALL_CLUBS = '__all_clubs__';
+
 // ─── component ──────────────────────────────────────────────────────────────
 
 export function EventsPage() {
@@ -187,12 +192,15 @@ export function EventsPage() {
       <div className="mb-4 flex flex-wrap gap-3 items-end">
         {/* Category */}
         <div className="min-w-[140px]">
-          <Select value={filterCategory} onValueChange={setFilterCategory}>
+          <Select
+            value={filterCategory || ALL_CATEGORIES}
+            onValueChange={(v) => setFilterCategory(v === ALL_CATEGORIES ? '' : v)}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Category" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All categories</SelectItem>
+              <SelectItem value={ALL_CATEGORIES}>All categories</SelectItem>
               {(categories ?? []).map((cat) => (
                 <SelectItem key={cat} value={cat}>{cat}</SelectItem>
               ))}
@@ -202,12 +210,15 @@ export function EventsPage() {
 
         {/* Club */}
         <div className="min-w-[160px]">
-          <Select value={filterClubId} onValueChange={setFilterClubId}>
+          <Select
+            value={filterClubId || ALL_CLUBS}
+            onValueChange={(v) => setFilterClubId(v === ALL_CLUBS ? '' : v)}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Club" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All clubs</SelectItem>
+              <SelectItem value={ALL_CLUBS}>All clubs</SelectItem>
               {allClubs.map((club) => (
                 <SelectItem key={club.id} value={String(club.id)}>
                   {language === 'ar' ? club.name_ar : club.name}

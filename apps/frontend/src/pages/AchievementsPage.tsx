@@ -16,6 +16,9 @@ import { clubsApi } from '@/api/clubs';
 import { achievementsApi } from '@/api/achievements';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
+const ALL_TERMS = '__all_terms__';
+const ALL_CLUBS = '__all_clubs__';
+
 export function AchievementsPage() {
   const { t } = useTranslation();
   const { currentUser } = useCurrentUser();
@@ -79,12 +82,15 @@ export function AchievementsPage() {
           <div className="flex flex-wrap gap-3 items-end">
             <div className="flex-1 min-w-[160px]">
               <label className="text-sm font-medium mb-1 block">{t('achievements.semester')}</label>
-              <Select value={semesterId} onValueChange={setSemesterId}>
+              <Select
+                value={semesterId || ALL_TERMS}
+                onValueChange={(v) => setSemesterId(v === ALL_TERMS ? '' : v)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder={t('achievements.allTerms')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">{t('achievements.allTerms')}</SelectItem>
+                  <SelectItem value={ALL_TERMS}>{t('achievements.allTerms')}</SelectItem>
                   {semesters.map((s) => (
                     <SelectItem key={s.id} value={String(s.id)}>
                       {s.name}
@@ -96,12 +102,15 @@ export function AchievementsPage() {
 
             <div className="flex-1 min-w-[160px]">
               <label className="text-sm font-medium mb-1 block">{t('achievements.club')}</label>
-              <Select value={clubId} onValueChange={setClubId}>
+              <Select
+                value={clubId || ALL_CLUBS}
+                onValueChange={(v) => setClubId(v === ALL_CLUBS ? '' : v)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder={t('achievements.allClubs')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">{t('achievements.allClubs')}</SelectItem>
+                  <SelectItem value={ALL_CLUBS}>{t('achievements.allClubs')}</SelectItem>
                   {clubs.map((c) => (
                     <SelectItem key={c.id} value={String(c.id)}>
                       {c.name}
