@@ -68,7 +68,7 @@ export function AppSidebar() {
                       to={item.path}
                       end={item.path === '/'}
                       className={({ isActive }) =>
-                        isActive ? 'bg-main text-main-foreground outline-border outline-2' : 'text-foreground'
+                        isActive ? 'bg-main text-main-foreground outline-border outline-2' : 'text-foreground dark:text-white'
                       }
                     >
                       <item.icon />

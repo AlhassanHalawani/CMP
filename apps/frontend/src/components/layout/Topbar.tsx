@@ -30,7 +30,7 @@ export function Topbar() {
   const unreadCount = notifData?.unread ?? 0;
 
   return (
-    <header className="flex items-center justify-between border-b-2 border-[var(--border)] bg-[var(--background)] px-6 py-3">
+    <header className="flex items-center justify-between px-4">
       <div />
       <div className="flex items-center gap-3">
         <Button variant="outline" size="sm" onClick={toggleLanguage}>
