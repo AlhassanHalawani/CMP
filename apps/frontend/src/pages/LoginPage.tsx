@@ -9,7 +9,7 @@ export function LoginPage() {
   const { t } = useTranslation();
   const { toggleLanguage, language } = useLanguage();
 
-  if (authenticated) return <Navigate to="/" replace />;
+  if (authenticated) return <Navigate to="/dashboard" replace />;
 
   return (
     <div className="flex h-screen items-center justify-center bg-[var(--background)]">

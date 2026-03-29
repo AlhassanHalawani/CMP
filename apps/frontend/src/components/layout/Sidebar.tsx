@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/sidebar';
 
 const navItems = [
-  { path: '/', labelKey: 'nav.dashboard', roles: [], icon: LayoutDashboard },
+  { path: '/dashboard', labelKey: 'nav.dashboard', roles: [], icon: LayoutDashboard },
   { path: '/clubs', labelKey: 'nav.clubs', roles: [], icon: Users },
   { path: '/events', labelKey: 'nav.events', roles: [], icon: Calendar },
   { path: '/achievements', labelKey: 'nav.achievements', roles: [], icon: Trophy },

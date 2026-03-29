@@ -11,7 +11,7 @@ export function SignupPage() {
   const { toggleLanguage, language } = useLanguage();
   const [redirectError, setRedirectError] = useState(false);
 
-  if (authenticated) return <Navigate to="/" replace />;
+  if (authenticated) return <Navigate to="/dashboard" replace />;
 
   useEffect(() => {
     Promise.resolve(register()).catch(() => {
