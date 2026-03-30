@@ -11,7 +11,7 @@ import { notify, notifyRole } from '../services/notifications.service';
 export function listEvents(req: Request, res: Response) {
   const authReq = req as AuthRequest;
   const user = authReq.user;
-  let status = req.query.status as string | undefined;
+  const status = req.query.status as string | undefined;
   const clubId = req.query.club_id ? parseInt(req.query.club_id as string) : undefined;
   const limit = parseInt(req.query.limit as string) || 50;
   const offset = parseInt(req.query.offset as string) || 0;
