@@ -33,6 +33,20 @@ function getSigningKey(header: jwt.JwtHeader): Promise<string> {
   });
 }
 
+/**
+ * Optional authentication middleware.
+ * - No token → continues as anonymous (req.user is unset)
+ * - Valid token → populates req.user and continues
+ * - Invalid token → returns 401
+ */
+export async function authenticateOptional(req: AuthRequest, res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    return next();
+  }
+  return authenticate(req, res, next);
+}
+
 export async function authenticate(req: AuthRequest, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {

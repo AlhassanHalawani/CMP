@@ -21,6 +21,17 @@ export interface LeaderboardEntry {
     total_score: number;
     rank: number;
 }
+export interface StudentKpiEntry {
+    user_id: number;
+    name: string;
+    email: string;
+    attendance_count: number;
+    achievement_count: number;
+    registration_count: number;
+    active_memberships: number;
+    engagement_score: number;
+    rank: number;
+}
 export declare const KpiModel: {
     recordMetric(data: {
         club_id: number;
@@ -30,5 +41,6 @@ export declare const KpiModel: {
     }): KpiMetric;
     getClubSummary(clubId: number, semesterId?: number): ClubKpiSummary[];
     getLeaderboard(semesterId?: number, department?: string): LeaderboardEntry[];
+    getStudentKpi(semesterId?: number): StudentKpiEntry[];
     computeKpi(semesterId: number): number;
 };

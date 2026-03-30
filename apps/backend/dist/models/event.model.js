@@ -23,7 +23,12 @@ exports.EventModel = {
         let sql = `SELECT *, ${REG_COUNT_SQL} FROM events`;
         const conditions = [];
         const values = [];
-        if (params?.status) {
+        if (params?.leaderClubIds && params.leaderClubIds.length > 0) {
+            const placeholders = params.leaderClubIds.map(() => '?').join(', ');
+            conditions.push(`(status = 'published' OR club_id IN (${placeholders}))`);
+            values.push(...params.leaderClubIds);
+        }
+        else if (params?.status) {
             conditions.push('status = ?');
             values.push(params.status);
         }
@@ -88,13 +93,18 @@ exports.EventModel = {
         let sql = 'SELECT COUNT(*) as count FROM events';
         const conditions = [];
         const values = [];
+        if (params?.leaderClubIds && params.leaderClubIds.length > 0) {
+            const placeholders = params.leaderClubIds.map(() => '?').join(', ');
+            conditions.push(`(status = 'published' OR club_id IN (${placeholders}))`);
+            values.push(...params.leaderClubIds);
+        }
+        else if (params?.status) {
+            conditions.push('status = ?');
+            values.push(params.status);
+        }
         if (params?.clubId) {
             conditions.push('club_id = ?');
             values.push(params.clubId);
-        }
-        if (params?.status) {
-            conditions.push('status = ?');
-            values.push(params.status);
         }
         if (params?.category) {
             conditions.push('category = ?');

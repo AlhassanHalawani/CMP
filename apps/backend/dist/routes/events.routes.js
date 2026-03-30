@@ -8,8 +8,8 @@ const router = (0, express_1.Router)();
 // ICS / calendar export — must come before /:id routes
 router.get('/calendar.ics', events_controller_1.exportCalendarIcs);
 router.get('/categories', events_controller_1.listEventCategories);
-router.get('/', events_controller_1.listEvents);
-router.get('/:id', events_controller_1.getEvent);
+router.get('/', auth_1.authenticateOptional, events_controller_1.listEvents);
+router.get('/:id', auth_1.authenticateOptional, events_controller_1.getEvent);
 router.post('/', auth_1.authenticate, (0, roles_1.requireRole)('admin', 'club_leader'), events_controller_1.createEvent);
 router.patch('/:id', auth_1.authenticate, (0, roles_1.requireRole)('admin', 'club_leader'), events_controller_1.updateEvent);
 router.delete('/:id', auth_1.authenticate, (0, roles_1.requireRole)('admin', 'club_leader'), events_controller_1.deleteEvent);

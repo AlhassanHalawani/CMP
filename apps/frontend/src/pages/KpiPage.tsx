@@ -57,6 +57,13 @@ const leaderboardChartConfig: ChartConfig = {
   },
 };
 
+const studentChartConfig: ChartConfig = {
+  engagement_score: {
+    label: 'Engagement',
+    color: 'var(--color-main, #facc15)',
+  },
+};
+
 const MEDAL: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
 
 export function KpiPage() {
@@ -82,24 +89,38 @@ export function KpiPage() {
   const { data: leaderboard, isLoading: leaderboardLoading } = useQuery({
     queryKey: ['kpi', 'leaderboard', selectedSemester, selectedDepartment],
     queryFn: () => kpiApi.getLeaderboard(selectedSemester, selectedDepartment),
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   const { data: clubSummary, isLoading: summaryLoading } = useQuery({
     queryKey: ['kpi', 'club', selectedClub, selectedSemester],
     queryFn: () => kpiApi.getClubSummary(selectedClub!, selectedSemester),
     enabled: !!selectedClub,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
+  });
+
+  const { data: studentKpi, isLoading: studentLoading } = useQuery({
+    queryKey: ['kpi', 'students', selectedSemester],
+    queryFn: () => kpiApi.getStudentKpi(selectedSemester),
+    enabled: isAdmin,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   const computeMutation = useMutation({
     mutationFn: () => kpiApi.computeKpi(selectedSemester!),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['kpi', 'leaderboard'] });
+      queryClient.invalidateQueries({ queryKey: ['kpi'] });
     },
   });
 
   const leaderboardData = leaderboard?.data ?? [];
   const summaryData = clubSummary?.data ?? [];
-  const maxScore = leaderboardData[0]?.total_score ?? 1;
+  const studentData = studentKpi?.data ?? [];
+  const maxScore = leaderboardData[0]?.total_score ?? 0;
+  const maxEngagement = studentData[0]?.engagement_score ?? 0;
 
   // Unique departments from clubs list
   const departments = Array.from(
@@ -117,7 +138,19 @@ export function KpiPage() {
     {},
   );
 
-  // Active semester name for compute button context
+  // Pie chart always has a stable set of slices; use a neutral placeholder when all zero
+  const pieData =
+    summaryData.length > 0
+      ? summaryData.map((s) => ({ name: s.metric_key, value: s.total }))
+      : [
+          { name: 'attendance_count', value: 0 },
+          { name: 'achievement_count', value: 0 },
+          { name: 'member_count', value: 0 },
+          { name: 'total_score', value: 0 },
+        ];
+
+  const allPieZero = pieData.every((d) => d.value === 0);
+
   const activeSemesterName = semesters?.data.find((s) => s.id === selectedSemester)?.name;
 
   return (
@@ -126,7 +159,6 @@ export function KpiPage() {
 
       {/* Filters row */}
       <div className="mb-6 flex flex-wrap items-center gap-3">
-        {/* Semester filter */}
         <span className="text-sm font-bold">{t('kpi.filterBySemester')}:</span>
         <button
           className={`px-3 py-1 text-sm font-bold border-2 border-[var(--border)] rounded-base transition-all ${
@@ -152,7 +184,6 @@ export function KpiPage() {
           </button>
         ))}
 
-        {/* Department filter */}
         {departments.length > 0 && (
           <div className="ml-4 flex items-center gap-2">
             <span className="text-sm font-bold">{t('kpi.filterByDepartment', 'Department')}:</span>
@@ -223,6 +254,7 @@ export function KpiPage() {
         <TabsList>
           <TabsTrigger value="leaderboard">{t('kpi.leaderboard')}</TabsTrigger>
           <TabsTrigger value="club">{t('kpi.clubBreakdown')}</TabsTrigger>
+          {isAdmin && <TabsTrigger value="students">{t('kpi.students', 'Students')}</TabsTrigger>}
         </TabsList>
 
         {/* Leaderboard tab */}
@@ -239,7 +271,7 @@ export function KpiPage() {
                 <CardContent>
                   {leaderboardData.length === 0 ? (
                     <div className="flex h-[300px] items-center justify-center">
-                      <p className="text-sm opacity-50">{t('kpi.noActivityYet', 'No activity yet')}</p>
+                      <p className="text-sm opacity-50">{t('kpi.noClubsYet', 'No clubs yet')}</p>
                     </div>
                   ) : (
                     <ChartContainer config={leaderboardChartConfig} className="h-[300px] w-full">
@@ -275,7 +307,7 @@ export function KpiPage() {
                       {leaderboardData.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={5} className="py-8 text-center text-sm opacity-50">
-                            {t('kpi.noActivityYet', 'No activity yet')}
+                            {t('kpi.noClubsYet', 'No clubs yet')}
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -339,59 +371,146 @@ export function KpiPage() {
             <div className="flex justify-center p-12"><Spinner size="lg" /></div>
           ) : (
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              {/* Pie chart */}
+              {/* Pie chart — always rendered, neutral placeholder when all zero */}
               <Card>
                 <CardHeader>
                   <CardTitle>{t('kpi.metricsBreakdown')}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {summaryData.length === 0 ? (
-                    <div className="flex h-[300px] items-center justify-center">
-                      <p className="text-sm opacity-50">{t('kpi.noActivityYet', 'No activity yet')}</p>
-                    </div>
-                  ) : (
-                    <ChartContainer config={summaryChartConfig} className="h-[300px] w-full">
-                      <PieChart>
-                        <ChartTooltip content={<ChartTooltipContent />} />
-                        <Pie
-                          data={summaryData.map((s) => ({ name: s.metric_key, value: s.total }))}
-                          dataKey="value"
-                          nameKey="name"
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={100}
-                          strokeWidth={2}
-                        >
-                          {summaryData.map((_, i) => (
-                            <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />
-                          ))}
-                        </Pie>
-                      </PieChart>
-                    </ChartContainer>
+                  <ChartContainer config={summaryChartConfig} className="h-[300px] w-full">
+                    <PieChart>
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Pie
+                        data={allPieZero ? [{ name: 'No activity yet', value: 1 }] : pieData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={100}
+                        strokeWidth={2}
+                      >
+                        {(allPieZero ? [{}] : pieData).map((_, i) => (
+                          <Cell
+                            key={i}
+                            fill={allPieZero ? 'var(--color-secondary-background, #e0e0e0)' : BAR_COLORS[i % BAR_COLORS.length]}
+                          />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ChartContainer>
+                  {allPieZero && (
+                    <p className="mt-2 text-center text-sm opacity-50">
+                      {t('kpi.noActivityRecorded', 'No activity recorded yet')}
+                    </p>
                   )}
                 </CardContent>
               </Card>
 
-              {/* Metric cards */}
+              {/* Metric cards — always rendered with 4 fixed metrics */}
               <div className="space-y-3">
-                {summaryData.length === 0 ? (
-                  <p className="text-sm opacity-50">{t('kpi.noActivityYet', 'No activity yet')}</p>
-                ) : (
-                  summaryData.map((metric) => (
-                    <Card key={metric.metric_key}>
-                      <CardContent className="flex items-center justify-between py-4">
-                        <span className="font-bold">{metric.metric_key}</span>
-                        <Badge variant="accent" className="text-lg px-3 py-1">
-                          {metric.total}
-                        </Badge>
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
+                {pieData.map((metric) => (
+                  <Card key={metric.name}>
+                    <CardContent className="flex items-center justify-between py-4">
+                      <span className="font-bold">{metric.name}</span>
+                      <Badge variant={metric.value > 0 ? 'accent' : 'neutral'} className="text-lg px-3 py-1">
+                        {metric.value}
+                      </Badge>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             </div>
           )}
         </TabsContent>
+
+        {/* Students tab — admin only */}
+        {isAdmin && (
+          <TabsContent value="students">
+            {studentLoading ? (
+              <div className="flex justify-center p-12"><Spinner size="lg" /></div>
+            ) : (
+              <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-2">
+                {/* Student engagement bar chart */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{t('kpi.studentEngagement', 'Student Engagement')}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {studentData.length === 0 ? (
+                      <div className="flex h-[300px] items-center justify-center">
+                        <p className="text-sm opacity-50">{t('kpi.noStudentsYet', 'No students yet')}</p>
+                      </div>
+                    ) : (
+                      <ChartContainer config={studentChartConfig} className="h-[300px] w-full">
+                        <BarChart data={studentData.slice(0, 15)} layout="vertical" margin={{ left: 110 }}>
+                          <CartesianGrid horizontal={false} />
+                          <XAxis type="number" />
+                          <YAxis type="category" dataKey="name" width={105} tick={{ fontSize: 11 }} />
+                          <ChartTooltip content={<ChartTooltipContent />} />
+                          <Bar dataKey="engagement_score" fill="var(--color-engagement_score)" radius={[0, 4, 4, 0]} />
+                        </BarChart>
+                      </ChartContainer>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Student table */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{t('kpi.studentRankings', 'Student Rankings')}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-12">{t('kpi.rank', 'Rank')}</TableHead>
+                          <TableHead>{t('kpi.student', 'Student')}</TableHead>
+                          <TableHead className="text-right">{t('kpi.attendance', 'Attend.')}</TableHead>
+                          <TableHead className="text-right">{t('kpi.achievements', 'Achiev.')}</TableHead>
+                          <TableHead className="text-right">{t('kpi.score', 'Score')}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {studentData.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="py-8 text-center text-sm opacity-50">
+                              {t('kpi.noStudentsYet', 'No students yet')}
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          studentData.map((entry) => (
+                            <TableRow key={entry.user_id}>
+                              <TableCell className="font-black text-center">
+                                {MEDAL[entry.rank] ?? (
+                                  <Badge variant="neutral" className="text-xs">{entry.rank}</Badge>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <div className="font-bold">{entry.name}</div>
+                                <div className="text-xs opacity-50">{entry.email}</div>
+                                <Progress
+                                  value={maxEngagement > 0 ? (entry.engagement_score / maxEngagement) * 100 : 0}
+                                  className="mt-1 h-1.5"
+                                />
+                              </TableCell>
+                              <TableCell className="text-right text-sm">{entry.attendance_count}</TableCell>
+                              <TableCell className="text-right text-sm">{entry.achievement_count}</TableCell>
+                              <TableCell className="text-right">
+                                <Badge variant="accent" className="text-sm px-2 py-0.5">
+                                  {entry.engagement_score}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

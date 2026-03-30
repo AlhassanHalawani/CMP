@@ -32,6 +32,8 @@ export declare const EventModel: {
         location?: string;
         startsAfter?: string;
         endsBefore?: string;
+        /** When set, returns published events PLUS any event belonging to these clubs (leader visibility) */
+        leaderClubIds?: number[];
     }): Event[];
     create(data: Omit<Event, "id" | "created_at" | "registration_count">): Event;
     update(id: number, data: Partial<Omit<Event, "id" | "created_at" | "registration_count">>): Event | undefined;
@@ -43,6 +45,8 @@ export declare const EventModel: {
         location?: string;
         startsAfter?: string;
         endsBefore?: string;
+        /** When set, counts published events PLUS any event belonging to these clubs (leader visibility) */
+        leaderClubIds?: number[];
     }): number;
     listDistinctCategories(): string[];
 };

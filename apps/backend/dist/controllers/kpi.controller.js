@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.recordMetric = recordMetric;
 exports.getClubSummary = getClubSummary;
 exports.getLeaderboard = getLeaderboard;
+exports.getStudentKpi = getStudentKpi;
 exports.computeKpi = computeKpi;
 const kpi_model_1 = require("../models/kpi.model");
 const ownership_service_1 = require("../services/ownership.service");
@@ -63,6 +64,11 @@ async function getLeaderboard(req, res) {
         return res.send(pdfBuffer);
     }
     res.json({ data: leaderboard });
+}
+function getStudentKpi(req, res) {
+    const semesterId = req.query.semester_id ? parseInt(req.query.semester_id) : undefined;
+    const students = kpi_model_1.KpiModel.getStudentKpi(semesterId);
+    res.json({ data: students });
 }
 function computeKpi(req, res) {
     const semesterId = parseInt(req.body.semester_id);

@@ -29,6 +29,14 @@ export function leaderOwnsEvent(userId: number, eventId: number): boolean {
 }
 
 /**
+ * Returns all club IDs that the user leads.
+ */
+export function getLeaderClubIds(userId: number): number[] {
+  const rows = db.prepare('SELECT id FROM clubs WHERE leader_id = ?').all(userId) as { id: number }[];
+  return rows.map((r) => r.id);
+}
+
+/**
  * Returns true if the user can manage the club (admin bypass or owns it).
  */
 export function canManageClub(user: User, clubId: number): boolean {

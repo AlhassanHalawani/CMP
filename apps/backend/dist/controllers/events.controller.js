@@ -22,6 +22,7 @@ const ownership_service_1 = require("../services/ownership.service");
 const notifications_service_1 = require("../services/notifications.service");
 function listEvents(req, res) {
     const authReq = req;
+    const user = authReq.user;
     let status = req.query.status;
     const clubId = req.query.club_id ? parseInt(req.query.club_id) : undefined;
     const limit = parseInt(req.query.limit) || 50;
@@ -30,14 +31,26 @@ function listEvents(req, res) {
     const location = req.query.location;
     const startsAfter = req.query.starts_after;
     const endsBefore = req.query.ends_before;
-    // Students (and unauthenticated callers) only see published events
-    if (!authReq.user || authReq.user.role === 'student') {
-        status = 'published';
+    const baseFilters = { clubId, limit, offset, category, location, startsAfter, endsBefore };
+    if (!user || user.role === 'student') {
+        // Anonymous and students only see published events
+        const events = event_model_1.EventModel.list({ ...baseFilters, status: 'published' });
+        const total = event_model_1.EventModel.count({ ...baseFilters, status: 'published' });
+        res.json({ data: events, total });
     }
-    const filterParams = { status, clubId, limit, offset, category, location, startsAfter, endsBefore };
-    const events = event_model_1.EventModel.list(filterParams);
-    const total = event_model_1.EventModel.count({ status, clubId, category, location, startsAfter, endsBefore });
-    res.json({ data: events, total });
+    else if ((0, ownership_service_1.isAdmin)(user)) {
+        // Admins see all events; respect an explicit status filter if provided
+        const events = event_model_1.EventModel.list({ ...baseFilters, status });
+        const total = event_model_1.EventModel.count({ ...baseFilters, status });
+        res.json({ data: events, total });
+    }
+    else {
+        // Club leaders: published events + all events belonging to clubs they lead
+        const leaderClubIds = (0, ownership_service_1.getLeaderClubIds)(user.id);
+        const events = event_model_1.EventModel.list({ ...baseFilters, leaderClubIds });
+        const total = event_model_1.EventModel.count({ ...baseFilters, leaderClubIds });
+        res.json({ data: events, total });
+    }
 }
 function listEventCategories(_req, res) {
     const categories = event_model_1.EventModel.listDistinctCategories();
@@ -106,12 +119,26 @@ function exportCalendarIcs(req, res) {
     res.send(ics);
 }
 function getEvent(req, res) {
+    const user = req.user;
     const event = event_model_1.EventModel.findById(parseInt(req.params.id));
     if (!event) {
         res.status(404).json({ error: 'Event not found' });
         return;
     }
-    res.json(event);
+    if (event.status === 'published') {
+        res.json(event);
+        return;
+    }
+    // Unpublished: only admins and the owning leader may view
+    if (!user) {
+        res.status(404).json({ error: 'Event not found' });
+        return;
+    }
+    if ((0, ownership_service_1.isAdmin)(user) || (0, ownership_service_1.leaderOwnsEvent)(user.id, event.id)) {
+        res.json(event);
+        return;
+    }
+    res.status(404).json({ error: 'Event not found' });
 }
 function createEvent(req, res) {
     const user = req.user;

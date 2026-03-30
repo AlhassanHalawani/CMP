@@ -10,27 +10,39 @@ exports.KpiModel = {
         return database_1.db.prepare('SELECT * FROM kpi_metrics WHERE id = ?').get(result.lastInsertRowid);
     },
     getClubSummary(clubId, semesterId) {
-        let sql = 'SELECT club_id, metric_key, SUM(metric_value) as total FROM kpi_metrics WHERE club_id = ?';
-        const values = [clubId];
-        if (semesterId) {
-            sql += ' AND semester_id = ?';
-            values.push(semesterId);
-        }
-        sql += ' GROUP BY metric_key';
-        return database_1.db.prepare(sql).all(...values);
+        const semesterJoin = semesterId ? 'AND km.semester_id = ?' : '';
+        const values = [clubId, clubId];
+        if (semesterId)
+            values.push(semesterId, semesterId, semesterId, semesterId);
+        const sql = `
+      WITH keys(metric_key) AS (
+        VALUES ('attendance_count'), ('achievement_count'), ('member_count'), ('total_score')
+      )
+      SELECT
+        ? AS club_id,
+        k.metric_key,
+        COALESCE(SUM(km.metric_value), 0) AS total
+      FROM keys k
+      LEFT JOIN kpi_metrics km
+        ON km.club_id = ? AND km.metric_key = k.metric_key ${semesterJoin}
+      GROUP BY k.metric_key
+      ORDER BY k.metric_key
+    `;
+        // semesterId appears once per ? placeholder in the join
+        const params = [clubId, clubId];
+        if (semesterId)
+            params.push(semesterId);
+        return database_1.db.prepare(sql).all(...params);
     },
     getLeaderboard(semesterId, department) {
-        const conditions = [];
-        const values = [];
-        if (semesterId) {
-            conditions.push("km.semester_id = ?");
-            values.push(semesterId);
-        }
-        if (department) {
-            conditions.push("c.department = ?");
-            values.push(department);
-        }
-        const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+        // semester filter must be a JOIN condition so LEFT JOIN is preserved for clubs with no KPI rows
+        const semesterJoin = semesterId ? 'AND km.semester_id = ?' : '';
+        const departmentWhere = department ? 'WHERE c.department = ?' : '';
+        const params = [];
+        if (semesterId)
+            params.push(semesterId);
+        if (department)
+            params.push(department);
         const sql = `
       SELECT
         c.id        AS club_id,
@@ -40,17 +52,76 @@ exports.KpiModel = {
         COALESCE(SUM(CASE WHEN km.metric_key = 'achievement_count' THEN km.metric_value END), 0) AS achievement_count,
         COALESCE(SUM(CASE WHEN km.metric_key = 'member_count'      THEN km.metric_value END), 0) AS member_count,
         COALESCE(SUM(CASE WHEN km.metric_key = 'total_score'       THEN km.metric_value END), 0) AS total_score
-      FROM kpi_metrics km
-      JOIN clubs c ON c.id = km.club_id
-      ${where}
-      GROUP BY km.club_id
-      ORDER BY total_score DESC
+      FROM clubs c
+      LEFT JOIN kpi_metrics km ON km.club_id = c.id ${semesterJoin}
+      ${departmentWhere}
+      GROUP BY c.id
+      ORDER BY total_score DESC, c.name ASC
     `;
-        const rows = database_1.db.prepare(sql).all(...values);
+        const rows = database_1.db.prepare(sql).all(...params);
         // Apply tied-rank logic in application code
         let rank = 1;
         return rows.map((row, i) => {
             if (i > 0 && row.total_score < rows[i - 1].total_score)
+                rank = i + 1;
+            return { ...row, rank };
+        });
+    },
+    getStudentKpi(semesterId) {
+        // Build semester-aware attendance and achievement subqueries using parameterized joins
+        const attSemJoin = semesterId
+            ? 'JOIN semesters sem_a ON sem_a.id = ? AND a.checked_in_at BETWEEN sem_a.starts_at AND sem_a.ends_at'
+            : '';
+        const achSemJoin = semesterId
+            ? 'JOIN semesters sem_c ON sem_c.id = ? AND ach.awarded_at BETWEEN sem_c.starts_at AND sem_c.ends_at'
+            : '';
+        const sql = `
+      SELECT
+        u.id   AS user_id,
+        u.name,
+        u.email,
+        COALESCE(att.attendance_count,   0) AS attendance_count,
+        COALESCE(ach.achievement_count,  0) AS achievement_count,
+        COALESCE(reg.registration_count, 0) AS registration_count,
+        COALESCE(mem.active_memberships, 0) AS active_memberships,
+        (COALESCE(att.attendance_count, 0) + COALESCE(ach.achievement_count, 0)) AS engagement_score
+      FROM users u
+      LEFT JOIN (
+        SELECT a.user_id, COUNT(*) AS attendance_count
+        FROM attendance a
+        JOIN events e ON e.id = a.event_id AND e.status = 'published'
+        ${attSemJoin}
+        GROUP BY a.user_id
+      ) att ON att.user_id = u.id
+      LEFT JOIN (
+        SELECT ach.user_id, COUNT(*) AS achievement_count
+        FROM achievements ach
+        ${achSemJoin}
+        GROUP BY ach.user_id
+      ) ach ON ach.user_id = u.id
+      LEFT JOIN (
+        SELECT r.user_id, COUNT(*) AS registration_count
+        FROM registrations r
+        GROUP BY r.user_id
+      ) reg ON reg.user_id = u.id
+      LEFT JOIN (
+        SELECT m.user_id, COUNT(*) AS active_memberships
+        FROM memberships m
+        WHERE m.status = 'active'
+        GROUP BY m.user_id
+      ) mem ON mem.user_id = u.id
+      WHERE u.role = 'student'
+      ORDER BY engagement_score DESC, u.name ASC
+    `;
+        const params = [];
+        if (semesterId)
+            params.push(semesterId); // for attSemJoin
+        if (semesterId)
+            params.push(semesterId); // for achSemJoin
+        const rows = database_1.db.prepare(sql).all(...params);
+        let rank = 1;
+        return rows.map((row, i) => {
+            if (i > 0 && row.engagement_score < rows[i - 1].engagement_score)
                 rank = i + 1;
             return { ...row, rank };
         });

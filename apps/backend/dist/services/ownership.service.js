@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.isAdmin = isAdmin;
 exports.leaderOwnsClub = leaderOwnsClub;
 exports.leaderOwnsEvent = leaderOwnsEvent;
+exports.getLeaderClubIds = getLeaderClubIds;
 exports.canManageClub = canManageClub;
 exports.canManageEvent = canManageEvent;
 const database_1 = require("../config/database");
@@ -27,6 +28,13 @@ function leaderOwnsEvent(userId, eventId) {
         .prepare('SELECT clubs.leader_id FROM events JOIN clubs ON events.club_id = clubs.id WHERE events.id = ?')
         .get(eventId);
     return row !== undefined && row.leader_id === userId;
+}
+/**
+ * Returns all club IDs that the user leads.
+ */
+function getLeaderClubIds(userId) {
+    const rows = database_1.db.prepare('SELECT id FROM clubs WHERE leader_id = ?').all(userId);
+    return rows.map((r) => r.id);
 }
 /**
  * Returns true if the user can manage the club (admin bypass or owns it).

@@ -5,11 +5,12 @@ import { RegistrationModel } from '../models/registration.model';
 import { ClubModel } from '../models/club.model';
 import { MembershipModel } from '../models/membership.model';
 import { logAction } from '../services/audit.service';
-import { isAdmin, leaderOwnsClub, leaderOwnsEvent } from '../services/ownership.service';
+import { isAdmin, leaderOwnsClub, leaderOwnsEvent, getLeaderClubIds } from '../services/ownership.service';
 import { notify, notifyRole } from '../services/notifications.service';
 
 export function listEvents(req: Request, res: Response) {
   const authReq = req as AuthRequest;
+  const user = authReq.user;
   let status = req.query.status as string | undefined;
   const clubId = req.query.club_id ? parseInt(req.query.club_id as string) : undefined;
   const limit = parseInt(req.query.limit as string) || 50;
@@ -19,15 +20,25 @@ export function listEvents(req: Request, res: Response) {
   const startsAfter = req.query.starts_after as string | undefined;
   const endsBefore = req.query.ends_before as string | undefined;
 
-  // Students (and unauthenticated callers) only see published events
-  if (!authReq.user || authReq.user.role === 'student') {
-    status = 'published';
-  }
+  const baseFilters = { clubId, limit, offset, category, location, startsAfter, endsBefore };
 
-  const filterParams = { status, clubId, limit, offset, category, location, startsAfter, endsBefore };
-  const events = EventModel.list(filterParams);
-  const total = EventModel.count({ status, clubId, category, location, startsAfter, endsBefore });
-  res.json({ data: events, total });
+  if (!user || user.role === 'student') {
+    // Anonymous and students only see published events
+    const events = EventModel.list({ ...baseFilters, status: 'published' });
+    const total = EventModel.count({ ...baseFilters, status: 'published' });
+    res.json({ data: events, total });
+  } else if (isAdmin(user)) {
+    // Admins see all events; respect an explicit status filter if provided
+    const events = EventModel.list({ ...baseFilters, status });
+    const total = EventModel.count({ ...baseFilters, status });
+    res.json({ data: events, total });
+  } else {
+    // Club leaders: published events + all events belonging to clubs they lead
+    const leaderClubIds = getLeaderClubIds(user.id);
+    const events = EventModel.list({ ...baseFilters, leaderClubIds });
+    const total = EventModel.count({ ...baseFilters, leaderClubIds });
+    res.json({ data: events, total });
+  }
 }
 
 export function listEventCategories(_req: Request, res: Response) {
@@ -101,12 +112,28 @@ export function exportCalendarIcs(req: Request, res: Response) {
 }
 
 export function getEvent(req: Request, res: Response) {
+  const user = (req as AuthRequest).user;
   const event = EventModel.findById(parseInt(req.params.id));
   if (!event) {
     res.status(404).json({ error: 'Event not found' });
     return;
   }
-  res.json(event);
+
+  if (event.status === 'published') {
+    res.json(event);
+    return;
+  }
+
+  // Unpublished: only admins and the owning leader may view
+  if (!user) {
+    res.status(404).json({ error: 'Event not found' });
+    return;
+  }
+  if (isAdmin(user) || leaderOwnsEvent(user.id, event.id)) {
+    res.json(event);
+    return;
+  }
+  res.status(404).json({ error: 'Event not found' });
 }
 
 export function createEvent(req: AuthRequest, res: Response) {

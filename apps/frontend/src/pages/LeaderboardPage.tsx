@@ -25,6 +25,8 @@ export function LeaderboardPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['kpi', 'leaderboard'],
     queryFn: () => kpiApi.getLeaderboard(),
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   if (isLoading) return <div className="flex justify-center p-12"><Spinner size="lg" /></div>;
@@ -35,16 +37,18 @@ export function LeaderboardPage() {
     <div>
       <h1 className="mb-6 text-3xl font-black">{t('kpi.leaderboard')}</h1>
 
-      {entries.length === 0 ? (
-        <p>{t('common.noData')}</p>
-      ) : (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* Chart view */}
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('kpi.leaderboardChart')}</CardTitle>
-            </CardHeader>
-            <CardContent>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Chart view */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('kpi.leaderboardChart')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {entries.length === 0 ? (
+              <div className="flex h-[300px] items-center justify-center">
+                <p className="text-sm opacity-50">{t('kpi.noClubsYet', 'No clubs yet')}</p>
+              </div>
+            ) : (
               <ChartContainer config={chartConfig} className="h-[300px] w-full">
                 <BarChart data={entries} layout="vertical" margin={{ left: 80 }}>
                   <CartesianGrid horizontal={false} />
@@ -54,12 +58,16 @@ export function LeaderboardPage() {
                   <Bar dataKey="total_score" fill="var(--color-total_score)" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ChartContainer>
-            </CardContent>
-          </Card>
+            )}
+          </CardContent>
+        </Card>
 
-          {/* Ranked list */}
-          <div className="space-y-3">
-            {entries.map((entry, i) => (
+        {/* Ranked list */}
+        <div className="space-y-3">
+          {entries.length === 0 ? (
+            <p className="text-sm opacity-50">{t('kpi.noActivityRecorded', 'No activity recorded yet')}</p>
+          ) : (
+            entries.map((entry, i) => (
               <Card key={entry.club_id} className="flex items-center gap-4">
                 <div className="flex h-12 w-12 items-center justify-center border-r-2 border-[var(--border)] text-2xl font-black">
                   {i + 1}
@@ -71,10 +79,10 @@ export function LeaderboardPage() {
                   <Badge variant="accent" className="text-lg px-3 py-1">{entry.total_score}</Badge>
                 </div>
               </Card>
-            ))}
-          </div>
+            ))
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

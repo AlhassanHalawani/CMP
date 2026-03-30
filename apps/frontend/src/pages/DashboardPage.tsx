@@ -32,16 +32,22 @@ export function DashboardPage() {
   const { data: eventsData, isLoading: eventsLoading } = useQuery({
     queryKey: ['events', 'upcoming'],
     queryFn: () => eventsApi.list({ status: 'published', limit: 5 }),
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   const { data: clubsData } = useQuery({
     queryKey: ['clubs'],
     queryFn: () => clubsApi.list({ limit: 10 }),
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   const { data: leaderboard } = useQuery({
     queryKey: ['kpi', 'leaderboard', 'dashboard'],
     queryFn: () => kpiApi.getLeaderboard(),
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   const canViewKpi = hasRole('admin') || hasRole('club_leader');
@@ -94,23 +100,29 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Top clubs (mini leaderboard) */}
-      {canViewKpi && leaderboard?.data && leaderboard.data.length > 0 && (
+      {/* Top clubs (mini leaderboard) — always visible for kpi-capable roles */}
+      {canViewKpi && (
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-black">{t('kpi.leaderboard')}</h2>
             <Link to="/kpi" className="text-sm font-bold underline">{t('common.viewAll')}</Link>
           </div>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            {leaderboard.data.slice(0, 3).map((entry, i) => (
-              <Card key={entry.club_id}>
-                <CardContent className="flex items-center gap-3 py-4">
-                  <span className="text-2xl font-black">{i + 1}</span>
-                  <span className="flex-1 font-bold">{entry.club_name}</span>
-                  <Badge variant="accent">{entry.total_score}</Badge>
-                </CardContent>
-              </Card>
-            ))}
+            {leaderboard?.data && leaderboard.data.length > 0 ? (
+              leaderboard.data.slice(0, 3).map((entry, i) => (
+                <Card key={entry.club_id}>
+                  <CardContent className="flex items-center gap-3 py-4">
+                    <span className="text-2xl font-black">{i + 1}</span>
+                    <span className="flex-1 font-bold">{entry.club_name}</span>
+                    <Badge variant="accent">{entry.total_score}</Badge>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <p className="text-sm opacity-50 col-span-3">
+                {t('kpi.noActivityRecorded', 'No activity recorded yet')}
+              </p>
+            )}
           </div>
         </div>
       )}

@@ -10,6 +10,10 @@ export declare function leaderOwnsClub(userId: number, clubId: number): boolean;
  */
 export declare function leaderOwnsEvent(userId: number, eventId: number): boolean;
 /**
+ * Returns all club IDs that the user leads.
+ */
+export declare function getLeaderClubIds(userId: number): number[];
+/**
  * Returns true if the user can manage the club (admin bypass or owns it).
  */
 export declare function canManageClub(user: User, clubId: number): boolean;

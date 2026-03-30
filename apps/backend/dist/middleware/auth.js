@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.authenticateOptional = authenticateOptional;
 exports.authenticate = authenticate;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const jwks_rsa_1 = __importDefault(require("jwks-rsa"));
@@ -28,6 +29,19 @@ function getSigningKey(header) {
             resolve(key.getPublicKey());
         });
     });
+}
+/**
+ * Optional authentication middleware.
+ * - No token → continues as anonymous (req.user is unset)
+ * - Valid token → populates req.user and continues
+ * - Invalid token → returns 401
+ */
+async function authenticateOptional(req, res, next) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+        return next();
+    }
+    return authenticate(req, res, next);
 }
 async function authenticate(req, res, next) {
     const authHeader = req.headers.authorization;

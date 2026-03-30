@@ -6,6 +6,8 @@ exports.listUsers = listUsers;
 exports.updateUserRole = updateUserRole;
 const user_model_1 = require("../models/user.model");
 const audit_service_1 = require("../services/audit.service");
+const keycloakAdmin_service_1 = require("../services/keycloakAdmin.service");
+const logger_1 = require("../utils/logger");
 function getMe(req, res) {
     res.json(req.user);
 }
@@ -23,7 +25,7 @@ function listUsers(req, res) {
     const total = user_model_1.UserModel.count();
     res.json({ data: users, total });
 }
-function updateUserRole(req, res) {
+async function updateUserRole(req, res) {
     const id = parseInt(req.params.id);
     const { role } = req.body;
     const user = user_model_1.UserModel.findById(id);
@@ -31,8 +33,14 @@ function updateUserRole(req, res) {
         res.status(404).json({ error: 'User not found' });
         return;
     }
+    const previousRole = user.role;
     user_model_1.UserModel.updateRole(id, role);
     (0, audit_service_1.logAction)({ actorId: req.user.id, action: 'update_role', entityType: 'user', entityId: id, payload: { role } });
+    // Sync to Keycloak so the next token refresh reflects the new role.
+    // Best-effort: a sync failure does not roll back the DB change.
+    (0, keycloakAdmin_service_1.syncUserRealmRole)(user.keycloak_id, role, previousRole).catch((err) => {
+        logger_1.logger.warn(`Keycloak role sync failed for user ${id}: ${err.message}`);
+    });
     res.json(user_model_1.UserModel.findById(id));
 }
 //# sourceMappingURL=users.controller.js.map

@@ -69,6 +69,12 @@ export async function getLeaderboard(req: Request, res: Response) {
   res.json({ data: leaderboard });
 }
 
+export function getStudentKpi(req: Request, res: Response) {
+  const semesterId = req.query.semester_id ? parseInt(req.query.semester_id as string) : undefined;
+  const students = KpiModel.getStudentKpi(semesterId);
+  res.json({ data: students });
+}
+
 export function computeKpi(req: AuthRequest, res: Response) {
   const semesterId = parseInt(req.body.semester_id);
   if (!semesterId || isNaN(semesterId)) {

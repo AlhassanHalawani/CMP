@@ -54,12 +54,18 @@ export const EventModel = {
     location?: string;
     startsAfter?: string;
     endsBefore?: string;
+    /** When set, returns published events PLUS any event belonging to these clubs (leader visibility) */
+    leaderClubIds?: number[];
   }): Event[] {
     let sql = `SELECT *, ${REG_COUNT_SQL} FROM events`;
     const conditions: string[] = [];
     const values: any[] = [];
 
-    if (params?.status) {
+    if (params?.leaderClubIds && params.leaderClubIds.length > 0) {
+      const placeholders = params.leaderClubIds.map(() => '?').join(', ');
+      conditions.push(`(status = 'published' OR club_id IN (${placeholders}))`);
+      values.push(...params.leaderClubIds);
+    } else if (params?.status) {
       conditions.push('status = ?');
       values.push(params.status);
     }
@@ -145,17 +151,23 @@ export const EventModel = {
     location?: string;
     startsAfter?: string;
     endsBefore?: string;
+    /** When set, counts published events PLUS any event belonging to these clubs (leader visibility) */
+    leaderClubIds?: number[];
   }): number {
     let sql = 'SELECT COUNT(*) as count FROM events';
     const conditions: string[] = [];
     const values: any[] = [];
+    if (params?.leaderClubIds && params.leaderClubIds.length > 0) {
+      const placeholders = params.leaderClubIds.map(() => '?').join(', ');
+      conditions.push(`(status = 'published' OR club_id IN (${placeholders}))`);
+      values.push(...params.leaderClubIds);
+    } else if (params?.status) {
+      conditions.push('status = ?');
+      values.push(params.status);
+    }
     if (params?.clubId) {
       conditions.push('club_id = ?');
       values.push(params.clubId);
-    }
-    if (params?.status) {
-      conditions.push('status = ?');
-      values.push(params.status);
     }
     if (params?.category) {
       conditions.push('category = ?');

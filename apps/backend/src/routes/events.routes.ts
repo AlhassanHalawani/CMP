@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate } from '../middleware/auth';
+import { authenticate, authenticateOptional } from '../middleware/auth';
 import { requireRole } from '../middleware/roles';
 import {
   listEvents,
@@ -23,8 +23,8 @@ const router = Router();
 router.get('/calendar.ics', exportCalendarIcs);
 router.get('/categories', listEventCategories);
 
-router.get('/', listEvents);
-router.get('/:id', getEvent);
+router.get('/', authenticateOptional, listEvents);
+router.get('/:id', authenticateOptional, getEvent);
 router.post('/', authenticate, requireRole('admin', 'club_leader'), createEvent);
 router.patch('/:id', authenticate, requireRole('admin', 'club_leader'), updateEvent);
 router.delete('/:id', authenticate, requireRole('admin', 'club_leader'), deleteEvent);
