@@ -24,6 +24,7 @@ import {
   generateAdminToken,
   generateLeaderToken,
   generateLeader2Token,
+  generateTestToken,
   seedOwnershipData,
   TEST_JWT_SECRET,
 } from '../setup';
@@ -543,7 +544,6 @@ describe('Membership management — GET /api/clubs/:id/members', () => {
   });
 
   it('returns 403 for student', async () => {
-    const { generateTestToken } = require('../setup');
     const token = generateTestToken();
     const res = await request(app)
       .get('/api/clubs/1/members')
@@ -587,7 +587,6 @@ describe('Membership management — PATCH /api/clubs/:id/members/:userId', () =>
   });
 
   it('returns 403 for student', async () => {
-    const { generateTestToken } = require('../setup');
     const token = generateTestToken();
     const res = await request(app)
       .patch('/api/clubs/1/members/1')

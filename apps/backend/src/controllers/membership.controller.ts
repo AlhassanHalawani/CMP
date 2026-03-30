@@ -2,7 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { MembershipModel } from '../models/membership.model';
 import { ClubModel } from '../models/club.model';
-import { canManageClub, isAdmin } from '../services/ownership.service';
+import { canManageClub } from '../services/ownership.service';
 import { notify } from '../services/notifications.service';
 import { logAction } from '../services/audit.service';
 
