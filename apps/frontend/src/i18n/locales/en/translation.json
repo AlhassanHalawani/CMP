@@ -124,7 +124,25 @@
     "selectClubPrompt": "Select a club to view its KPI breakdown.",
     "leaderboardChart": "Leaderboard Chart",
     "rankings": "Rankings",
-    "metricsBreakdown": "Metrics Breakdown"
+    "metricsBreakdown": "Metrics Breakdown",
+    "noActivityYet": "No activity yet"
+  },
+  "notifications": {
+    "tab": "Notifications",
+    "preferencesTab": "Preferences",
+    "unreadCount": "({{count}} unread)",
+    "markAllRead": "Mark all read",
+    "preferencesIntro": "Toggle which notification types you receive and through which channels. Email is disabled by default.",
+    "prefEvent": "Event",
+    "prefInApp": "In-App",
+    "prefEmail": "Email",
+    "types": {
+      "event_approved": "Event Approved / Rejected",
+      "registration_confirmed": "Registration Confirmed",
+      "membership_approved": "Membership Approved / Declined",
+      "event_reminder": "Event Reminder (24h before)",
+      "membership_requested": "New Membership Request (leaders)"
+    }
   },
   "admin": {
     "title": "Admin Panel",

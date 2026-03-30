@@ -154,7 +154,7 @@ export function ClubDetailPage() {
   const [editError, setEditError] = useState('');
   const [deleteError, setDeleteError] = useState('');
   const logoInputRef = useRef<HTMLInputElement>(null);
-  const { currentUser } = useCurrentUser();
+  const { currentUser, isLoading: currentUserLoading } = useCurrentUser();
   const isAdmin = hasRole('admin');
   const isLeader = hasRole('club_leader');
 
@@ -187,7 +187,9 @@ export function ClubDetailPage() {
   const isClubOwner = isLeader && club?.leader_id === currentUser?.id;
   const canEdit = isAdmin || isClubOwner;
   const canManageMembers = isAdmin || isClubOwner;
-  const showJoinLeave = !isAdmin && !isClubOwner;
+  // Suppress join/leave while currentUser is loading to avoid a brief false-positive
+  // that would show the Join button to a club owner before their DB id resolves.
+  const showJoinLeave = !isAdmin && !isClubOwner && !currentUserLoading;
 
   const logoUploadMutation = useMutation({
     mutationFn: (file: File) => clubsApi.uploadLogo(clubId, file),

@@ -60,6 +60,7 @@ jest.mock('../../config/database', () => {
 
 jest.mock('../../services/keycloakAdmin.service', () => ({
   createKeycloakUser: jest.fn().mockResolvedValue(undefined),
+  syncUserRealmRole: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('../../services/qrcode.service', () => ({
@@ -507,6 +508,102 @@ describe('Achievement ownership', () => {
         .set('Authorization', `Bearer ${token}`);
       expect(res.status).toBe(404);
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Membership management ownership
+// ---------------------------------------------------------------------------
+describe('Membership management — GET /api/clubs/:id/members', () => {
+  it('allows admin to list members of any club', async () => {
+    const token = generateAdminToken();
+    const res = await request(app)
+      .get('/api/clubs/2/members')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('data');
+  });
+
+  it('allows leader to list members of their own club', async () => {
+    const token = generateLeaderToken(); // owns club 1
+    const res = await request(app)
+      .get('/api/clubs/1/members')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('data');
+  });
+
+  it('returns 403 when leader lists members of a club they do not own', async () => {
+    const token = generateLeaderToken(); // owns club 1, not club 2
+    const res = await request(app)
+      .get('/api/clubs/2/members')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(403);
+    expect(res.body).toHaveProperty('error');
+  });
+
+  it('returns 403 for student', async () => {
+    const { generateTestToken } = require('../setup');
+    const token = generateTestToken();
+    const res = await request(app)
+      .get('/api/clubs/1/members')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(403);
+  });
+});
+
+describe('Membership management — PATCH /api/clubs/:id/members/:userId', () => {
+  beforeEach(() => {
+    testDb.exec(`INSERT INTO memberships (club_id, user_id, status) VALUES (1, 1, 'pending')`);
+  });
+
+  it('allows admin to approve a membership in any club', async () => {
+    const token = generateAdminToken();
+    const res = await request(app)
+      .patch('/api/clubs/1/members/1')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ status: 'active' });
+    expect(res.status).toBe(200);
+  });
+
+  it('allows leader to approve a membership in their own club', async () => {
+    const token = generateLeaderToken(); // owns club 1
+    const res = await request(app)
+      .patch('/api/clubs/1/members/1')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ status: 'active' });
+    expect(res.status).toBe(200);
+  });
+
+  it('returns 403 when leader manages membership in a club they do not own', async () => {
+    testDb.exec(`INSERT INTO memberships (club_id, user_id, status) VALUES (2, 1, 'pending')`);
+    const token = generateLeaderToken(); // owns club 1, not club 2
+    const res = await request(app)
+      .patch('/api/clubs/2/members/1')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ status: 'active' });
+    expect(res.status).toBe(403);
+    expect(res.body).toHaveProperty('error');
+  });
+
+  it('returns 403 for student', async () => {
+    const { generateTestToken } = require('../setup');
+    const token = generateTestToken();
+    const res = await request(app)
+      .patch('/api/clubs/1/members/1')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ status: 'active' });
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 400 for invalid status value', async () => {
+    const token = generateAdminToken();
+    const res = await request(app)
+      .patch('/api/clubs/1/members/1')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ status: 'rejected' });
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error');
   });
 });
 

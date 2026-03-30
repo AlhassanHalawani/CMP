@@ -8,13 +8,13 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { notificationsApi, type NotificationPreference } from '@/api/notifications';
 
-const PREF_TYPES: { key: string; label: string }[] = [
-  { key: 'event_approved', label: 'Event Approved / Rejected' },
-  { key: 'registration_confirmed', label: 'Registration Confirmed' },
-  { key: 'membership_approved', label: 'Membership Approved / Declined' },
-  { key: 'event_reminder', label: 'Event Reminder (24h before)' },
-  { key: 'membership_requested', label: 'New Membership Request (leaders)' },
-];
+const PREF_KEYS = [
+  'event_approved',
+  'registration_confirmed',
+  'membership_approved',
+  'event_reminder',
+  'membership_requested',
+] as const;
 
 function getPrefEnabled(prefs: NotificationPreference[], eventType: string, channel: 'in_app' | 'email'): boolean {
   const row = prefs.find((p) => p.event_type === eventType && p.channel === channel);
@@ -60,16 +60,17 @@ export function NotificationsPage() {
       <Tabs defaultValue="notifications">
         <TabsList>
           <TabsTrigger value="notifications">
-            Notifications {data?.unread ? `(${data.unread} unread)` : ''}
+            {t('notifications.tab')}
+            {data?.unread ? ` ${t('notifications.unreadCount', { count: data.unread })}` : ''}
           </TabsTrigger>
-          <TabsTrigger value="preferences">Preferences</TabsTrigger>
+          <TabsTrigger value="preferences">{t('notifications.preferencesTab')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="notifications">
           <div className="mt-4 mb-4 flex justify-end">
             {data?.unread ? (
               <Button variant="outline" size="sm" onClick={() => markAllMutation.mutate()}>
-                Mark all read
+                {t('notifications.markAllRead')}
               </Button>
             ) : null}
           </div>
@@ -100,22 +101,21 @@ export function NotificationsPage() {
           ) : (
             <div className="mt-4">
               <p className="text-sm mb-4 opacity-70">
-                Toggle which notification types you receive and through which channels.
-                Email is disabled by default.
+                {t('notifications.preferencesIntro')}
               </p>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b-2 border-border">
-                      <th className="text-left py-2 pr-4 font-heading">Event</th>
-                      <th className="py-2 px-4 font-heading text-center">In-App</th>
-                      <th className="py-2 px-4 font-heading text-center">Email</th>
+                      <th className="text-left py-2 pr-4 font-heading">{t('notifications.prefEvent')}</th>
+                      <th className="py-2 px-4 font-heading text-center">{t('notifications.prefInApp')}</th>
+                      <th className="py-2 px-4 font-heading text-center">{t('notifications.prefEmail')}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {PREF_TYPES.map(({ key, label }) => (
+                    {PREF_KEYS.map((key) => (
                       <tr key={key} className="border-b border-border">
-                        <td className="py-3 pr-4">{label}</td>
+                        <td className="py-3 pr-4">{t(`notifications.types.${key}`)}</td>
                         <td className="py-3 px-4 text-center">
                           <Switch
                             checked={getPrefEnabled(prefs ?? [], key, 'in_app')}

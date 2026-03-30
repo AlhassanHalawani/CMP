@@ -92,6 +92,44 @@ async function assignRealmRoleToUser(token: string, userId: string, role: Keyclo
   }
 }
 
+async function revokeRealmRoleFromUser(token: string, userId: string, role: KeycloakRole): Promise<void> {
+  const mappingUrl = `${env.keycloak.url}/admin/realms/${env.keycloak.realm}/users/${userId}/role-mappings/realm`;
+  const res = await fetch(mappingUrl, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify([{ id: role.id, name: role.name }]),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to revoke role "${role.name}" from Keycloak user: ${res.status} ${text}`);
+  }
+}
+
+/**
+ * Syncs a user's Keycloak realm roles to match a new app role.
+ * Grants the new role and revokes the previous one (if different).
+ * keycloakUserId is the user's `sub` (UUID) from the JWT.
+ */
+export async function syncUserRealmRole(
+  keycloakUserId: string,
+  newRole: string,
+  previousRole: string | null,
+): Promise<void> {
+  const token = await getAdminToken();
+
+  if (previousRole && previousRole !== newRole) {
+    const prev = await getRealmRole(token, previousRole);
+    await revokeRealmRoleFromUser(token, keycloakUserId, prev);
+  }
+
+  const next = await getRealmRole(token, newRole);
+  await assignRealmRoleToUser(token, keycloakUserId, next);
+}
+
 export async function createKeycloakUser(payload: CreateKeycloakUserPayload): Promise<void> {
   const token = await getAdminToken();
   const url = `${env.keycloak.url}/admin/realms/${env.keycloak.realm}/users`;

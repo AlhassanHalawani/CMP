@@ -13,7 +13,8 @@ export function useCurrentUser(): { currentUser: User | undefined; isLoading: bo
     queryKey: ['users', 'me'],
     queryFn: () => usersApi.getMe(),
     enabled: !!token,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   return { currentUser, isLoading };

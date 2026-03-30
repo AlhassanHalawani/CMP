@@ -229,8 +229,6 @@ export function KpiPage() {
         <TabsContent value="leaderboard">
           {leaderboardLoading ? (
             <div className="flex justify-center p-12"><Spinner size="lg" /></div>
-          ) : leaderboardData.length === 0 ? (
-            <p className="mt-4">{t('common.noData')}</p>
           ) : (
             <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-2">
               {/* Bar chart */}
@@ -239,15 +237,21 @@ export function KpiPage() {
                   <CardTitle>{t('kpi.leaderboardChart')}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ChartContainer config={leaderboardChartConfig} className="h-[300px] w-full">
-                    <BarChart data={leaderboardData} layout="vertical" margin={{ left: 80 }}>
-                      <CartesianGrid horizontal={false} />
-                      <XAxis type="number" />
-                      <YAxis type="category" dataKey="club_name" width={75} tick={{ fontSize: 12 }} />
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <Bar dataKey="total_score" fill="var(--color-total_score)" radius={[0, 4, 4, 0]} />
-                    </BarChart>
-                  </ChartContainer>
+                  {leaderboardData.length === 0 ? (
+                    <div className="flex h-[300px] items-center justify-center">
+                      <p className="text-sm opacity-50">{t('kpi.noActivityYet', 'No activity yet')}</p>
+                    </div>
+                  ) : (
+                    <ChartContainer config={leaderboardChartConfig} className="h-[300px] w-full">
+                      <BarChart data={leaderboardData} layout="vertical" margin={{ left: 80 }}>
+                        <CartesianGrid horizontal={false} />
+                        <XAxis type="number" />
+                        <YAxis type="category" dataKey="club_name" width={75} tick={{ fontSize: 12 }} />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Bar dataKey="total_score" fill="var(--color-total_score)" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ChartContainer>
+                  )}
                 </CardContent>
               </Card>
 
@@ -268,32 +272,40 @@ export function KpiPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {leaderboardData.map((entry) => (
-                        <TableRow key={entry.club_id}>
-                          <TableCell className="font-black text-center">
-                            {MEDAL[entry.rank] ?? (
-                              <Badge variant="neutral" className="text-xs">{entry.rank}</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <div className="font-bold">{entry.club_name}</div>
-                            {entry.department && (
-                              <div className="text-xs opacity-50">{entry.department}</div>
-                            )}
-                            <Progress
-                              value={maxScore > 0 ? (entry.total_score / maxScore) * 100 : 0}
-                              className="mt-1 h-1.5"
-                            />
-                          </TableCell>
-                          <TableCell className="text-right text-sm">{entry.attendance_count}</TableCell>
-                          <TableCell className="text-right text-sm">{entry.achievement_count}</TableCell>
-                          <TableCell className="text-right">
-                            <Badge variant="accent" className="text-sm px-2 py-0.5">
-                              {entry.total_score}
-                            </Badge>
+                      {leaderboardData.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="py-8 text-center text-sm opacity-50">
+                            {t('kpi.noActivityYet', 'No activity yet')}
                           </TableCell>
                         </TableRow>
-                      ))}
+                      ) : (
+                        leaderboardData.map((entry) => (
+                          <TableRow key={entry.club_id}>
+                            <TableCell className="font-black text-center">
+                              {MEDAL[entry.rank] ?? (
+                                <Badge variant="neutral" className="text-xs">{entry.rank}</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="font-bold">{entry.club_name}</div>
+                              {entry.department && (
+                                <div className="text-xs opacity-50">{entry.department}</div>
+                              )}
+                              <Progress
+                                value={maxScore > 0 ? (entry.total_score / maxScore) * 100 : 0}
+                                className="mt-1 h-1.5"
+                              />
+                            </TableCell>
+                            <TableCell className="text-right text-sm">{entry.attendance_count}</TableCell>
+                            <TableCell className="text-right text-sm">{entry.achievement_count}</TableCell>
+                            <TableCell className="text-right">
+                              <Badge variant="accent" className="text-sm px-2 py-0.5">
+                                {entry.total_score}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </CardContent>
@@ -325,8 +337,6 @@ export function KpiPage() {
             <p>{t('kpi.selectClubPrompt')}</p>
           ) : summaryLoading ? (
             <div className="flex justify-center p-12"><Spinner size="lg" /></div>
-          ) : summaryData.length === 0 ? (
-            <p>{t('common.noData')}</p>
           ) : (
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               {/* Pie chart */}
@@ -335,39 +345,49 @@ export function KpiPage() {
                   <CardTitle>{t('kpi.metricsBreakdown')}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ChartContainer config={summaryChartConfig} className="h-[300px] w-full">
-                    <PieChart>
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <Pie
-                        data={summaryData.map((s) => ({ name: s.metric_key, value: s.total }))}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={100}
-                        strokeWidth={2}
-                      >
-                        {summaryData.map((_, i) => (
-                          <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ChartContainer>
+                  {summaryData.length === 0 ? (
+                    <div className="flex h-[300px] items-center justify-center">
+                      <p className="text-sm opacity-50">{t('kpi.noActivityYet', 'No activity yet')}</p>
+                    </div>
+                  ) : (
+                    <ChartContainer config={summaryChartConfig} className="h-[300px] w-full">
+                      <PieChart>
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Pie
+                          data={summaryData.map((s) => ({ name: s.metric_key, value: s.total }))}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={100}
+                          strokeWidth={2}
+                        >
+                          {summaryData.map((_, i) => (
+                            <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />
+                          ))}
+                        </Pie>
+                      </PieChart>
+                    </ChartContainer>
+                  )}
                 </CardContent>
               </Card>
 
               {/* Metric cards */}
               <div className="space-y-3">
-                {summaryData.map((metric) => (
-                  <Card key={metric.metric_key}>
-                    <CardContent className="flex items-center justify-between py-4">
-                      <span className="font-bold">{metric.metric_key}</span>
-                      <Badge variant="accent" className="text-lg px-3 py-1">
-                        {metric.total}
-                      </Badge>
-                    </CardContent>
-                  </Card>
-                ))}
+                {summaryData.length === 0 ? (
+                  <p className="text-sm opacity-50">{t('kpi.noActivityYet', 'No activity yet')}</p>
+                ) : (
+                  summaryData.map((metric) => (
+                    <Card key={metric.metric_key}>
+                      <CardContent className="flex items-center justify-between py-4">
+                        <span className="font-bold">{metric.metric_key}</span>
+                        <Badge variant="accent" className="text-lg px-3 py-1">
+                          {metric.total}
+                        </Badge>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
               </div>
             </div>
           )}

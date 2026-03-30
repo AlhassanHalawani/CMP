@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 
 import authRouter from '../routes/auth.routes';
+import usersRouter from '../routes/users.routes';
 import clubsRouter from '../routes/clubs.routes';
 import eventsRouter from '../routes/events.routes';
 import attendanceRouter from '../routes/attendance.routes';
@@ -27,6 +28,7 @@ export function createTestApp() {
   });
 
   app.use('/api/auth', authRouter);
+  app.use('/api/users', usersRouter);
   app.use('/api/clubs', clubsRouter);
   app.use('/api/events', eventsRouter);
   app.use('/api/attendance', attendanceRouter);

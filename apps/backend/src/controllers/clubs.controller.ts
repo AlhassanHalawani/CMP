@@ -8,6 +8,8 @@ import { UserModel } from '../models/user.model';
 import { db } from '../config/database';
 import { logAction } from '../services/audit.service';
 import { isAdmin, leaderOwnsClub } from '../services/ownership.service';
+import { syncUserRealmRole } from '../services/keycloakAdmin.service';
+import { logger } from '../utils/logger';
 
 const uploadsDir = path.resolve('./data/uploads/logos');
 if (!fs.existsSync(uploadsDir)) {
@@ -178,6 +180,25 @@ export function assignClubLeader(req: AuthRequest, res: Response) {
     entityType: 'club',
     entityId: clubId,
     payload: { new_leader_id: newLeaderId, previous_leader_id: previousLeaderId },
+  });
+
+  // Sync Keycloak realm roles to match the DB changes made in the transaction.
+  // Best-effort — failures are logged but do not affect the response.
+  const syncPromises: Promise<void>[] = [
+    syncUserRealmRole(newLeader.keycloak_id, 'club_leader', newLeader.role),
+  ];
+  if (previousLeaderId && previousLeaderId !== newLeaderId) {
+    const prevLeader = UserModel.findById(previousLeaderId);
+    if (prevLeader) {
+      // Determine what the transaction set their role to
+      const updatedPrev = UserModel.findById(previousLeaderId);
+      syncPromises.push(
+        syncUserRealmRole(prevLeader.keycloak_id, updatedPrev?.role ?? 'student', 'club_leader'),
+      );
+    }
+  }
+  Promise.all(syncPromises).catch((err: Error) => {
+    logger.warn(`Keycloak role sync failed for assignClubLeader on club ${clubId}: ${err.message}`);
   });
 
   res.json(ClubModel.findById(clubId));

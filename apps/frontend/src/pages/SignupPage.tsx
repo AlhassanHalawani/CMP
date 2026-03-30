@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,14 +10,20 @@ export function SignupPage() {
   const { t } = useTranslation();
   const { toggleLanguage, language } = useLanguage();
   const [redirectError, setRedirectError] = useState(false);
-
-  if (authenticated) return <Navigate to="/dashboard" replace />;
+  const hasRegistered = useRef(false);
 
   useEffect(() => {
+    // Guard against React Strict Mode double-invocation and re-renders
+    if (hasRegistered.current) return;
+    hasRegistered.current = true;
+
     Promise.resolve(register()).catch(() => {
       setRedirectError(true);
     });
-  }, [register]);
+  }, []);
+
+  // Redirect after hooks — must not be placed before useEffect
+  if (authenticated) return <Navigate to="/dashboard" replace />;
 
   const retryRegister = () => {
     setRedirectError(false);
@@ -48,12 +54,6 @@ export function SignupPage() {
             </Button>
           </div>
         )}
-
-        <div className="mt-4 text-center">
-          <button onClick={retryRegister} className="text-sm font-bold underline">
-            {t('auth.signupSubmit')}
-          </button>
-        </div>
 
         <div className="mt-4 text-center">
           <button onClick={toggleLanguage} className="text-sm font-bold underline">

@@ -124,7 +124,25 @@
     "selectClubPrompt": "اختر نادياً لعرض تفاصيل مؤشرات أدائه.",
     "leaderboardChart": "رسم بياني للمتصدرين",
     "rankings": "الترتيب",
-    "metricsBreakdown": "تفاصيل المقاييس"
+    "metricsBreakdown": "تفاصيل المقاييس",
+    "noActivityYet": "لا يوجد نشاط بعد"
+  },
+  "notifications": {
+    "tab": "الإشعارات",
+    "preferencesTab": "التفضيلات",
+    "unreadCount": "({{count}} غير مقروء)",
+    "markAllRead": "تعليم الكل كمقروء",
+    "preferencesIntro": "حدّد أنواع الإشعارات التي تريد استلامها والقنوات المناسبة. البريد الإلكتروني معطّل افتراضياً.",
+    "prefEvent": "الحدث",
+    "prefInApp": "داخل التطبيق",
+    "prefEmail": "البريد الإلكتروني",
+    "types": {
+      "event_approved": "اعتماد الفعالية / رفضها",
+      "registration_confirmed": "تأكيد التسجيل",
+      "membership_approved": "اعتماد العضوية / رفضها",
+      "event_reminder": "تذكير بالفعالية (قبل 24 ساعة)",
+      "membership_requested": "طلب عضوية جديد (للقادة)"
+    }
   },
   "admin": {
     "title": "لوحة الإدارة",
