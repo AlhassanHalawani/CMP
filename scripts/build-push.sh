@@ -26,12 +26,24 @@ echo "Backend:  ${BACKEND_IMAGE}"
 echo "Frontend: ${FRONTEND_IMAGE}"
 
 echo "Ensuring ARM64 build support..."
-docker run --privileged --rm tonistiigi/binfmt --install arm64 >/dev/null 2>&1 || true
-if ! docker buildx inspect arm-builder >/dev/null 2>&1; then
-  docker buildx create --name arm-builder --driver docker-container
+# Install QEMU binfmt handlers for ARM64 cross-compilation
+docker run --privileged --rm tonistiigi/binfmt --install arm64 2>&1 || true
+
+# Remove stale builder if it exists but lacks arm64 support
+if docker buildx inspect arm-builder >/dev/null 2>&1; then
+  if ! docker buildx inspect arm-builder --bootstrap 2>&1 | grep -q "linux/arm64"; then
+    echo "Recreating arm-builder (arm64 not detected, rebuilding)..."
+    docker buildx rm arm-builder
+  fi
 fi
+
+# Create the builder if it doesn't exist
+if ! docker buildx inspect arm-builder >/dev/null 2>&1; then
+  docker buildx create --name arm-builder --driver docker-container --bootstrap
+fi
+
 docker buildx use arm-builder
-docker buildx inspect --bootstrap 2>&1 | grep -q "linux/arm64" || { echo "error: ARM64 platform not available" >&2; exit 1; }
+docker buildx inspect arm-builder 2>&1 | grep -q "linux/arm64" || { echo "error: ARM64 platform not available" >&2; exit 1; }
 
 echo "$CR_PAT" | docker login ghcr.io -u "$GH_USER" --password-stdin
 
