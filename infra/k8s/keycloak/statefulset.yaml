@@ -22,6 +22,7 @@ spec:
             - --import-realm
             - --proxy-headers=xforwarded
             - --hostname=https://keycloak.fcitcmp.com
+            - --hostname-admin=https://keycloak.fcitcmp.com
             - --hostname-strict=false
           env:
             - name: KC_HTTP_ENABLED
