@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Spinner } from '@/components/ui/spinner';
@@ -24,10 +25,156 @@ const statsChartConfig: ChartConfig = {
   },
 };
 
-export function DashboardPage() {
+const leaderboardChartConfig: ChartConfig = {
+  total_score: {
+    label: 'Score',
+    color: 'var(--color-main, #facc15)',
+  },
+};
+
+// ─── Club Leader Dashboard ────────────────────────────────────────────────────
+
+function ClubLeaderDashboard({ clubId }: { clubId: number }) {
   const { t } = useTranslation();
-  const { user, hasRole } = useAuth();
   const { language } = useLanguage();
+
+  const { data: dash, isLoading } = useQuery({
+    queryKey: ['clubs', clubId, 'dashboard'],
+    queryFn: () => clubsApi.getDashboard(clubId),
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
+  });
+
+  const { data: leaderboard } = useQuery({
+    queryKey: ['kpi', 'leaderboard', 'dashboard'],
+    queryFn: () => kpiApi.getLeaderboard(),
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
+  });
+
+  const { data: eventsData, isLoading: eventsLoading } = useQuery({
+    queryKey: ['events', 'upcoming'],
+    queryFn: () => eventsApi.list({ status: 'published', limit: 5 }),
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
+  });
+
+  if (isLoading) return <div className="flex justify-center p-12"><Spinner size="lg" /></div>;
+
+  const statsData = dash
+    ? [
+        { name: t('clubs.publishedEvents', 'Published Events'), value: dash.published_events },
+        { name: t('clubs.totalAttendance', 'Total Attendance'), value: dash.total_attendance },
+        { name: t('clubs.activeMembers', 'Members'), value: dash.active_members },
+        { name: t('clubs.totalPoints', 'Points'), value: dash.total_points },
+      ]
+    : [];
+
+  const leaderboardEntries = leaderboard?.data ?? [];
+
+  return (
+    <div>
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4 mb-8">
+        <Card>
+          <CardHeader className="pb-1"><CardTitle className="text-sm">{t('clubs.publishedEvents', 'Published Events')}</CardTitle></CardHeader>
+          <CardContent><p className="text-4xl font-black">{dash?.published_events ?? '…'}</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-1"><CardTitle className="text-sm">{t('clubs.activeMembers', 'Members')}</CardTitle></CardHeader>
+          <CardContent><p className="text-4xl font-black">{dash?.active_members ?? '…'}</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-1"><CardTitle className="text-sm">{t('clubs.totalAttendance', 'Attendance')}</CardTitle></CardHeader>
+          <CardContent>
+            <p className="text-4xl font-black">{dash?.total_attendance ?? '…'}</p>
+            {dash && <p className="text-xs opacity-60 mt-1">{dash.attendance_rate}% rate</p>}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-1"><CardTitle className="text-sm">{t('clubs.totalPoints', 'Points')}</CardTitle></CardHeader>
+          <CardContent><p className="text-4xl font-black">{dash?.total_points ?? '…'}</p></CardContent>
+        </Card>
+      </div>
+
+      {/* Stats chart + leaderboard */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 mb-8">
+        <Card>
+          <CardHeader><CardTitle>{t('dashboard.quickStats')}</CardTitle></CardHeader>
+          <CardContent>
+            <ChartContainer config={statsChartConfig} className="h-[200px] w-full">
+              <BarChart data={statsData}>
+                <CartesianGrid vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                <YAxis />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="value" fill="var(--color-value)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>{t('kpi.leaderboard')}</CardTitle>
+              <Link to="/leaderboard" className="text-sm font-bold underline">{t('common.viewAll')}</Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {leaderboardEntries.length === 0 ? (
+              <p className="text-sm opacity-50">{t('kpi.noActivityRecorded', 'No activity recorded yet')}</p>
+            ) : (
+              <ChartContainer config={leaderboardChartConfig} className="h-[200px] w-full">
+                <BarChart data={leaderboardEntries.slice(0, 5)} layout="vertical" margin={{ left: 80 }}>
+                  <CartesianGrid horizontal={false} />
+                  <XAxis type="number" />
+                  <YAxis type="category" dataKey="club_name" width={75} tick={{ fontSize: 11 }} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="total_score" fill="var(--color-total_score)" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ChartContainer>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Upcoming events */}
+      <h2 className="mb-4 text-xl font-black">{t('dashboard.upcomingEvents')}</h2>
+      {eventsLoading ? (
+        <Spinner />
+      ) : (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {eventsData?.data.map((event) => (
+            <Link key={event.id} to={`/events/${event.id}`}>
+              <Card className="hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none transition-all cursor-pointer">
+                <CardHeader>
+                  <CardTitle>{language === 'ar' ? event.title_ar : event.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm">{language === 'ar' ? event.description_ar : event.description}</p>
+                  <div className="mt-2 flex gap-2">
+                    <Badge variant="accent">{event.location}</Badge>
+                    <Badge variant="secondary">{new Date(event.starts_at).toLocaleDateString()}</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+          {eventsData?.data.length === 0 && <p className="text-sm">{t('common.noData')}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Admin / Student Dashboard ────────────────────────────────────────────────
+
+function GlobalDashboard() {
+  const { t } = useTranslation();
+  const { language } = useLanguage();
+  const { hasRole } = useAuth();
+  const canViewKpi = hasRole('admin') || hasRole('club_leader');
 
   const { data: eventsData, isLoading: eventsLoading } = useQuery({
     queryKey: ['events', 'upcoming'],
@@ -48,9 +195,8 @@ export function DashboardPage() {
     queryFn: () => kpiApi.getLeaderboard(),
     refetchInterval: 30_000,
     refetchOnWindowFocus: true,
+    enabled: canViewKpi,
   });
-
-  const canViewKpi = hasRole('admin') || hasRole('club_leader');
 
   const statsData = [
     { name: t('nav.clubs'), value: clubsData?.total ?? 0 },
@@ -58,13 +204,10 @@ export function DashboardPage() {
     { name: t('dashboard.upcomingEvents'), value: eventsData?.data.length ?? 0 },
   ];
 
+  const leaderboardEntries = leaderboard?.data ?? [];
+
   return (
     <div>
-      <h1 className="mb-6 text-3xl font-black">
-        {t('dashboard.welcome')}, {user?.name || 'User'}
-      </h1>
-
-      {/* Stats overview with chart */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mb-8">
         <div className="lg:col-span-2">
           <Card>
@@ -83,47 +226,45 @@ export function DashboardPage() {
           </Card>
         </div>
 
-        {/* Stat cards */}
         <div className="space-y-4">
           <Card>
             <CardHeader><CardTitle>{t('nav.clubs')}</CardTitle></CardHeader>
             <CardContent>
-              <p className="text-4xl font-black">{clubsData?.total ?? '...'}</p>
+              <p className="text-4xl font-black">{clubsData?.total ?? '…'}</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader><CardTitle>{t('nav.events')}</CardTitle></CardHeader>
             <CardContent>
-              <p className="text-4xl font-black">{eventsData?.total ?? '...'}</p>
+              <p className="text-4xl font-black">{eventsData?.total ?? '…'}</p>
             </CardContent>
           </Card>
         </div>
       </div>
 
-      {/* Top clubs (mini leaderboard) — always visible for kpi-capable roles */}
       {canViewKpi && (
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-black">{t('kpi.leaderboard')}</h2>
-            <Link to="/kpi" className="text-sm font-bold underline">{t('common.viewAll')}</Link>
+            <Link to="/leaderboard" className="text-sm font-bold underline">{t('common.viewAll')}</Link>
           </div>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            {leaderboard?.data && leaderboard.data.length > 0 ? (
-              leaderboard.data.slice(0, 3).map((entry, i) => (
-                <Card key={entry.club_id}>
-                  <CardContent className="flex items-center gap-3 py-4">
-                    <span className="text-2xl font-black">{i + 1}</span>
-                    <span className="flex-1 font-bold">{entry.club_name}</span>
-                    <Badge variant="accent">{entry.total_score}</Badge>
-                  </CardContent>
-                </Card>
-              ))
-            ) : (
-              <p className="text-sm opacity-50 col-span-3">
-                {t('kpi.noActivityRecorded', 'No activity recorded yet')}
-              </p>
-            )}
-          </div>
+          {leaderboardEntries.length === 0 ? (
+            <p className="text-sm opacity-50">{t('kpi.noActivityRecorded', 'No activity recorded yet')}</p>
+          ) : (
+            <Card>
+              <CardContent className="pt-4">
+                <ChartContainer config={leaderboardChartConfig} className="h-[180px] w-full">
+                  <BarChart data={leaderboardEntries.slice(0, 5)} layout="vertical" margin={{ left: 80 }}>
+                    <CartesianGrid horizontal={false} />
+                    <XAxis type="number" />
+                    <YAxis type="category" dataKey="club_name" width={75} tick={{ fontSize: 11 }} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="total_score" fill="var(--color-total_score)" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
 
@@ -150,6 +291,40 @@ export function DashboardPage() {
           ))}
           {eventsData?.data.length === 0 && <p className="text-sm">{t('common.noData')}</p>}
         </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Page root ────────────────────────────────────────────────────────────────
+
+export function DashboardPage() {
+  const { t } = useTranslation();
+  const { user, hasRole } = useAuth();
+  const { currentUser } = useCurrentUser();
+  const { data: clubsData } = useQuery({
+    queryKey: ['clubs'],
+    queryFn: () => clubsApi.list({ limit: 200 }),
+    enabled: hasRole('club_leader'),
+  });
+
+  const isLeader = hasRole('club_leader') && !hasRole('admin');
+  const ownedClub = isLeader && currentUser
+    ? (clubsData?.data ?? []).find((c) => c.leader_id === currentUser.id)
+    : undefined;
+
+  return (
+    <div>
+      <h1 className="mb-6 text-3xl font-black">
+        {t('dashboard.welcome')}, {user?.name || 'User'}
+      </h1>
+      {ownedClub ? (
+        <>
+          <p className="mb-6 text-sm opacity-60">{ownedClub.name}</p>
+          <ClubLeaderDashboard clubId={ownedClub.id} />
+        </>
+      ) : (
+        <GlobalDashboard />
       )}
     </div>
   );

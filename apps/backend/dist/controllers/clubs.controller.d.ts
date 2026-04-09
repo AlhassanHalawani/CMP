@@ -17,4 +17,5 @@ export declare function getClubStats(req: Request, res: Response): void;
  *   3. Demotes the previous leader back to student if they no longer lead any club
  */
 export declare function assignClubLeader(req: AuthRequest, res: Response): void;
+export declare function getClubDashboard(req: AuthRequest, res: Response): void;
 export declare function uploadLogo(req: AuthRequest, res: Response): void;

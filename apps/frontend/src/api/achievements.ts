@@ -16,6 +16,9 @@ export const achievementsApi = {
   listForUser: (userId: number) =>
     api.get<{ data: Achievement[] }>(`/achievements/user/${userId}`).then((r) => r.data),
 
+  listForClub: (clubId: number) =>
+    api.get<{ data: Achievement[] }>(`/achievements/club/${clubId}`).then((r) => r.data),
+
   downloadReport: async (userId: number, params: { semester_id?: number; club_id?: number; report_date?: string }) => {
     const query = new URLSearchParams();
     if (params.semester_id) query.set('semester_id', String(params.semester_id));

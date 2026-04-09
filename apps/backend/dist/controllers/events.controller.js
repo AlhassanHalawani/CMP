@@ -23,7 +23,7 @@ const notifications_service_1 = require("../services/notifications.service");
 function listEvents(req, res) {
     const authReq = req;
     const user = authReq.user;
-    let status = req.query.status;
+    const status = req.query.status;
     const clubId = req.query.club_id ? parseInt(req.query.club_id) : undefined;
     const limit = parseInt(req.query.limit) || 50;
     const offset = parseInt(req.query.offset) || 0;

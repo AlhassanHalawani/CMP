@@ -18,6 +18,28 @@ export interface ClubStats {
   active_members: number;
 }
 
+export interface ClubDashboard {
+  club_id: number;
+  club_name: string;
+  club_name_ar: string;
+  published_events: number;
+  total_events: number;
+  active_members: number;
+  registered_participants: number;
+  unique_attendees: number;
+  total_attendance: number;
+  attendance_rate: number;
+  total_points: number;
+  recent_events: Array<{
+    id: number;
+    title: string;
+    title_ar: string;
+    starts_at: string;
+    status: string;
+    category: string | null;
+  }>;
+}
+
 export const clubsApi = {
   list: (params?: { limit?: number; offset?: number }) =>
     api.get<{ data: Club[]; total: number }>('/clubs', { params }).then((r) => r.data),
@@ -33,4 +55,6 @@ export const clubsApi = {
   },
   assignLeader: (clubId: number, userId: number) =>
     api.post<Club>(`/clubs/${clubId}/assign-leader`, { user_id: userId }).then((r) => r.data),
+  getDashboard: (id: number) =>
+    api.get<ClubDashboard>(`/clubs/${id}/dashboard`).then((r) => r.data),
 };

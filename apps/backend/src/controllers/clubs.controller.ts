@@ -204,6 +204,96 @@ export function assignClubLeader(req: AuthRequest, res: Response) {
   res.json(ClubModel.findById(clubId));
 }
 
+export function getClubDashboard(req: AuthRequest, res: Response) {
+  const clubId = parseInt(req.params.id);
+  const user = req.user!;
+
+  const club = ClubModel.findById(clubId);
+  if (!club) {
+    res.status(404).json({ error: 'Club not found' });
+    return;
+  }
+
+  if (!isAdmin(user) && !leaderOwnsClub(user.id, clubId)) {
+    res.status(403).json({ error: 'You do not have permission to view this club dashboard' });
+    return;
+  }
+
+  const { published_events } = db
+    .prepare(`SELECT COUNT(*) AS published_events FROM events WHERE club_id = ? AND status = 'published'`)
+    .get(clubId) as { published_events: number };
+
+  const { total_events } = db
+    .prepare(`SELECT COUNT(*) AS total_events FROM events WHERE club_id = ?`)
+    .get(clubId) as { total_events: number };
+
+  const { active_members } = db
+    .prepare(`SELECT COUNT(*) AS active_members FROM memberships WHERE club_id = ? AND status = 'active'`)
+    .get(clubId) as { active_members: number };
+
+  const { registered_participants } = db
+    .prepare(
+      `SELECT COUNT(DISTINCT r.user_id) AS registered_participants
+       FROM registrations r
+       JOIN events e ON e.id = r.event_id AND e.club_id = ?`,
+    )
+    .get(clubId) as { registered_participants: number };
+
+  const { unique_attendees } = db
+    .prepare(
+      `SELECT COUNT(DISTINCT a.user_id) AS unique_attendees
+       FROM attendance a
+       JOIN events e ON e.id = a.event_id AND e.club_id = ?`,
+    )
+    .get(clubId) as { unique_attendees: number };
+
+  const { total_attendance } = db
+    .prepare(
+      `SELECT COUNT(a.id) AS total_attendance
+       FROM attendance a
+       JOIN events e ON e.id = a.event_id AND e.club_id = ? AND e.status = 'published'`,
+    )
+    .get(clubId) as { total_attendance: number };
+
+  const { total_registered } = db
+    .prepare(
+      `SELECT COUNT(r.id) AS total_registered
+       FROM registrations r
+       JOIN events e ON e.id = r.event_id AND e.club_id = ?`,
+    )
+    .get(clubId) as { total_registered: number };
+
+  const { achievement_count } = db
+    .prepare(`SELECT COUNT(*) AS achievement_count FROM achievements WHERE club_id = ?`)
+    .get(clubId) as { achievement_count: number };
+
+  const attendance_rate =
+    total_registered > 0 ? Math.round((total_attendance / total_registered) * 100) : 0;
+  const total_points = total_attendance + achievement_count;
+
+  const recent_events = db
+    .prepare(
+      `SELECT id, title, title_ar, starts_at, status, category
+       FROM events WHERE club_id = ? ORDER BY starts_at DESC LIMIT 5`,
+    )
+    .all(clubId);
+
+  res.json({
+    club_id: clubId,
+    club_name: club.name,
+    club_name_ar: club.name_ar,
+    published_events,
+    total_events,
+    active_members,
+    registered_participants,
+    unique_attendees,
+    total_attendance,
+    attendance_rate,
+    total_points,
+    recent_events,
+  });
+}
+
 export function uploadLogo(req: AuthRequest, res: Response) {
   const id = parseInt(req.params.id);
   const user = req.user!;

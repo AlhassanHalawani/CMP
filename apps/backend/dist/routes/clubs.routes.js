@@ -15,6 +15,7 @@ router.delete('/:id', auth_1.authenticate, (0, roles_1.requireRole)('admin'), cl
 router.post('/:id/assign-leader', auth_1.authenticate, (0, roles_1.requireRole)('admin'), clubs_controller_1.assignClubLeader);
 // Stats & logo
 router.get('/:id/stats', clubs_controller_1.getClubStats);
+router.get('/:id/dashboard', auth_1.authenticate, (0, roles_1.requireRole)('admin', 'club_leader'), clubs_controller_1.getClubDashboard);
 router.post('/:id/logo', auth_1.authenticate, (0, roles_1.requireRole)('admin', 'club_leader'), clubs_controller_1.logoUpload.single('logo'), clubs_controller_1.uploadLogo);
 // Membership routes
 router.post('/:id/join', auth_1.authenticate, membership_controller_1.joinClub);

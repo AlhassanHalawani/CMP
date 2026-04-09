@@ -47,60 +47,86 @@ export const KpiModel = {
   },
 
   getClubSummary(clubId: number, semesterId?: number): ClubKpiSummary[] {
-    const semesterJoin = semesterId ? 'AND km.semester_id = ?' : '';
-    const values: any[] = [clubId, clubId];
-    if (semesterId) values.push(semesterId, semesterId, semesterId, semesterId);
+    // Compute live from base tables instead of reading precomputed kpi_metrics rows
+    const semAttWhere = semesterId
+      ? `AND a.checked_in_at BETWEEN (SELECT starts_at FROM semesters WHERE id = ${semesterId}) AND (SELECT ends_at FROM semesters WHERE id = ${semesterId})`
+      : '';
+    const semAchWhere = semesterId
+      ? `AND ach.awarded_at BETWEEN (SELECT starts_at FROM semesters WHERE id = ${semesterId}) AND (SELECT ends_at FROM semesters WHERE id = ${semesterId})`
+      : '';
 
-    const sql = `
-      WITH keys(metric_key) AS (
-        VALUES ('attendance_count'), ('achievement_count'), ('member_count'), ('total_score')
-      )
-      SELECT
-        ? AS club_id,
-        k.metric_key,
-        COALESCE(SUM(km.metric_value), 0) AS total
-      FROM keys k
-      LEFT JOIN kpi_metrics km
-        ON km.club_id = ? AND km.metric_key = k.metric_key ${semesterJoin}
-      GROUP BY k.metric_key
-      ORDER BY k.metric_key
-    `;
+    const { attendance_count } = db.prepare(`
+      SELECT COUNT(a.id) AS attendance_count
+      FROM attendance a
+      JOIN events e ON e.id = a.event_id AND e.status = 'published' AND e.club_id = ?
+      ${semAttWhere}
+    `).get(clubId) as { attendance_count: number };
 
-    // semesterId appears once per ? placeholder in the join
-    const params: any[] = [clubId, clubId];
-    if (semesterId) params.push(semesterId);
+    const { achievement_count } = db.prepare(`
+      SELECT COUNT(ach.id) AS achievement_count
+      FROM achievements ach
+      WHERE ach.club_id = ? ${semAchWhere}
+    `).get(clubId) as { achievement_count: number };
 
-    return db.prepare(sql).all(...params) as ClubKpiSummary[];
+    const { member_count } = db.prepare(`
+      SELECT COUNT(*) AS member_count FROM memberships WHERE club_id = ? AND status = 'active'
+    `).get(clubId) as { member_count: number };
+
+    return [
+      { club_id: clubId, metric_key: 'attendance_count', total: attendance_count },
+      { club_id: clubId, metric_key: 'achievement_count', total: achievement_count },
+      { club_id: clubId, metric_key: 'member_count', total: member_count },
+      { club_id: clubId, metric_key: 'total_score', total: attendance_count + achievement_count },
+    ];
   },
 
   getLeaderboard(semesterId?: number, department?: string): LeaderboardEntry[] {
-    // semester filter must be a JOIN condition so LEFT JOIN is preserved for clubs with no KPI rows
-    const semesterJoin = semesterId ? 'AND km.semester_id = ?' : '';
+    // Compute live from base tables so the leaderboard shows real data even when kpi_metrics is empty
+    const semAttJoin = semesterId
+      ? `JOIN semesters sem_a ON sem_a.id = ${semesterId} AND a.checked_in_at BETWEEN sem_a.starts_at AND sem_a.ends_at`
+      : '';
+    const semAchJoin = semesterId
+      ? `JOIN semesters sem_b ON sem_b.id = ${semesterId} AND ach.awarded_at BETWEEN sem_b.starts_at AND sem_b.ends_at`
+      : '';
     const departmentWhere = department ? 'WHERE c.department = ?' : '';
 
     const params: any[] = [];
-    if (semesterId) params.push(semesterId);
     if (department) params.push(department);
 
     const sql = `
       SELECT
-        c.id        AS club_id,
-        c.name      AS club_name,
+        c.id AS club_id,
+        c.name AS club_name,
         c.department,
-        COALESCE(SUM(CASE WHEN km.metric_key = 'attendance_count'  THEN km.metric_value END), 0) AS attendance_count,
-        COALESCE(SUM(CASE WHEN km.metric_key = 'achievement_count' THEN km.metric_value END), 0) AS achievement_count,
-        COALESCE(SUM(CASE WHEN km.metric_key = 'member_count'      THEN km.metric_value END), 0) AS member_count,
-        COALESCE(SUM(CASE WHEN km.metric_key = 'total_score'       THEN km.metric_value END), 0) AS total_score
+        COALESCE(att.attendance_count, 0) AS attendance_count,
+        COALESCE(ach.achievement_count, 0) AS achievement_count,
+        COALESCE(mem.member_count, 0) AS member_count,
+        COALESCE(att.attendance_count, 0) + COALESCE(ach.achievement_count, 0) AS total_score
       FROM clubs c
-      LEFT JOIN kpi_metrics km ON km.club_id = c.id ${semesterJoin}
+      LEFT JOIN (
+        SELECT e.club_id, COUNT(a.id) AS attendance_count
+        FROM attendance a
+        JOIN events e ON e.id = a.event_id AND e.status = 'published'
+        ${semAttJoin}
+        GROUP BY e.club_id
+      ) att ON att.club_id = c.id
+      LEFT JOIN (
+        SELECT ach.club_id, COUNT(ach.id) AS achievement_count
+        FROM achievements ach
+        ${semAchJoin}
+        GROUP BY ach.club_id
+      ) ach ON ach.club_id = c.id
+      LEFT JOIN (
+        SELECT m.club_id, COUNT(*) AS member_count
+        FROM memberships m WHERE m.status = 'active'
+        GROUP BY m.club_id
+      ) mem ON mem.club_id = c.id
       ${departmentWhere}
-      GROUP BY c.id
       ORDER BY total_score DESC, c.name ASC
     `;
 
     const rows = db.prepare(sql).all(...params) as Omit<LeaderboardEntry, 'rank'>[];
 
-    // Apply tied-rank logic in application code
     let rank = 1;
     return rows.map((row, i) => {
       if (i > 0 && row.total_score < (rows[i - 1] as any).total_score) rank = i + 1;

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth';
 import { requireRole } from '../middleware/roles';
-import { listClubs, getClub, createClub, updateClub, deleteClub, getClubStats, uploadLogo, logoUpload, assignClubLeader } from '../controllers/clubs.controller';
+import { listClubs, getClub, createClub, updateClub, deleteClub, getClubStats, getClubDashboard, uploadLogo, logoUpload, assignClubLeader } from '../controllers/clubs.controller';
 import {
   joinClub,
   leaveClub,
@@ -23,6 +23,7 @@ router.post('/:id/assign-leader', authenticate, requireRole('admin'), assignClub
 
 // Stats & logo
 router.get('/:id/stats', getClubStats);
+router.get('/:id/dashboard', authenticate, requireRole('admin', 'club_leader'), getClubDashboard);
 router.post('/:id/logo', authenticate, requireRole('admin', 'club_leader'), logoUpload.single('logo'), uploadLogo);
 
 // Membership routes

@@ -12,7 +12,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectTrigger,
@@ -45,6 +45,10 @@ function isSameDay(a: Date, b: Date) {
     a.getMonth() === b.getMonth() &&
     a.getDate() === b.getDate()
   );
+}
+
+function isUpcoming(event: Event) {
+  return new Date(event.starts_at) > new Date();
 }
 
 // ─── sentinels ──────────────────────────────────────────────────────────────
@@ -131,7 +135,6 @@ export function EventsPage() {
   if (isLoading) return <div className="flex justify-center p-12"><Spinner size="lg" /></div>;
   if (isError) return <PageError message={(error as any)?.response?.data?.error ?? (error as Error)?.message} />;
 
-  // Clubs available for the create form
   const allClubs = clubsData?.data ?? [];
   const ownedClubs = isLeader && currentUser
     ? allClubs.filter((c) => c.leader_id === currentUser.id)
@@ -139,21 +142,34 @@ export function EventsPage() {
   const canCreate = isAdmin || (isLeader && ownedClubs.length > 0);
   const canManageEvents = isAdmin || isLeader;
 
+  // All visible events, sorted newest-start first
   const sourceEvents = canManageEvents
     ? (allEvents?.data ?? [])
     : (allEvents?.data.filter((e) => e.status === 'published') ?? []);
-
-  const upcoming = sourceEvents.filter((e) => new Date(e.starts_at) > new Date());
-  const past = sourceEvents.filter((e) => new Date(e.starts_at) <= new Date());
-
-  // Calendar view helpers
-  const publishedUpcoming = sourceEvents.filter(
-    (e) => e.status === 'published' && new Date(e.starts_at) > new Date()
+  const sortedEvents = [...sourceEvents].sort(
+    (a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime(),
   );
-  const eventDays = publishedUpcoming.map((e) => new Date(e.starts_at));
+
+  // Calendar: all visible events (not just upcoming published)
+  const eventDays = sourceEvents.map((e) => new Date(e.starts_at));
+  const calendarMonthEvents = calendarDate
+    ? sourceEvents.filter((e) => {
+        const d = new Date(e.starts_at);
+        return d.getMonth() === calendarDate.getMonth() && d.getFullYear() === calendarDate.getFullYear();
+      })
+    : sourceEvents.filter((e) => {
+        const d = new Date(e.starts_at);
+        const now = new Date();
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      });
   const selectedDayEvents = calendarDate
-    ? publishedUpcoming.filter((e) => isSameDay(new Date(e.starts_at), calendarDate))
-    : [];
+    ? sourceEvents.filter((e) => isSameDay(new Date(e.starts_at), calendarDate))
+    : null;
+
+  // Agenda: selected-day events if a day is picked, otherwise current-month events
+  const agendaEvents = selectedDayEvents ?? calendarMonthEvents.sort(
+    (a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime(),
+  );
 
   const dateRangeLabel =
     dateRange?.from
@@ -163,6 +179,8 @@ export function EventsPage() {
       : 'Pick dates';
 
   const hasFilters = !!filterCategory || !!filterClubId || !!filterLocation || !!dateRange?.from;
+
+  const pendingCount = submittedEvents?.data.length ?? 0;
 
   return (
     <div>
@@ -190,7 +208,6 @@ export function EventsPage() {
 
       {/* Filter bar */}
       <div className="mb-4 flex flex-wrap gap-3 items-end">
-        {/* Category */}
         <div className="min-w-[140px]">
           <Select
             value={filterCategory || ALL_CATEGORIES}
@@ -208,7 +225,6 @@ export function EventsPage() {
           </Select>
         </div>
 
-        {/* Club */}
         <div className="min-w-[160px]">
           <Select
             value={filterClubId || ALL_CLUBS}
@@ -228,7 +244,6 @@ export function EventsPage() {
           </Select>
         </div>
 
-        {/* Location search */}
         <div className="min-w-[160px]">
           <Input
             placeholder="Search location…"
@@ -237,7 +252,6 @@ export function EventsPage() {
           />
         </div>
 
-        {/* Date range picker */}
         <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="gap-2">
@@ -298,63 +312,87 @@ export function EventsPage() {
 
       {/* ── List View ── */}
       {viewMode === 'list' && (
-        <Tabs defaultValue="upcoming">
-          <TabsList>
-            <TabsTrigger value="upcoming">{t('events.upcoming')} ({upcoming.length})</TabsTrigger>
-            <TabsTrigger value="past">{t('events.past')} ({past.length})</TabsTrigger>
-            {isAdmin && (
-              <TabsTrigger value="pending">
-                Pending Approval ({submittedEvents?.data.length ?? 0})
-              </TabsTrigger>
-            )}
-          </TabsList>
-
-          <TabsContent value="upcoming">
-            <EventGrid events={upcoming} language={language} />
-          </TabsContent>
-          <TabsContent value="past">
-            <EventGrid events={past} language={language} />
-          </TabsContent>
-          {isAdmin && (
-            <TabsContent value="pending">
-              <EventGrid events={submittedEvents?.data ?? []} language={language} />
-            </TabsContent>
+        <div>
+          {/* Pending approval banner for admins */}
+          {isAdmin && pendingCount > 0 && (
+            <div className="mb-4 flex items-center gap-3 rounded-base border-2 border-[var(--border)] bg-[var(--overlay)] px-4 py-3">
+              <Badge variant="neutral">{pendingCount}</Badge>
+              <span className="text-sm font-bold">
+                {pendingCount === 1 ? 'event awaiting approval' : 'events awaiting approval'}
+              </span>
+              <div className="ml-auto flex gap-2 flex-wrap">
+                {(submittedEvents?.data ?? []).slice(0, 3).map((e) => (
+                  <Link key={e.id} to={`/events/${e.id}`}>
+                    <Badge variant="secondary" className="cursor-pointer hover:opacity-80">
+                      {language === 'ar' ? e.title_ar : e.title}
+                    </Badge>
+                  </Link>
+                ))}
+              </div>
+            </div>
           )}
-        </Tabs>
+          <EventGrid events={sortedEvents} language={language} />
+        </div>
       )}
 
       {/* ── Calendar View ── */}
       {viewMode === 'calendar' && (
-        <div className="flex flex-col gap-6 md:flex-row md:items-start">
-          <Calendar
-            mode="single"
-            selected={calendarDate}
-            onSelect={setCalendarDate}
-            modifiers={{ hasEvent: eventDays }}
-            modifiersClassNames={{
-              hasEvent: 'underline decoration-2 font-bold',
-            }}
-          />
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+          <div className="shrink-0">
+            <Calendar
+              mode="single"
+              selected={calendarDate}
+              onSelect={setCalendarDate}
+              modifiers={{ hasEvent: eventDays }}
+              modifiersClassNames={{
+                hasEvent: 'underline decoration-2 font-bold',
+              }}
+            />
+            {calendarDate && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2 w-full"
+                onClick={() => setCalendarDate(undefined)}
+              >
+                Show all this month
+              </Button>
+            )}
+          </div>
           <div className="flex-1">
-            {!calendarDate ? (
-              <p className="text-sm text-muted-foreground mt-2">Select a day to see events.</p>
-            ) : selectedDayEvents.length === 0 ? (
-              <p className="text-sm mt-2">No events on {format(calendarDate, 'PPP')}.</p>
+            <p className="mb-3 font-bold text-sm">
+              {calendarDate
+                ? format(calendarDate, 'PPP')
+                : format(new Date(), 'MMMM yyyy')}
+              {' '}
+              <span className="font-normal opacity-60">
+                ({agendaEvents.length} event{agendaEvents.length !== 1 ? 's' : ''})
+              </span>
+            </p>
+            {agendaEvents.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No events to show.</p>
             ) : (
               <div className="flex flex-col gap-3">
-                <p className="font-bold">{format(calendarDate, 'PPP')}</p>
-                {selectedDayEvents.map((event) => (
+                {agendaEvents.map((event) => (
                   <Link key={event.id} to={`/events/${event.id}`}>
                     <Card className="cursor-pointer hover:-translate-y-0.5 transition-transform">
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-base">
-                          {language === 'ar' ? event.title_ar : event.title}
-                        </CardTitle>
+                        <div className="flex items-start justify-between gap-2">
+                          <CardTitle className="text-base">
+                            {language === 'ar' ? event.title_ar : event.title}
+                          </CardTitle>
+                          <Badge variant={isUpcoming(event) ? 'accent' : 'neutral'} className="shrink-0">
+                            {isUpcoming(event) ? t('events.upcoming', 'Upcoming') : t('events.past', 'Past')}
+                          </Badge>
+                        </div>
                       </CardHeader>
                       <CardContent>
                         <div className="flex flex-wrap gap-2 text-sm">
                           {event.location && <Badge variant="accent">{event.location}</Badge>}
                           <Badge variant="secondary">
+                            {new Date(event.starts_at).toLocaleDateString([], {
+                              month: 'short', day: 'numeric',
+                            })}{' '}
                             {new Date(event.starts_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </Badge>
                           {event.category && <Badge variant="outline">{event.category}</Badge>}
@@ -386,11 +424,19 @@ function EventGrid({ events, language }: { events: Event[]; language: 'en' | 'ar
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
       {events.map((event) => {
         const seats = remainingSeats(event);
+        const upcoming = isUpcoming(event);
         return (
           <Link key={event.id} to={`/events/${event.id}`}>
             <Card className="h-full cursor-pointer hover:-translate-y-0.5 transition-transform">
               <CardHeader>
-                <CardTitle>{language === 'ar' ? event.title_ar : event.title}</CardTitle>
+                <div className="flex items-start justify-between gap-2">
+                  <CardTitle className="text-base leading-tight">
+                    {language === 'ar' ? event.title_ar : event.title}
+                  </CardTitle>
+                  <Badge variant={upcoming ? 'accent' : 'neutral'} className="shrink-0 text-xs">
+                    {upcoming ? t('events.upcoming', 'Upcoming') : t('events.past', 'Past')}
+                  </Badge>
+                </div>
               </CardHeader>
               <CardContent>
                 <p className="text-sm line-clamp-2 mb-2">
@@ -404,6 +450,9 @@ function EventGrid({ events, language }: { events: Event[]; language: 'en' | 'ar
                     <Badge variant="outline">
                       {seats ?? `${event.capacity} seats`}
                     </Badge>
+                  )}
+                  {(event.status === 'draft' || event.status === 'submitted' || event.status === 'rejected') && (
+                    <Badge variant="neutral" className="capitalize">{event.status}</Badge>
                   )}
                 </div>
               </CardContent>
