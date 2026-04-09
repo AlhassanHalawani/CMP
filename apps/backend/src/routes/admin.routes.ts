@@ -9,6 +9,7 @@ import {
   setActiveSemester,
   deleteSemester,
 } from '../controllers/admin.controller';
+import { getTraffic } from '../controllers/analytics.controller';
 
 const router = Router();
 
@@ -21,5 +22,6 @@ router.get('/semesters', listSemesters);
 router.post('/semesters', createSemester);
 router.patch('/semesters/:id/activate', setActiveSemester);
 router.delete('/semesters/:id', deleteSemester);
+router.get('/traffic', getTraffic);
 
 export default router;

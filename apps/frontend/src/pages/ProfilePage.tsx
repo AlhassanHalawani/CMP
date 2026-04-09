@@ -3,12 +3,15 @@ import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useUiPreferences, COLOR_PRESETS } from '@/contexts/UiPreferencesContext';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Select,
   SelectTrigger,
@@ -27,6 +30,149 @@ import { usersApi } from '@/api/users';
 import { clubsApi } from '@/api/clubs';
 import { leaderRequestsApi } from '@/api/admin';
 import { useAppToast } from '@/contexts/ToastContext';
+import { Sun, Moon } from 'lucide-react';
+
+// ─── Segmented button helper ──────────────────────────────────────────────────
+
+function SegmentedButtons<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: T[];
+  value: T;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-1">
+      {options.map((opt) => (
+        <Button
+          key={opt}
+          size="sm"
+          variant={value === opt ? 'default' : 'outline'}
+          className="min-w-[3rem] text-xs"
+          onClick={() => onChange(opt)}
+          type="button"
+        >
+          {opt}
+        </Button>
+      ))}
+    </div>
+  );
+}
+
+// ─── Customize Styling Dialog ─────────────────────────────────────────────────
+
+function CustomizeStylingDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+  const { draft, setDraft, previewDraft, savePreferences, resetPreferences, isSaving } = useUiPreferences();
+  const { showToast } = useAppToast();
+
+  const handleSave = () => {
+    savePreferences();
+    showToast('Preferences saved', 'Your styling preferences have been applied.');
+    onOpenChange(false);
+  };
+
+  const handleReset = () => {
+    resetPreferences();
+    showToast('Preferences reset', 'Styling has been reset to defaults.');
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Customize styling</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-5 py-2">
+          {/* Color preset */}
+          <div>
+            <label className="block text-sm font-bold mb-2">Color preset</label>
+            <Select value={draft.color_preset} onValueChange={(v) => { setDraft({ color_preset: v }); previewDraft(); }}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(COLOR_PRESETS).map(([key, { label, main }]) => (
+                  <SelectItem key={key} value={key}>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="inline-block size-3 rounded-sm border border-border"
+                        style={{ background: main }}
+                      />
+                      {label}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Border radius */}
+          <div>
+            <label className="block text-sm font-bold mb-2">Border radius</label>
+            <SegmentedButtons
+              options={['0px', '5px', '10px', '15px']}
+              value={draft.radius_base as '0px' | '5px' | '10px' | '15px'}
+              onChange={(v) => { setDraft({ radius_base: v }); previewDraft(); }}
+            />
+          </div>
+
+          {/* Horizontal box shadow */}
+          <div>
+            <label className="block text-sm font-bold mb-2">Horizontal shadow</label>
+            <SegmentedButtons
+              options={['-4px', '-2px', '0px', '2px', '4px']}
+              value={draft.box_shadow_x as '-4px' | '-2px' | '0px' | '2px' | '4px'}
+              onChange={(v) => { setDraft({ box_shadow_x: v }); previewDraft(); }}
+            />
+          </div>
+
+          {/* Vertical box shadow */}
+          <div>
+            <label className="block text-sm font-bold mb-2">Vertical shadow</label>
+            <SegmentedButtons
+              options={['-4px', '-2px', '0px', '2px', '4px']}
+              value={draft.box_shadow_y as '-4px' | '-2px' | '0px' | '2px' | '4px'}
+              onChange={(v) => { setDraft({ box_shadow_y: v }); previewDraft(); }}
+            />
+          </div>
+
+          {/* Heading font weight */}
+          <div>
+            <label className="block text-sm font-bold mb-2">Heading font weight</label>
+            <SegmentedButtons
+              options={['700', '800', '900']}
+              value={draft.font_weight_heading as '700' | '800' | '900'}
+              onChange={(v) => { setDraft({ font_weight_heading: v }); previewDraft(); }}
+            />
+          </div>
+
+          {/* Base font weight */}
+          <div>
+            <label className="block text-sm font-bold mb-2">Base font weight</label>
+            <SegmentedButtons
+              options={['500', '600', '700']}
+              value={draft.font_weight_base as '500' | '600' | '700'}
+              onChange={(v) => { setDraft({ font_weight_base: v }); previewDraft(); }}
+            />
+          </div>
+        </div>
+
+        <DialogFooter className="flex gap-2 mt-4">
+          <Button variant="outline" onClick={handleReset} type="button">
+            Reset
+          </Button>
+          <Button onClick={handleSave} disabled={isSaving} type="button">
+            {isSaving ? 'Saving…' : 'Save changes'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 // ─── Club Leader Request section ──────────────────────────────────────────────
 
@@ -72,36 +218,35 @@ function LeaderRequestSection() {
   };
 
   return (
-    <Card className="max-w-lg">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Club Leader Request</CardTitle>
-          <Button size="sm" onClick={() => setOpen(true)}>Request Leadership</Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {requestsLoading && <Spinner />}
-        {!requestsLoading && myRequests.length === 0 && (
-          <p className="text-sm opacity-60">You have no leadership requests yet.</p>
-        )}
-        <div className="space-y-2 mt-2">
-          {myRequests.map((req) => (
-            <div key={req.id} className="border-2 border-border p-3 text-sm">
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-bold">Club Leader Requests</h2>
+        <Button size="sm" onClick={() => setOpen(true)}>Request Leadership</Button>
+      </div>
+
+      {requestsLoading && <Spinner />}
+      {!requestsLoading && myRequests.length === 0 && (
+        <p className="text-sm opacity-60">You have no leadership requests yet.</p>
+      )}
+      <div className="space-y-2">
+        {myRequests.map((req) => (
+          <Card key={req.id}>
+            <CardContent className="pt-4">
               <div className="flex items-center justify-between">
                 <span className="font-bold">{req.club_name}</span>
                 <Badge variant={statusVariant[req.status] ?? 'default'}>{req.status}</Badge>
               </div>
-              {req.message && <p className="opacity-60 italic mt-1">"{req.message}"</p>}
+              {req.message && <p className="opacity-60 italic mt-1 text-sm">"{req.message}"</p>}
               {req.admin_notes && (
                 <p className="mt-1 text-xs">
                   <span className="font-bold">Admin notes: </span>{req.admin_notes}
                 </p>
               )}
               <p className="text-xs opacity-40 mt-1">{new Date(req.created_at).toLocaleDateString()}</p>
-            </div>
-          ))}
-        </div>
-      </CardContent>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
       <Dialog open={open} onOpenChange={(o) => { if (!o) setOpen(false); }}>
         <DialogContent>
@@ -139,7 +284,52 @@ function LeaderRequestSection() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </div>
+  );
+}
+
+// ─── Preferences tab ──────────────────────────────────────────────────────────
+
+function PreferencesTab() {
+  const { theme, toggleTheme } = useTheme();
+  const [stylingOpen, setStylingOpen] = useState(false);
+
+  return (
+    <div className="space-y-6 max-w-lg">
+      <Card>
+        <CardHeader><CardTitle>Appearance</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <label className="block text-sm font-bold mb-2">Theme</label>
+            <div className="flex gap-2">
+              <Button
+                variant={theme === 'light' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => theme !== 'light' && toggleTheme()}
+              >
+                <Sun className="size-4 mr-1" /> Light
+              </Button>
+              <Button
+                variant={theme === 'dark' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => theme !== 'dark' && toggleTheme()}
+              >
+                <Moon className="size-4 mr-1" /> Dark
+              </Button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold mb-2">UI Styling</label>
+            <Button variant="outline" size="sm" onClick={() => setStylingOpen(true)}>
+              Customize styling
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <CustomizeStylingDialog open={stylingOpen} onOpenChange={setStylingOpen} />
+    </div>
   );
 }
 
@@ -164,38 +354,60 @@ export function ProfilePage() {
   });
 
   return (
-    <div className="space-y-6">
+    <div>
       <h1 className="mb-6 text-3xl font-black">{t('nav.profile')}</h1>
 
-      <Card className="max-w-lg">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>{user?.name}</CardTitle>
-            <Badge variant="accent">{user?.roles?.join(', ')}</Badge>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-bold mb-1">Email</label>
-              <Input value={user?.email || ''} disabled />
-            </div>
-            <div>
-              <label className="block text-sm font-bold mb-1">Name</label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} />
-            </div>
-            <Button
-              disabled={updateMutation.isPending || name === user?.name}
-              onClick={() => updateMutation.mutate({ name })}
-            >
-              {updateMutation.isPending ? 'Saving…' : t('common.save')}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="profile">
+        <TabsList>
+          <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="preferences">Preferences</TabsTrigger>
+          {isStudent && <TabsTrigger value="requests">Requests</TabsTrigger>}
+        </TabsList>
 
-      {/* Students can request club leadership */}
-      {isStudent && <LeaderRequestSection />}
+        {/* Profile tab */}
+        <TabsContent value="profile" className="mt-6">
+          <Card className="max-w-lg">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>{user?.name}</CardTitle>
+                <Badge variant="accent">{user?.roles?.join(', ')}</Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-bold mb-1">Email</label>
+                  <Input value={user?.email || ''} disabled />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-1">Name</label>
+                  <Input value={name} onChange={(e) => setName(e.target.value)} />
+                </div>
+                <Button
+                  disabled={updateMutation.isPending || name === user?.name}
+                  onClick={() => updateMutation.mutate({ name })}
+                >
+                  {updateMutation.isPending ? 'Saving…' : t('common.save')}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Preferences tab */}
+        <TabsContent value="preferences" className="mt-6">
+          <PreferencesTab />
+        </TabsContent>
+
+        {/* Requests tab (students only) */}
+        {isStudent && (
+          <TabsContent value="requests" className="mt-6">
+            <div className="max-w-lg">
+              <LeaderRequestSection />
+            </div>
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   );
 }

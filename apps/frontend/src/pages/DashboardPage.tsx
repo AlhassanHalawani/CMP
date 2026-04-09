@@ -1,12 +1,14 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import {
   ChartContainer,
@@ -17,6 +19,73 @@ import {
 import { eventsApi } from '@/api/events';
 import { clubsApi } from '@/api/clubs';
 import { kpiApi } from '@/api/kpi';
+import { analyticsApi } from '@/api/analytics';
+
+// ─── Visitors Chart (admin only) ─────────────────────────────────────────────
+
+type TrafficRange = '7d' | '30d' | '90d';
+
+const visitorsChartConfig: ChartConfig = {
+  desktop: { label: 'Desktop', color: 'var(--color-chart-1)' },
+  mobile:  { label: 'Mobile',  color: 'var(--color-chart-2)' },
+};
+
+function VisitorsChart() {
+  const [range, setRange] = useState<TrafficRange>('30d');
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin', 'traffic', range],
+    queryFn: () => analyticsApi.getTraffic(range),
+    refetchInterval: 60_000,
+  });
+
+  return (
+    <Card className="mb-8">
+      <CardHeader>
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <CardTitle>Website Visitors</CardTitle>
+            <CardDescription className="mt-1">
+              Showing visitors for the selected time range
+              {data && (
+                <span className="ml-2 font-bold">
+                  — {data.totals.visitors} visitors · {data.totals.page_views} page views
+                </span>
+              )}
+            </CardDescription>
+          </div>
+          <div className="flex gap-1">
+            {(['7d', '30d', '90d'] as TrafficRange[]).map((r) => (
+              <Button
+                key={r}
+                size="sm"
+                variant={range === r ? 'default' : 'outline'}
+                onClick={() => setRange(r)}
+              >
+                {r}
+              </Button>
+            ))}
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex justify-center h-[200px] items-center"><Spinner /></div>
+        ) : (
+          <ChartContainer config={visitorsChartConfig} className="h-[200px] w-full">
+            <AreaChart data={data?.series ?? []}>
+              <CartesianGrid vertical={false} />
+              <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <Area dataKey="desktop" stackId="a" stroke="var(--color-desktop)" fill="var(--color-desktop)" fillOpacity={0.3} />
+              <Area dataKey="mobile"  stackId="a" stroke="var(--color-mobile)"  fill="var(--color-mobile)"  fillOpacity={0.3} />
+            </AreaChart>
+          </ChartContainer>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 const statsChartConfig: ChartConfig = {
   value: {
@@ -208,6 +277,7 @@ function GlobalDashboard() {
 
   return (
     <div>
+      {hasRole('admin') && <VisitorsChart />}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mb-8">
         <div className="lg:col-span-2">
           <Card>

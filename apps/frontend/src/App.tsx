@@ -19,11 +19,13 @@ import { KpiPage } from '@/pages/KpiPage';
 import { EventAttendancePage } from '@/pages/EventAttendancePage';
 import { ReportsPage } from '@/pages/ReportsPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
+import { PageViewTracker } from '@/components/app/PageViewTracker';
 
 export default function App() {
   return (
     <BrowserRouter>
       <ErrorBoundary>
+        <PageViewTracker />
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
