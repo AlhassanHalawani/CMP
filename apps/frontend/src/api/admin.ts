@@ -24,8 +24,20 @@ export interface Semester {
   is_active: number;
 }
 
+export interface ActivityStat {
+  date: string;
+  count: number;
+}
+
+export interface ActivityStats {
+  registrations: ActivityStat[];
+  actions: ActivityStat[];
+}
+
 export const adminApi = {
   getStats: () => api.get<Stats>('/admin/stats').then((r) => r.data),
+  getActivityStats: (days?: number) =>
+    api.get<{ data: ActivityStats }>('/admin/activity', { params: { days } }).then((r) => r.data),
   getAuditLog: (params?: { limit?: number; offset?: number }) =>
     api.get<{ data: AuditLog[] }>('/admin/audit-log', { params }).then((r) => r.data),
   listSemesters: () => api.get<{ data: Semester[] }>('/admin/semesters').then((r) => r.data),

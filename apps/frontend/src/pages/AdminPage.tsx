@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { adminApi, leaderRequestsApi } from '@/api/admin';
+import { VisitorsChart } from '@/components/admin/VisitorsChart';
 import { usersApi, type User } from '@/api/users';
 import { clubsApi, type Club } from '@/api/clubs';
 import { useAppToast } from '@/contexts/ToastContext';
@@ -328,6 +329,10 @@ export function AdminPage() {
   return (
     <div>
       <h1 className="mb-6 text-3xl font-black">{t('admin.title')}</h1>
+
+      <div className="mb-8">
+        <VisitorsChart />
+      </div>
 
       <div className="grid grid-cols-3 gap-4 mb-8">
         <Card>

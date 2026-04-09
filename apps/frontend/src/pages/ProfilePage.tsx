@@ -3,12 +3,15 @@ import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectTrigger,
@@ -27,6 +30,32 @@ import { usersApi } from '@/api/users';
 import { clubsApi } from '@/api/clubs';
 import { leaderRequestsApi } from '@/api/admin';
 import { useAppToast } from '@/contexts/ToastContext';
+
+// ─── Avatar ───────────────────────────────────────────────────────────────────
+
+function Avatar({ name, role }: { name: string; role: string }) {
+  const initials = name
+    .split(' ')
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? '')
+    .join('');
+
+  const colorMap: Record<string, string> = {
+    admin: 'bg-red-500',
+    club_leader: 'bg-blue-500',
+    student: 'bg-green-500',
+  };
+  const bg = colorMap[role] ?? 'bg-gray-500';
+
+  return (
+    <div
+      className={`${bg} flex items-center justify-center rounded-full text-white font-black text-2xl`}
+      style={{ width: 80, height: 80 }}
+    >
+      {initials || '?'}
+    </div>
+  );
+}
 
 // ─── Club Leader Request section ──────────────────────────────────────────────
 
@@ -148,11 +177,14 @@ function LeaderRequestSection() {
 export function ProfilePage() {
   const { t } = useTranslation();
   const { user, hasRole } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const { language, toggleLanguage } = useLanguage();
   const { showToast } = useAppToast();
   const queryClient = useQueryClient();
   const [name, setName] = useState(user?.name || '');
 
   const isStudent = !hasRole('admin') && !hasRole('club_leader');
+  const primaryRole = hasRole('admin') ? 'admin' : hasRole('club_leader') ? 'club_leader' : 'student';
 
   const updateMutation = useMutation({
     mutationFn: (data: { name: string }) => usersApi.updateMe(data),
@@ -164,14 +196,23 @@ export function ProfilePage() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-2xl">
       <h1 className="mb-6 text-3xl font-black">{t('nav.profile')}</h1>
 
-      <Card className="max-w-lg">
+      {/* Profile card */}
+      <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>{user?.name}</CardTitle>
-            <Badge variant="accent">{user?.roles?.join(', ')}</Badge>
+          <div className="flex items-center gap-4">
+            <Avatar name={user?.name ?? ''} role={primaryRole} />
+            <div>
+              <CardTitle className="text-xl">{user?.name}</CardTitle>
+              <p className="text-sm opacity-60">{user?.email}</p>
+              <div className="flex gap-1 mt-1">
+                {user?.roles?.map((r) => (
+                  <Badge key={r} variant="accent">{r}</Badge>
+                ))}
+              </div>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -181,15 +222,61 @@ export function ProfilePage() {
               <Input value={user?.email || ''} disabled />
             </div>
             <div>
-              <label className="block text-sm font-bold mb-1">Name</label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} />
+              <label className="block text-sm font-bold mb-1">Display Name</label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
             </div>
             <Button
-              disabled={updateMutation.isPending || name === user?.name}
+              disabled={updateMutation.isPending || name === user?.name || !name.trim()}
               onClick={() => updateMutation.mutate({ name })}
             >
               {updateMutation.isPending ? 'Saving…' : t('common.save')}
             </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Preferences */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Preferences</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-bold text-sm">Dark Mode</p>
+              <p className="text-xs opacity-60">Switch between light and dark theme</p>
+            </div>
+            <Switch
+              checked={theme === 'dark'}
+              onCheckedChange={toggleTheme}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-bold text-sm">Language</p>
+              <p className="text-xs opacity-60">Interface language and text direction</p>
+            </div>
+            <Button size="sm" variant="outline" onClick={toggleLanguage}>
+              {language === 'en' ? 'Switch to Arabic' : 'Switch to English'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Account info */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Account</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="opacity-60">Role</span>
+            <span className="font-bold capitalize">{primaryRole.replace('_', ' ')}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="opacity-60">User ID</span>
+            <span className="font-mono opacity-80">{user?.id}</span>
           </div>
         </CardContent>
       </Card>

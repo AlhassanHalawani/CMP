@@ -4,6 +4,7 @@ import { requireRole } from '../middleware/roles';
 import {
   getStats,
   getAuditLog,
+  getActivityStats,
   listSemesters,
   createSemester,
   setActiveSemester,
@@ -16,6 +17,7 @@ router.use(authenticate);
 router.use(requireRole('admin'));
 
 router.get('/stats', getStats);
+router.get('/activity', getActivityStats);
 router.get('/audit-log', getAuditLog);
 router.get('/semesters', listSemesters);
 router.post('/semesters', createSemester);

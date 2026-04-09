@@ -6,6 +6,7 @@ import { EventModel } from '../models/event.model';
 import { AuditLogModel } from '../models/auditLog.model';
 import { SemesterModel } from '../models/semester.model';
 import { logAction } from '../services/audit.service';
+import { db } from '../config/database';
 
 export function getStats(_req: AuthRequest, res: Response) {
   res.json({
@@ -13,6 +14,28 @@ export function getStats(_req: AuthRequest, res: Response) {
     clubs: ClubModel.count(),
     events: EventModel.count(),
   });
+}
+
+export function getActivityStats(req: AuthRequest, res: Response) {
+  const days = Math.min(parseInt(req.query.days as string) || 90, 365);
+
+  const registrations = db.prepare(`
+    SELECT date(created_at) as date, COUNT(*) as count
+    FROM users
+    WHERE created_at >= date('now', ? || ' days')
+    GROUP BY date(created_at)
+    ORDER BY date ASC
+  `).all(`-${days}`) as { date: string; count: number }[];
+
+  const actions = db.prepare(`
+    SELECT date(created_at) as date, COUNT(*) as count
+    FROM audit_logs
+    WHERE created_at >= date('now', ? || ' days')
+    GROUP BY date(created_at)
+    ORDER BY date ASC
+  `).all(`-${days}`) as { date: string; count: number }[];
+
+  res.json({ data: { registrations, actions } });
 }
 
 export function getAuditLog(req: AuthRequest, res: Response) {
