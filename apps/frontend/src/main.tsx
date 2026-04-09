@@ -5,7 +5,6 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { AppToastProvider } from '@/contexts/ToastContext';
-import { UIPreferencesProvider } from '@/contexts/UIPreferencesContext';
 import '@/i18n/config';
 import '@/styles/globals.css';
 import App from './App';
@@ -24,13 +23,11 @@ createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ThemeProvider>
-          <UIPreferencesProvider>
-            <AppToastProvider>
-              <LanguageProvider>
-                <App />
-              </LanguageProvider>
-            </AppToastProvider>
-          </UIPreferencesProvider>
+          <AppToastProvider>
+            <LanguageProvider>
+              <App />
+            </LanguageProvider>
+          </AppToastProvider>
         </ThemeProvider>
       </AuthProvider>
     </QueryClientProvider>

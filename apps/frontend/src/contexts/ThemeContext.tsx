@@ -9,14 +9,6 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-// Callback registered by UIPreferencesContext so it can re-apply color vars
-// when the theme changes. Using a module-level ref avoids a circular import.
-let _onThemeToggle: ((isDark: boolean) => void) | null = null;
-
-export function registerThemeToggleCallback(fn: (isDark: boolean) => void) {
-  _onThemeToggle = fn;
-}
-
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = localStorage.getItem('cmp-theme');
@@ -29,15 +21,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('cmp-theme', theme);
   }, [theme]);
 
-  const toggleTheme = () => {
-    setTheme((t) => {
-      const next = t === 'light' ? 'dark' : 'light';
-      const isDark = next === 'dark';
-      // Let UIPreferences swap --main / --background for the new theme
-      setTimeout(() => _onThemeToggle?.(isDark), 0);
-      return next;
-    });
-  };
+  const toggleTheme = () => setTheme((t) => (t === 'light' ? 'dark' : 'light'));
 
   return <ThemeContext.Provider value={{ theme, toggleTheme }}>{children}</ThemeContext.Provider>;
 }
