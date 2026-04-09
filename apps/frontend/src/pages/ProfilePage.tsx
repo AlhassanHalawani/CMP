@@ -2,16 +2,17 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
+import { Moon, Sun } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useUIPreferences, COLORS } from '@/contexts/UIPreferencesContext';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectTrigger,
@@ -30,6 +31,7 @@ import { usersApi } from '@/api/users';
 import { clubsApi } from '@/api/clubs';
 import { leaderRequestsApi } from '@/api/admin';
 import { useAppToast } from '@/contexts/ToastContext';
+import { cn } from '@/lib/utils';
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 
@@ -45,14 +47,54 @@ function Avatar({ name, role }: { name: string; role: string }) {
     club_leader: 'bg-blue-500',
     student: 'bg-green-500',
   };
-  const bg = colorMap[role] ?? 'bg-gray-500';
 
   return (
     <div
-      className={`${bg} flex items-center justify-center rounded-full text-white font-black text-2xl`}
+      className={cn(
+        colorMap[role] ?? 'bg-gray-500',
+        'flex items-center justify-center rounded-full text-white font-black text-2xl select-none',
+      )}
       style={{ width: 80, height: 80 }}
     >
       {initials || '?'}
+    </div>
+  );
+}
+
+// ─── Customizer helpers ───────────────────────────────────────────────────────
+
+function OptionGroup<T extends number | string>({
+  label,
+  options,
+  value,
+  onChange,
+  format,
+}: {
+  label: string;
+  options: T[];
+  value: T;
+  onChange: (v: T) => void;
+  format?: (v: T) => string;
+}) {
+  return (
+    <div>
+      <p className="text-sm font-bold mb-2">{label}</p>
+      <div className="flex flex-wrap gap-2">
+        {options.map((opt) => (
+          <button
+            key={String(opt)}
+            onClick={() => onChange(opt)}
+            className={cn(
+              'border-2 border-border px-3 py-1 text-sm font-base transition-colors',
+              value === opt
+                ? 'bg-main text-main-foreground'
+                : 'bg-background hover:bg-main/20',
+            )}
+          >
+            {format ? format(opt) : String(opt)}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -101,7 +143,7 @@ function LeaderRequestSection() {
   };
 
   return (
-    <Card className="max-w-lg">
+    <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Club Leader Request</CardTitle>
@@ -179,6 +221,16 @@ export function ProfilePage() {
   const { user, hasRole } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { language, toggleLanguage } = useLanguage();
+  const {
+    prefs,
+    setColor,
+    setBorderRadius,
+    setShadowX,
+    setShadowY,
+    setHeadingWeight,
+    setBaseWeight,
+    resetPrefs,
+  } = useUIPreferences();
   const { showToast } = useAppToast();
   const queryClient = useQueryClient();
   const [name, setName] = useState(user?.name || '');
@@ -199,7 +251,7 @@ export function ProfilePage() {
     <div className="space-y-6 max-w-2xl">
       <h1 className="mb-6 text-3xl font-black">{t('nav.profile')}</h1>
 
-      {/* Profile card */}
+      {/* ── Profile card ─────────────────────────────────── */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-4">
@@ -207,7 +259,7 @@ export function ProfilePage() {
             <div>
               <CardTitle className="text-xl">{user?.name}</CardTitle>
               <p className="text-sm opacity-60">{user?.email}</p>
-              <div className="flex gap-1 mt-1">
+              <div className="flex gap-1 mt-1 flex-wrap">
                 {user?.roles?.map((r) => (
                   <Badge key={r} variant="accent">{r}</Badge>
                 ))}
@@ -215,56 +267,144 @@ export function ProfilePage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-bold mb-1">Email</label>
-              <Input value={user?.email || ''} disabled />
-            </div>
-            <div>
-              <label className="block text-sm font-bold mb-1">Display Name</label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
-            </div>
-            <Button
-              disabled={updateMutation.isPending || name === user?.name || !name.trim()}
-              onClick={() => updateMutation.mutate({ name })}
-            >
-              {updateMutation.isPending ? 'Saving…' : t('common.save')}
-            </Button>
+        <CardContent className="space-y-4">
+          <div>
+            <label className="block text-sm font-bold mb-1">Email</label>
+            <Input value={user?.email || ''} disabled />
           </div>
+          <div>
+            <label className="block text-sm font-bold mb-1">Display Name</label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
+          </div>
+          <Button
+            disabled={updateMutation.isPending || name === user?.name || !name.trim()}
+            onClick={() => updateMutation.mutate({ name })}
+          >
+            {updateMutation.isPending ? 'Saving…' : t('common.save')}
+          </Button>
         </CardContent>
       </Card>
 
-      {/* Preferences */}
+      {/* ── Appearance ───────────────────────────────────── */}
       <Card>
         <CardHeader>
-          <CardTitle>Preferences</CardTitle>
+          <CardTitle>Appearance</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
+          {/* Dark / Light toggle */}
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-bold text-sm">Dark Mode</p>
-              <p className="text-xs opacity-60">Switch between light and dark theme</p>
+              <p className="font-bold text-sm">Theme</p>
+              <p className="text-xs opacity-60">Switch between light and dark mode</p>
             </div>
-            <Switch
-              checked={theme === 'dark'}
-              onCheckedChange={toggleTheme}
-            />
+            <button
+              onClick={toggleTheme}
+              className="size-10 flex items-center justify-center border-2 border-border bg-background hover:bg-main/20 transition-colors"
+              aria-label="Toggle theme"
+            >
+              {theme === 'dark'
+                ? <Sun className="size-5 stroke-foreground" />
+                : <Moon className="size-5 stroke-foreground" />
+              }
+            </button>
           </div>
 
+          {/* Language */}
           <div className="flex items-center justify-between">
             <div>
               <p className="font-bold text-sm">Language</p>
               <p className="text-xs opacity-60">Interface language and text direction</p>
             </div>
             <Button size="sm" variant="outline" onClick={toggleLanguage}>
-              {language === 'en' ? 'Switch to Arabic' : 'Switch to English'}
+              {language === 'en' ? 'العربية' : 'English'}
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Account info */}
+      {/* ── UI Customizer ─────────────────────────────────── */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Customize Styling</CardTitle>
+            <Button size="sm" variant="outline" onClick={resetPrefs}>Reset</Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+
+          {/* Color */}
+          <div>
+            <p className="text-sm font-bold mb-3">Color</p>
+            <div className="flex flex-wrap gap-2">
+              {COLORS.map((c) => (
+                <button
+                  key={c.name}
+                  title={c.name}
+                  onClick={() => setColor(c.name)}
+                  className={cn(
+                    'flex items-center gap-1.5 px-2 py-1 border-2 text-sm capitalize transition-colors',
+                    prefs.colorName === c.name
+                      ? 'border-foreground font-bold'
+                      : 'border-border hover:border-foreground/50',
+                  )}
+                >
+                  <span
+                    className="inline-block size-3 rounded-full border border-border"
+                    style={{ background: c.main }}
+                  />
+                  {c.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Border Radius */}
+          <OptionGroup
+            label="Border Radius"
+            options={[0, 5, 10, 15] as number[]}
+            value={prefs.borderRadius}
+            onChange={(v) => setBorderRadius(v as number)}
+            format={(v) => `${v} px`}
+          />
+
+          {/* Shadow X */}
+          <OptionGroup
+            label="Horizontal Box Shadow"
+            options={[-4, -2, 0, 2, 4] as number[]}
+            value={prefs.shadowX}
+            onChange={(v) => setShadowX(v as number)}
+            format={(v) => `${v} px`}
+          />
+
+          {/* Shadow Y */}
+          <OptionGroup
+            label="Vertical Box Shadow"
+            options={[-4, -2, 0, 2, 4] as number[]}
+            value={prefs.shadowY}
+            onChange={(v) => setShadowY(v as number)}
+            format={(v) => `${v} px`}
+          />
+
+          {/* Heading weight */}
+          <OptionGroup
+            label="Heading Font Weight"
+            options={[700, 800, 900] as number[]}
+            value={prefs.headingWeight}
+            onChange={(v) => setHeadingWeight(v as number)}
+          />
+
+          {/* Base weight */}
+          <OptionGroup
+            label="Base Font Weight"
+            options={[500, 600, 700] as number[]}
+            value={prefs.baseWeight}
+            onChange={(v) => setBaseWeight(v as number)}
+          />
+
+        </CardContent>
+      </Card>
+
+      {/* ── Account ──────────────────────────────────────── */}
       <Card>
         <CardHeader>
           <CardTitle>Account</CardTitle>
