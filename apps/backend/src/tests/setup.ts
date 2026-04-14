@@ -43,6 +43,7 @@ export function createTestDb() {
       status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'submitted', 'published', 'rejected', 'cancelled', 'completed')),
       rejection_notes TEXT,
       members_only INTEGER NOT NULL DEFAULT 0,
+      delivery_mode TEXT NOT NULL DEFAULT 'physical' CHECK (delivery_mode IN ('physical', 'online')),
       created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       checkin_open INTEGER NOT NULL DEFAULT 0,
@@ -56,6 +57,7 @@ export function createTestDb() {
       body TEXT,
       type TEXT NOT NULL DEFAULT 'info' CHECK (type IN ('info', 'success', 'warning', 'error')),
       is_read INTEGER NOT NULL DEFAULT 0,
+      target_url TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
     CREATE TABLE IF NOT EXISTS notification_preferences (
