@@ -5,6 +5,14 @@ import { generateAchievementReport } from '../services/pdf.service';
 import { logAction } from '../services/audit.service';
 import { isAdmin, leaderOwnsClub } from '../services/ownership.service';
 
+export function listAll(req: Request, res: Response) {
+  const userId = req.query.user_id ? parseInt(req.query.user_id as string) : undefined;
+  const clubId = req.query.club_id ? parseInt(req.query.club_id as string) : undefined;
+  const semesterId = req.query.semester_id ? parseInt(req.query.semester_id as string) : undefined;
+  const achievements = AchievementModel.findAll({ userId, clubId, semesterId });
+  res.json({ data: achievements });
+}
+
 export function listForUser(req: Request, res: Response) {
   const userId = parseInt(req.params.userId);
   const achievements = AchievementModel.findByUser(userId);

@@ -1,7 +1,9 @@
-import { NavLink, useMatch } from 'react-router-dom';
+import { NavLink, Link, useMatch } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import {
   LayoutDashboard,
   Users,
@@ -17,6 +19,7 @@ import {
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
@@ -62,10 +65,19 @@ function NavItem({ item }: { item: NavItem }) {
   );
 }
 
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? '')
+    .join('');
+}
+
 export function AppSidebar() {
   const { t } = useTranslation();
   const { hasRole } = useAuth();
   const { isRtl } = useLanguage();
+  const { currentUser } = useCurrentUser();
 
   const visibleItems = navItems.filter(
     (item) => item.roles.length === 0 || item.roles.some((r) => hasRole(r))
@@ -95,6 +107,26 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      <SidebarFooter>
+        <Link
+          to="/profile"
+          className="flex items-center gap-3 px-2 py-2 rounded-base hover:bg-[var(--overlay)] transition-colors"
+        >
+          <Avatar className="size-8 shrink-0">
+            {currentUser?.avatar_url ? (
+              <AvatarImage src={currentUser.avatar_url} alt={currentUser.name} />
+            ) : null}
+            <AvatarFallback className="text-xs">
+              {currentUser ? getInitials(currentUser.name) : '?'}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
+            <p className="text-sm font-bold truncate">{currentUser?.name ?? '…'}</p>
+            <p className="text-xs opacity-50 truncate">{currentUser?.email ?? ''}</p>
+          </div>
+        </Link>
+      </SidebarFooter>
 
       <SidebarRail />
     </Sidebar>

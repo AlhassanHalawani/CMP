@@ -166,7 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = () => keycloak.login();
   const logout = () => keycloak.logout({ redirectUri: window.location.origin });
   const register = (loginHint?: string) =>
-    keycloak.register(loginHint ? { loginHint } : undefined);
+    keycloak.register({ redirectUri: window.location.origin + '/', ...(loginHint ? { loginHint } : {}) });
 
   // Prefer the DB role (authoritative) over stale token roles.
   const hasRole = (role: string): boolean => {

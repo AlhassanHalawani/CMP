@@ -228,6 +228,25 @@ export async function submitEvent(req: AuthRequest, res: Response) {
     return;
   }
 
+  // Online events bypass admin approval and publish immediately
+  if (event.delivery_mode === 'online') {
+    const updated = EventModel.update(id, { status: 'published', rejection_notes: null });
+    logAction({ actorId: user.id, action: 'publish_online_event', entityType: 'event', entityId: id });
+
+    await notify({
+      userId: user.id,
+      eventType: 'event_approved',
+      title: 'Event Published',
+      body: `Your online event "${event.title}" is now published.`,
+      type: 'success',
+      targetUrl: `/events/${id}`,
+    });
+
+    res.json(updated);
+    return;
+  }
+
+  // Physical events go through admin approval
   const updated = EventModel.update(id, { status: 'submitted', rejection_notes: null });
   logAction({ actorId: user.id, action: 'submit_event', entityType: 'event', entityId: id });
 
@@ -265,6 +284,7 @@ export async function approveEvent(req: AuthRequest, res: Response) {
       title: 'Event Approved',
       body: `Your event "${event.title}" has been approved and is now published.`,
       type: 'success',
+      targetUrl: `/events/${id}`,
     });
   }
 
@@ -301,6 +321,7 @@ export async function rejectEvent(req: AuthRequest, res: Response) {
       title: 'Event Rejected',
       body: `Your event "${event.title}" was rejected. Notes: ${notes.trim()}`,
       type: 'error',
+      targetUrl: `/events/${id}`,
     });
   }
 
@@ -345,6 +366,7 @@ export async function registerForEvent(req: AuthRequest, res: Response) {
     title: 'Registration Confirmed',
     body: `You are registered for "${event.title}" on ${event.starts_at}.`,
     type: 'success',
+    targetUrl: `/events/${eventId}`,
   });
 
   res.status(201).json(registration);

@@ -24,7 +24,7 @@ function list(req, res) {
 }
 function markRead(req, res) {
     const id = parseInt(req.params.id);
-    notification_model_1.NotificationModel.markRead(id);
+    notification_model_1.NotificationModel.markRead(id, req.user.id);
     res.json({ message: 'Marked as read' });
 }
 function markAllRead(req, res) {

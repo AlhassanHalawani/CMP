@@ -13,6 +13,9 @@ export interface Achievement {
 }
 
 export const achievementsApi = {
+  listAll: (params?: { user_id?: number; club_id?: number; semester_id?: number }) =>
+    api.get<{ data: Achievement[] }>('/achievements', { params }).then((r) => r.data),
+
   listForUser: (userId: number) =>
     api.get<{ data: Achievement[] }>(`/achievements/user/${userId}`).then((r) => r.data),
 

@@ -19,6 +19,8 @@ const kpi_routes_1 = __importDefault(require("./routes/kpi.routes"));
 const notifications_routes_1 = __importDefault(require("./routes/notifications.routes"));
 const admin_routes_1 = __importDefault(require("./routes/admin.routes"));
 const leader_requests_routes_1 = __importDefault(require("./routes/leader-requests.routes"));
+const analytics_routes_1 = __importDefault(require("./routes/analytics.routes"));
+const userPreferences_routes_1 = __importDefault(require("./routes/userPreferences.routes"));
 const event_reminders_job_1 = require("./jobs/event-reminders.job");
 // ensure db is initialized on startup
 require("./config/database");
@@ -44,6 +46,8 @@ app.use('/api/kpi', kpi_routes_1.default);
 app.use('/api/notifications', notifications_routes_1.default);
 app.use('/api/admin', admin_routes_1.default);
 app.use('/api/leader-requests', leader_requests_routes_1.default);
+app.use('/api/analytics', analytics_routes_1.default);
+app.use('/api/users', userPreferences_routes_1.default);
 // --- error handler (must be last) ---
 app.use(errorHandler_1.errorHandler);
 // --- background jobs ---

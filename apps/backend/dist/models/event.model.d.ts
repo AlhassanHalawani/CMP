@@ -12,6 +12,7 @@ export interface Event {
     status: 'draft' | 'submitted' | 'published' | 'rejected' | 'cancelled' | 'completed';
     rejection_notes: string | null;
     members_only: number;
+    delivery_mode: 'physical' | 'online';
     created_by: number | null;
     created_at: string;
     checkin_open: number;

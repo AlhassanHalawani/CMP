@@ -55,6 +55,16 @@ export const AchievementModel = {
     return db.prepare(sql).all(...params) as Achievement[];
   },
 
+  findAll(opts: { userId?: number; clubId?: number; semesterId?: number } = {}): Achievement[] {
+    let sql = 'SELECT * FROM achievements WHERE 1=1';
+    const params: unknown[] = [];
+    if (opts.userId)     { sql += ' AND user_id = ?';    params.push(opts.userId); }
+    if (opts.clubId)     { sql += ' AND club_id = ?';    params.push(opts.clubId); }
+    if (opts.semesterId) { sql += ' AND semester_id = ?'; params.push(opts.semesterId); }
+    sql += ' ORDER BY awarded_at DESC';
+    return db.prepare(sql).all(...params) as Achievement[];
+  },
+
   delete(id: number): boolean {
     const result = db.prepare('DELETE FROM achievements WHERE id = ?').run(id);
     return result.changes > 0;

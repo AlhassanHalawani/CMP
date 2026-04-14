@@ -54,6 +54,7 @@
   },
   "dashboard": {
     "welcome": "مرحباً بعودتك",
+    "role": "الدور",
     "upcomingEvents": "الفعاليات القادمة",
     "recentNotifications": "آخر الإشعارات",
     "quickStats": "إحصائيات سريعة"

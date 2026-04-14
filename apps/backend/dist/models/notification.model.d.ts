@@ -5,6 +5,7 @@ export interface Notification {
     body: string | null;
     type: 'info' | 'success' | 'warning' | 'error';
     is_read: number;
+    target_url: string | null;
     created_at: string;
 }
 export declare const NotificationModel: {
@@ -13,12 +14,13 @@ export declare const NotificationModel: {
         title: string;
         body?: string;
         type?: string;
+        target_url?: string | null;
     }): Notification;
     listForUser(userId: number, params?: {
         limit?: number;
         offset?: number;
     }): Notification[];
-    markRead(id: number): void;
+    markRead(id: number, userId: number): void;
     markAllRead(userId: number): void;
     countUnread(userId: number): number;
 };

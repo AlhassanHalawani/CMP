@@ -23,7 +23,7 @@ export function SignupPage() {
   }, []);
 
   // Redirect after hooks — must not be placed before useEffect
-  if (authenticated) return <Navigate to="/dashboard" replace />;
+  if (authenticated) return <Navigate to="/" replace />;
 
   const retryRegister = () => {
     setRedirectError(false);

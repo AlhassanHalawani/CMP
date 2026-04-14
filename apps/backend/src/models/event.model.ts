@@ -14,6 +14,7 @@ export interface Event {
   status: 'draft' | 'submitted' | 'published' | 'rejected' | 'cancelled' | 'completed';
   rejection_notes: string | null;
   members_only: number;
+  delivery_mode: 'physical' | 'online';
   created_by: number | null;
   created_at: string;
   checkin_open: number;       // 0 | 1
@@ -105,8 +106,8 @@ export const EventModel = {
   create(data: Omit<Event, 'id' | 'created_at' | 'registration_count'>): Event {
     const result = db
       .prepare(
-        `INSERT INTO events (club_id, title, title_ar, description, description_ar, location, starts_at, ends_at, capacity, status, members_only, created_by, category)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO events (club_id, title, title_ar, description, description_ar, location, starts_at, ends_at, capacity, status, members_only, delivery_mode, created_by, category)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         data.club_id,
@@ -120,6 +121,7 @@ export const EventModel = {
         data.capacity,
         data.status,
         data.members_only ?? 0,
+        data.delivery_mode ?? 'physical',
         data.created_by,
         data.category ?? null
       );

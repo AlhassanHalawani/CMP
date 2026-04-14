@@ -7,14 +7,15 @@ export interface Notification {
   body: string | null;
   type: 'info' | 'success' | 'warning' | 'error';
   is_read: number;
+  target_url: string | null;
   created_at: string;
 }
 
 export const NotificationModel = {
-  create(data: { user_id: number; title: string; body?: string; type?: string }): Notification {
+  create(data: { user_id: number; title: string; body?: string; type?: string; target_url?: string | null }): Notification {
     const result = db
-      .prepare('INSERT INTO notifications (user_id, title, body, type) VALUES (?, ?, ?, ?)')
-      .run(data.user_id, data.title, data.body || null, data.type || 'info');
+      .prepare('INSERT INTO notifications (user_id, title, body, type, target_url) VALUES (?, ?, ?, ?, ?)')
+      .run(data.user_id, data.title, data.body || null, data.type || 'info', data.target_url ?? null);
     return db.prepare('SELECT * FROM notifications WHERE id = ?').get(result.lastInsertRowid) as Notification;
   },
 
@@ -32,8 +33,8 @@ export const NotificationModel = {
     return db.prepare(sql).all(...values) as Notification[];
   },
 
-  markRead(id: number): void {
-    db.prepare('UPDATE notifications SET is_read = 1 WHERE id = ?').run(id);
+  markRead(id: number, userId: number): void {
+    db.prepare('UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?').run(id, userId);
   },
 
   markAllRead(userId: number): void {

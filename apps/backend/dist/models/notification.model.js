@@ -5,8 +5,8 @@ const database_1 = require("../config/database");
 exports.NotificationModel = {
     create(data) {
         const result = database_1.db
-            .prepare('INSERT INTO notifications (user_id, title, body, type) VALUES (?, ?, ?, ?)')
-            .run(data.user_id, data.title, data.body || null, data.type || 'info');
+            .prepare('INSERT INTO notifications (user_id, title, body, type, target_url) VALUES (?, ?, ?, ?, ?)')
+            .run(data.user_id, data.title, data.body || null, data.type || 'info', data.target_url ?? null);
         return database_1.db.prepare('SELECT * FROM notifications WHERE id = ?').get(result.lastInsertRowid);
     },
     listForUser(userId, params) {
@@ -22,8 +22,8 @@ exports.NotificationModel = {
         }
         return database_1.db.prepare(sql).all(...values);
     },
-    markRead(id) {
-        database_1.db.prepare('UPDATE notifications SET is_read = 1 WHERE id = ?').run(id);
+    markRead(id, userId) {
+        database_1.db.prepare('UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?').run(id, userId);
     },
     markAllRead(userId) {
         database_1.db.prepare('UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0').run(userId);

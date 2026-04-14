@@ -11,15 +11,16 @@ interface NotifyOptions {
   title: string;
   body: string;
   type?: NotifType;
+  targetUrl?: string | null;
 }
 
 export async function notify(opts: NotifyOptions): Promise<void> {
-  const { userId, eventType, title, body, type = 'info' } = opts;
+  const { userId, eventType, title, body, type = 'info', targetUrl } = opts;
 
   // In-app: default enabled (null = no preference row = enabled)
   const inAppPref = getPreference(userId, eventType, 'in_app');
   if (inAppPref !== false) {
-    NotificationModel.create({ user_id: userId, title, body, type });
+    NotificationModel.create({ user_id: userId, title, body, type, target_url: targetUrl ?? null });
   }
 
   // Email: default disabled (null = no preference row = disabled)

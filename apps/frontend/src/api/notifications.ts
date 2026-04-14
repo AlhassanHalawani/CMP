@@ -7,6 +7,7 @@ export interface Notification {
   body: string | null;
   type: string;
   is_read: number;
+  target_url: string | null;
   created_at: string;
 }
 

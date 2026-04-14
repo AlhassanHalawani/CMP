@@ -7,11 +7,11 @@ const email_service_1 = require("./email.service");
 const user_model_1 = require("../models/user.model");
 const database_1 = require("../config/database");
 async function notify(opts) {
-    const { userId, eventType, title, body, type = 'info' } = opts;
+    const { userId, eventType, title, body, type = 'info', targetUrl } = opts;
     // In-app: default enabled (null = no preference row = enabled)
     const inAppPref = getPreference(userId, eventType, 'in_app');
     if (inAppPref !== false) {
-        notification_model_1.NotificationModel.create({ user_id: userId, title, body, type });
+        notification_model_1.NotificationModel.create({ user_id: userId, title, body, type, target_url: targetUrl ?? null });
     }
     // Email: default disabled (null = no preference row = disabled)
     const emailPref = getPreference(userId, eventType, 'email');

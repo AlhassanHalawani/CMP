@@ -24,6 +24,7 @@ type EventPayload = {
   ends_at: string;
   capacity: number | null;
   members_only: number;
+  delivery_mode: 'physical' | 'online';
   status: 'draft' | 'submitted' | 'published' | 'rejected' | 'cancelled' | 'completed';
 };
 
@@ -37,6 +38,7 @@ type EventFormValues = {
   starts_at: string;
   ends_at: string;
   capacity: string;
+  delivery_mode: 'physical' | 'online';
   status: EventPayload['status'];
 };
 
@@ -68,6 +70,7 @@ const emptyValues: EventFormValues = {
   starts_at: '',
   ends_at: '',
   capacity: '',
+  delivery_mode: 'physical',
   status: 'draft',
 };
 
@@ -110,6 +113,7 @@ export function EventFormDialog({
       starts_at: toDateTimeLocal(initialValues?.starts_at),
       ends_at: toDateTimeLocal(initialValues?.ends_at),
       capacity: initialValues?.capacity ? String(initialValues.capacity) : '',
+      delivery_mode: initialValues?.delivery_mode ?? 'physical',
       status: initialValues?.status ?? 'draft',
     }),
     [initialValues]
@@ -138,6 +142,11 @@ export function EventFormDialog({
       return;
     }
 
+    if (values.delivery_mode === 'physical' && !values.location.trim()) {
+      setLocalError('Location is required for physical events.');
+      return;
+    }
+
     if (new Date(values.ends_at) <= new Date(values.starts_at)) {
       setLocalError('End date must be after start date.');
       return;
@@ -154,11 +163,12 @@ export function EventFormDialog({
       title_ar: values.title_ar.trim(),
       description: values.description.trim() || null,
       description_ar: values.description_ar.trim() || null,
-      location: values.location.trim() || null,
+      location: values.delivery_mode === 'online' ? null : (values.location.trim() || null),
       starts_at: values.starts_at,
       ends_at: values.ends_at,
       capacity: values.capacity.trim() ? Number(values.capacity) : null,
       members_only: membersOnly ? 1 : 0,
+      delivery_mode: values.delivery_mode,
       status: values.status,
     });
   };
@@ -202,7 +212,31 @@ export function EventFormDialog({
             value={values.description_ar}
             onChange={(e) => updateField('description_ar', e.target.value)}
           />
-          <Input placeholder="Location" value={values.location} onChange={(e) => updateField('location', e.target.value)} />
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium">Event Mode:</span>
+            <button
+              type="button"
+              className={`px-3 py-1 text-sm font-bold border-2 rounded-base transition-all ${values.delivery_mode === 'physical' ? 'bg-[var(--main)] text-[var(--main-foreground)] border-[var(--border)]' : 'bg-[var(--background)] border-[var(--border)]'}`}
+              onClick={() => updateField('delivery_mode', 'physical')}
+            >
+              Physical
+            </button>
+            <button
+              type="button"
+              className={`px-3 py-1 text-sm font-bold border-2 rounded-base transition-all ${values.delivery_mode === 'online' ? 'bg-[var(--main)] text-[var(--main-foreground)] border-[var(--border)]' : 'bg-[var(--background)] border-[var(--border)]'}`}
+              onClick={() => updateField('delivery_mode', 'online')}
+            >
+              Online
+            </button>
+          </div>
+
+          {values.delivery_mode === 'physical' && (
+            <Input
+              placeholder="Location (required for physical events)"
+              value={values.location}
+              onChange={(e) => updateField('location', e.target.value)}
+            />
+          )}
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <Input

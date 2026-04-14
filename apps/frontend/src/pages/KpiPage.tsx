@@ -7,9 +7,6 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  PieChart,
-  Pie,
-  Cell,
 } from 'recharts';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
@@ -41,14 +38,6 @@ import { kpiApi } from '@/api/kpi';
 import { adminApi } from '@/api/admin';
 import { clubsApi } from '@/api/clubs';
 import { useAuth } from '@/contexts/AuthContext';
-
-const BAR_COLORS = [
-  'var(--color-main, #facc15)',
-  'var(--color-secondary-background, #e0e0e0)',
-  '#60a5fa',
-  '#f472b6',
-  '#34d399',
-];
 
 const leaderboardChartConfig: ChartConfig = {
   total_score: {
@@ -127,29 +116,29 @@ export function KpiPage() {
     new Set((clubs?.data ?? []).map((c: any) => c.department).filter(Boolean)),
   ) as string[];
 
-  const summaryChartConfig: ChartConfig = summaryData.reduce<ChartConfig>(
-    (acc, item, i) => {
-      acc[item.metric_key] = {
-        label: item.metric_key,
-        color: BAR_COLORS[i % BAR_COLORS.length],
-      };
-      return acc;
-    },
-    {},
-  );
+  // Human-readable labels for raw metric keys
+  const METRIC_LABELS: Record<string, string> = {
+    attendance_count: 'Attendance',
+    achievement_count: 'Achievements',
+    member_count: 'Members',
+    total_score: 'Total Score',
+  };
 
-  // Pie chart always has a stable set of slices; use a neutral placeholder when all zero
-  const pieData =
-    summaryData.length > 0
-      ? summaryData.map((s) => ({ name: s.metric_key, value: s.total }))
-      : [
-          { name: 'attendance_count', value: 0 },
-          { name: 'achievement_count', value: 0 },
-          { name: 'member_count', value: 0 },
-          { name: 'total_score', value: 0 },
-        ];
+  // Stable set of primary metrics (excludes total_score from bar chart)
+  const PRIMARY_METRICS = ['attendance_count', 'achievement_count', 'member_count'];
 
-  const allPieZero = pieData.every((d) => d.value === 0);
+  const metricMap = new Map(summaryData.map((s) => [s.metric_key, s.total]));
+
+  const barData = PRIMARY_METRICS.map((key) => ({
+    name: METRIC_LABELS[key] ?? key,
+    value: metricMap.get(key) ?? 0,
+  }));
+
+  const totalScore = metricMap.get('total_score') ?? 0;
+
+  const summaryChartConfig: ChartConfig = {
+    value: { label: 'Count', color: 'var(--color-main, #facc15)' },
+  };
 
   const activeSemesterName = semesters?.data.find((s) => s.id === selectedSemester)?.name;
 
@@ -371,44 +360,33 @@ export function KpiPage() {
             <div className="flex justify-center p-12"><Spinner size="lg" /></div>
           ) : (
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              {/* Pie chart — always rendered, neutral placeholder when all zero */}
+              {/* Bar chart — primary metrics */}
               <Card>
                 <CardHeader>
                   <CardTitle>{t('kpi.metricsBreakdown')}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ChartContainer config={summaryChartConfig} className="h-[300px] w-full">
-                    <PieChart>
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <Pie
-                        data={allPieZero ? [{ name: 'No activity yet', value: 1 }] : pieData}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={100}
-                        strokeWidth={2}
-                      >
-                        {(allPieZero ? [{}] : pieData).map((_, i) => (
-                          <Cell
-                            key={i}
-                            fill={allPieZero ? 'var(--color-secondary-background, #e0e0e0)' : BAR_COLORS[i % BAR_COLORS.length]}
-                          />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ChartContainer>
-                  {allPieZero && (
-                    <p className="mt-2 text-center text-sm opacity-50">
-                      {t('kpi.noActivityRecorded', 'No activity recorded yet')}
-                    </p>
+                  {barData.every((d) => d.value === 0) ? (
+                    <div className="flex h-[300px] items-center justify-center">
+                      <p className="text-sm opacity-50">{t('kpi.noActivityRecorded', 'No activity recorded yet')}</p>
+                    </div>
+                  ) : (
+                    <ChartContainer config={summaryChartConfig} className="h-[300px] w-full">
+                      <BarChart data={barData}>
+                        <CartesianGrid vertical={false} />
+                        <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                        <YAxis allowDecimals={false} />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Bar dataKey="value" fill="var(--color-value)" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ChartContainer>
                   )}
                 </CardContent>
               </Card>
 
-              {/* Metric cards — always rendered with 4 fixed metrics */}
+              {/* Metric stat cards */}
               <div className="space-y-3">
-                {pieData.map((metric) => (
+                {barData.map((metric) => (
                   <Card key={metric.name}>
                     <CardContent className="flex items-center justify-between py-4">
                       <span className="font-bold">{metric.name}</span>
@@ -418,6 +396,15 @@ export function KpiPage() {
                     </CardContent>
                   </Card>
                 ))}
+                {/* Total Score — separate highlight card */}
+                <Card className="border-[var(--main)] border-2">
+                  <CardContent className="flex items-center justify-between py-4">
+                    <span className="font-black">{METRIC_LABELS['total_score']}</span>
+                    <Badge variant="accent" className="text-xl px-4 py-1">
+                      {totalScore}
+                    </Badge>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           )}

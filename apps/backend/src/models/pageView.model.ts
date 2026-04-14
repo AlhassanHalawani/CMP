@@ -60,10 +60,20 @@ export const PageViewModel = {
       ORDER BY date ASC
     `).all(`-${days} days`) as TrafficSeries[];
 
+    // Build a complete daily series — zero-fill missing dates
+    const rowMap = new Map(seriesRows.map((r) => [r.date, r]));
+    const fullSeries: TrafficSeries[] = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().slice(0, 10);
+      fullSeries.push(rowMap.get(dateStr) ?? { date: dateStr, desktop: 0, mobile: 0 });
+    }
+
     return {
       range,
       totals: totalsRow ?? { visitors: 0, page_views: 0 },
-      series: seriesRows,
+      series: fullSeries,
     };
   },
 };

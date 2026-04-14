@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.listAll = listAll;
 exports.listForUser = listForUser;
 exports.listForClub = listForClub;
 exports.create = create;
@@ -9,6 +10,13 @@ const achievement_model_1 = require("../models/achievement.model");
 const pdf_service_1 = require("../services/pdf.service");
 const audit_service_1 = require("../services/audit.service");
 const ownership_service_1 = require("../services/ownership.service");
+function listAll(req, res) {
+    const userId = req.query.user_id ? parseInt(req.query.user_id) : undefined;
+    const clubId = req.query.club_id ? parseInt(req.query.club_id) : undefined;
+    const semesterId = req.query.semester_id ? parseInt(req.query.semester_id) : undefined;
+    const achievements = achievement_model_1.AchievementModel.findAll({ userId, clubId, semesterId });
+    res.json({ data: achievements });
+}
 function listForUser(req, res) {
     const userId = parseInt(req.params.userId);
     const achievements = achievement_model_1.AchievementModel.findByUser(userId);

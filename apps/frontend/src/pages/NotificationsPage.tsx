@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { notificationsApi, type NotificationPreference } from '@/api/notifications';
+import { notificationsApi, type NotificationPreference, type Notification } from '@/api/notifications';
 
 const PREF_KEYS = [
   'event_approved',
@@ -23,6 +24,34 @@ function getPrefEnabled(prefs: NotificationPreference[], eventType: string, chan
   return row.enabled === 1;
 }
 
+function NotificationCard({ n, onMarkRead }: { n: Notification; onMarkRead: (id: number) => void }) {
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    if (!n.is_read) onMarkRead(n.id);
+    if (n.target_url) navigate(n.target_url);
+  };
+
+  const isClickable = !!n.target_url;
+
+  return (
+    <Card
+      key={n.id}
+      className={`${n.is_read ? 'opacity-60' : ''} ${isClickable ? 'cursor-pointer hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none transition-all' : ''}`}
+      onClick={isClickable ? handleClick : undefined}
+    >
+      <CardContent>
+        <div className="flex items-center justify-between">
+          <span className="font-bold">{n.title}</span>
+          <Badge variant={n.is_read ? 'outline' : 'accent'}>{n.type}</Badge>
+        </div>
+        {n.body && <p className="mt-1 text-sm">{n.body}</p>}
+        <p className="mt-1 text-xs opacity-60">{new Date(n.created_at).toLocaleString()}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function NotificationsPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -35,6 +64,11 @@ export function NotificationsPage() {
   const { data: prefs, isLoading: prefsLoading } = useQuery({
     queryKey: ['notification-preferences'],
     queryFn: () => notificationsApi.getPreferences(),
+  });
+
+  const markReadMutation = useMutation({
+    mutationFn: (id: number) => notificationsApi.markRead(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
   });
 
   const markAllMutation = useMutation({
@@ -80,16 +114,7 @@ export function NotificationsPage() {
           ) : (
             <div className="space-y-3">
               {data?.data.map((n) => (
-                <Card key={n.id} className={n.is_read ? 'opacity-60' : ''}>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold">{n.title}</span>
-                      <Badge variant={n.is_read ? 'outline' : 'accent'}>{n.type}</Badge>
-                    </div>
-                    {n.body && <p className="mt-1 text-sm">{n.body}</p>}
-                    <p className="mt-1 text-xs opacity-60">{new Date(n.created_at).toLocaleString()}</p>
-                  </CardContent>
-                </Card>
+                <NotificationCard key={n.id} n={n} onMarkRead={(id) => markReadMutation.mutate(id)} />
               ))}
             </div>
           )}

@@ -22,7 +22,7 @@ export function list(req: AuthRequest, res: Response) {
 
 export function markRead(req: AuthRequest, res: Response) {
   const id = parseInt(req.params.id);
-  NotificationModel.markRead(id);
+  NotificationModel.markRead(id, req.user!.id);
   res.json({ message: 'Marked as read' });
 }
 

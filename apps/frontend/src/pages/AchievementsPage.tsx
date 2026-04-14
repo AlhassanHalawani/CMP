@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/select';
 import { adminApi } from '@/api/admin';
 import { clubsApi } from '@/api/clubs';
-import { achievementsApi } from '@/api/achievements';
+import { achievementsApi, Achievement } from '@/api/achievements';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -62,13 +62,54 @@ function RuleCard({ rule }: { rule: typeof STUDENT_RULES[number] }) {
   );
 }
 
+// ─── Reusable achievement card ────────────────────────────────────────────────
+
+function AchievementCard({ achievement, clubName }: { achievement: Achievement; clubName?: string }) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <div className="flex items-start justify-between gap-2">
+          <CardTitle className="text-base">{achievement.title}</CardTitle>
+          {clubName && <Badge variant="neutral">{clubName}</Badge>}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {achievement.description && (
+          <p className="text-sm text-muted-foreground mb-2">{achievement.description}</p>
+        )}
+        <p className="text-xs text-muted-foreground">{achievement.awarded_at.slice(0, 10)}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function AchievementGrid({ achievements, clubMap }: { achievements: Achievement[]; clubMap: Map<number, string> }) {
+  if (achievements.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-6">
+          <p className="text-sm text-muted-foreground">No data available</p>
+        </CardContent>
+      </Card>
+    );
+  }
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {achievements.map((a) => (
+        <AchievementCard key={a.id} achievement={a} clubName={clubMap.get(a.club_id)} />
+      ))}
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export function AchievementsPage() {
   const { t } = useTranslation();
   const { hasRole } = useAuth();
   const { currentUser } = useCurrentUser();
-  const isLeader = hasRole('club_leader');
+  const isAdmin = hasRole('admin');
+  const isLeader = hasRole('club_leader') && !isAdmin;
 
   const [semesterId, setSemesterId] = useState<string>('');
   const [clubId, setClubId] = useState<string>('');
@@ -84,10 +125,11 @@ export function AchievementsPage() {
     queryFn: () => clubsApi.list({ limit: 200 }),
   });
 
-  const { data: achievementsData } = useQuery({
+  // Personal achievements (students + leaders)
+  const { data: myAchievementsData } = useQuery({
     queryKey: ['achievements', 'user', currentUser?.id],
     queryFn: () => achievementsApi.listForUser(currentUser!.id),
-    enabled: !!currentUser,
+    enabled: !!currentUser && !isAdmin,
   });
 
   // Determine which club this leader owns (first match)
@@ -101,10 +143,28 @@ export function AchievementsPage() {
     enabled: !!ownedClub,
   });
 
+  // Admin: all student achievements
+  const { data: allStudentAchievementsData } = useQuery({
+    queryKey: ['achievements', 'all', 'students'],
+    queryFn: () => achievementsApi.listAll(),
+    enabled: isAdmin,
+  });
+
+  // Admin: all club achievements grouped by club
+  const { data: allClubAchievementsData } = useQuery({
+    queryKey: ['achievements', 'all', 'clubs'],
+    queryFn: () => achievementsApi.listAll(),
+    enabled: isAdmin,
+  });
+
   const semesters = semestersData?.data ?? [];
   const clubs = clubsData?.data ?? [];
-  const achievements = achievementsData?.data ?? [];
+  const myAchievements = myAchievementsData?.data ?? [];
   const clubAchievements = clubAchievementsData?.data ?? [];
+  const allAchievements = allStudentAchievementsData?.data ?? allClubAchievementsData?.data ?? [];
+
+  // Build a map of club_id → club name for display
+  const clubMap = new Map(clubs.map((c) => [c.id, c.name]));
 
   async function handleDownload() {
     if (!currentUser) return;
@@ -126,128 +186,102 @@ export function AchievementsPage() {
     }
   }
 
+  // Determine default tab
+  const defaultTab = isAdmin ? 'students' : 'my';
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-3xl font-black">{t('achievements.title')}</h1>
       </div>
 
-      <Tabs defaultValue="my">
+      <Tabs defaultValue={defaultTab}>
         <TabsList>
-          <TabsTrigger value="my">{t('achievements.myAchievements', 'My Achievements')}</TabsTrigger>
-          {isLeader && ownedClub && (
-            <TabsTrigger value="club">{t('achievements.myClubAchievements', 'Club Achievements')}</TabsTrigger>
+          {!isAdmin && (
+            <TabsTrigger value="my">{t('achievements.myAchievements', 'My Achievements')}</TabsTrigger>
           )}
+          {isAdmin && (
+            <TabsTrigger value="students">{t('achievements.studentAchievements', 'Student Achievements')}</TabsTrigger>
+          )}
+          {(isLeader && ownedClub) || isAdmin ? (
+            <TabsTrigger value="club">{t('achievements.myClubAchievements', 'Club Achievements')}</TabsTrigger>
+          ) : null}
           <TabsTrigger value="howto">{t('achievements.howToEarn', 'How to Earn')}</TabsTrigger>
         </TabsList>
 
-        {/* ── My Achievements ── */}
-        <TabsContent value="my" className="mt-4">
-          {/* Report download */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>{t('achievements.reportTitle')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-3 items-end">
-                <div className="flex-1 min-w-[160px]">
-                  <label className="text-sm font-medium mb-1 block">{t('achievements.semester')}</label>
-                  <Select
-                    value={semesterId || ALL_TERMS}
-                    onValueChange={(v) => setSemesterId(v === ALL_TERMS ? '' : v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={t('achievements.allTerms')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={ALL_TERMS}>{t('achievements.allTerms')}</SelectItem>
-                      {semesters.map((s) => (
-                        <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+        {/* ── My Achievements (student / leader) ── */}
+        {!isAdmin && (
+          <TabsContent value="my" className="mt-4">
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>{t('achievements.reportTitle')}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-3 items-end">
+                  <div className="flex-1 min-w-[160px]">
+                    <label className="text-sm font-medium mb-1 block">{t('achievements.semester')}</label>
+                    <Select
+                      value={semesterId || ALL_TERMS}
+                      onValueChange={(v) => setSemesterId(v === ALL_TERMS ? '' : v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('achievements.allTerms')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={ALL_TERMS}>{t('achievements.allTerms')}</SelectItem>
+                        {semesters.map((s) => (
+                          <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex-1 min-w-[160px]">
+                    <label className="text-sm font-medium mb-1 block">{t('achievements.club')}</label>
+                    <Select
+                      value={clubId || ALL_CLUBS}
+                      onValueChange={(v) => setClubId(v === ALL_CLUBS ? '' : v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('achievements.allClubs')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={ALL_CLUBS}>{t('achievements.allClubs')}</SelectItem>
+                        {clubs.map((c) => (
+                          <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Button onClick={handleDownload} disabled={downloading || !currentUser}>
+                    {downloading ? t('common.loading') : t('achievements.downloadReport')}
+                  </Button>
                 </div>
-
-                <div className="flex-1 min-w-[160px]">
-                  <label className="text-sm font-medium mb-1 block">{t('achievements.club')}</label>
-                  <Select
-                    value={clubId || ALL_CLUBS}
-                    onValueChange={(v) => setClubId(v === ALL_CLUBS ? '' : v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={t('achievements.allClubs')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={ALL_CLUBS}>{t('achievements.allClubs')}</SelectItem>
-                      {clubs.map((c) => (
-                        <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Button onClick={handleDownload} disabled={downloading || !currentUser}>
-                  {downloading ? t('common.loading') : t('achievements.downloadReport')}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {achievements.length === 0 ? (
-            <Card>
-              <CardContent className="py-6">
-                <p className="text-sm text-muted-foreground">{t('common.noData')}</p>
               </CardContent>
             </Card>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {achievements.map((a) => (
-                <Card key={a.id}>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <CardTitle className="text-base">{a.title}</CardTitle>
-                      <Badge variant="neutral">Club #{a.club_id}</Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {a.description && (
-                      <p className="text-sm text-muted-foreground mb-2">{a.description}</p>
-                    )}
-                    <p className="text-xs text-muted-foreground">{a.awarded_at.slice(0, 10)}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
 
-        {/* ── Club Achievements ── */}
-        {isLeader && ownedClub && (
+            <AchievementGrid achievements={myAchievements} clubMap={clubMap} />
+          </TabsContent>
+        )}
+
+        {/* ── Student Achievements (admin) ── */}
+        {isAdmin && (
+          <TabsContent value="students" className="mt-4">
+            <AchievementGrid achievements={allAchievements} clubMap={clubMap} />
+          </TabsContent>
+        )}
+
+        {/* ── Club Achievements (leader or admin) ── */}
+        {((isLeader && ownedClub) || isAdmin) && (
           <TabsContent value="club" className="mt-4">
-            <p className="mb-4 text-sm opacity-60">{ownedClub.name}</p>
-            {clubAchievements.length === 0 ? (
-              <Card>
-                <CardContent className="py-6">
-                  <p className="text-sm text-muted-foreground">{t('common.noData')}</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {clubAchievements.map((a) => (
-                  <Card key={a.id}>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">{a.title}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {a.description && (
-                        <p className="text-sm text-muted-foreground mb-2">{a.description}</p>
-                      )}
-                      <p className="text-xs text-muted-foreground">{a.awarded_at.slice(0, 10)}</p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+            {isLeader && ownedClub && (
+              <p className="mb-4 text-sm opacity-60">{ownedClub.name}</p>
             )}
+            <AchievementGrid
+              achievements={isAdmin ? allAchievements.filter((a) => clubMap.has(a.club_id)) : clubAchievements}
+              clubMap={clubMap}
+            />
           </TabsContent>
         )}
 

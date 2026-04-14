@@ -67,9 +67,9 @@ exports.EventModel = {
     },
     create(data) {
         const result = database_1.db
-            .prepare(`INSERT INTO events (club_id, title, title_ar, description, description_ar, location, starts_at, ends_at, capacity, status, members_only, created_by, category)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-            .run(data.club_id, data.title, data.title_ar, data.description, data.description_ar, data.location, data.starts_at, data.ends_at, data.capacity, data.status, data.members_only ?? 0, data.created_by, data.category ?? null);
+            .prepare(`INSERT INTO events (club_id, title, title_ar, description, description_ar, location, starts_at, ends_at, capacity, status, members_only, delivery_mode, created_by, category)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+            .run(data.club_id, data.title, data.title_ar, data.description, data.description_ar, data.location, data.starts_at, data.ends_at, data.capacity, data.status, data.members_only ?? 0, data.delivery_mode ?? 'physical', data.created_by, data.category ?? null);
         return exports.EventModel.findById(result.lastInsertRowid);
     },
     update(id, data) {

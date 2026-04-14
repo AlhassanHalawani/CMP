@@ -75,10 +75,18 @@ function VisitorsChart() {
           <ChartContainer config={visitorsChartConfig} className="h-[200px] w-full">
             <AreaChart data={data?.series ?? []}>
               <CartesianGrid vertical={false} />
-              <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+              <XAxis
+                dataKey="date"
+                tick={{ fontSize: 11 }}
+                tickFormatter={(v: string) => {
+                  const d = new Date(v + 'T00:00:00');
+                  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                }}
+                interval="preserveStartEnd"
+              />
               <ChartTooltip content={<ChartTooltipContent />} />
-              <Area dataKey="desktop" stackId="a" stroke="var(--color-desktop)" fill="var(--color-desktop)" fillOpacity={0.3} />
-              <Area dataKey="mobile"  stackId="a" stroke="var(--color-mobile)"  fill="var(--color-mobile)"  fillOpacity={0.3} />
+              <Area type="monotone" dataKey="desktop" stackId="a" stroke="var(--color-desktop)" fill="var(--color-desktop)" fillOpacity={0.3} />
+              <Area type="monotone" dataKey="mobile"  stackId="a" stroke="var(--color-mobile)"  fill="var(--color-mobile)"  fillOpacity={0.3} />
             </AreaChart>
           </ChartContainer>
         )}
@@ -366,6 +374,17 @@ function GlobalDashboard() {
   );
 }
 
+// ─── Role formatter ──────────────────────────────────────────────────────────
+
+function formatRole(role: string): string {
+  switch (role) {
+    case 'admin': return 'Admin';
+    case 'club_leader': return 'Club Leader';
+    case 'student': return 'Student';
+    default: return role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+}
+
 // ─── Page root ────────────────────────────────────────────────────────────────
 
 export function DashboardPage() {
@@ -385,9 +404,14 @@ export function DashboardPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-3xl font-black">
+      <h1 className="mb-1 text-3xl font-black">
         {t('dashboard.welcome')}, {user?.name || 'User'}
       </h1>
+      {currentUser?.role && (
+        <p className="mb-6 text-sm font-bold text-[var(--main)]">
+          {t('dashboard.role', 'Role')}: {formatRole(currentUser.role)}
+        </p>
+      )}
       {ownedClub ? (
         <>
           <p className="mb-6 text-sm opacity-60">{ownedClub.name}</p>

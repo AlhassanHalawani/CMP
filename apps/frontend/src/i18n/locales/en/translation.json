@@ -54,6 +54,7 @@
   },
   "dashboard": {
     "welcome": "Welcome back",
+    "role": "Role",
     "upcomingEvents": "Upcoming Events",
     "recentNotifications": "Recent Notifications",
     "quickStats": "Quick Stats"

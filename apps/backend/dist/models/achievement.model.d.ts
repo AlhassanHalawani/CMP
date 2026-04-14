@@ -18,5 +18,10 @@ export declare const AchievementModel: {
         semesterId?: number;
         clubId?: number;
     }): Achievement[];
+    findAll(opts?: {
+        userId?: number;
+        clubId?: number;
+        semesterId?: number;
+    }): Achievement[];
     delete(id: number): boolean;
 };
