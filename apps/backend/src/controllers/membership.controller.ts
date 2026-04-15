@@ -5,6 +5,7 @@ import { ClubModel } from '../models/club.model';
 import { canManageClub } from '../services/ownership.service';
 import { notify } from '../services/notifications.service';
 import { logAction } from '../services/audit.service';
+import { evaluateClubAchievements } from '../services/achievement-engine.service';
 
 export async function joinClub(req: AuthRequest, res: Response) {
   const clubId = parseInt(req.params.id);
@@ -121,6 +122,8 @@ export async function updateMembership(req: AuthRequest, res: Response) {
       body: `Your membership request to "${club.name}" has been approved.`,
       type: 'success',
     });
+    // Best-effort: evaluate club achievements after a new member is approved
+    try { evaluateClubAchievements(clubId); } catch { /* ignore */ }
   } else {
     await notify({
       userId: targetUserId,

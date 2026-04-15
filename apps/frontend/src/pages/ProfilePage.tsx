@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
@@ -28,9 +29,17 @@ import {
 } from '@/components/ui/dialog';
 import { usersApi } from '@/api/users';
 import { clubsApi } from '@/api/clubs';
+import { achievementsApi } from '@/api/achievements';
 import { leaderRequestsApi } from '@/api/admin';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useAppToast } from '@/contexts/ToastContext';
 import { Sun, Moon } from 'lucide-react';
+
+const TIER_VARIANT: Record<string, 'accent' | 'neutral' | 'secondary'> = {
+  Gold: 'accent',
+  Silver: 'secondary',
+  Bronze: 'neutral',
+};
 
 // ─── Segmented button helper ──────────────────────────────────────────────────
 
@@ -340,9 +349,29 @@ export function ProfilePage() {
   const { user, hasRole } = useAuth();
   const { showToast } = useAppToast();
   const queryClient = useQueryClient();
+  const { currentUser } = useCurrentUser();
   const [name, setName] = useState(user?.name || '');
+  const loginActivityFired = useRef(false);
 
   const isStudent = !hasRole('admin') && !hasRole('club_leader');
+
+  // Record login activity once per day (drives login-streak achievement)
+  useEffect(() => {
+    if (!currentUser || loginActivityFired.current) return;
+    const todayKey = `cmp_login_${new Date().toISOString().slice(0, 10)}`;
+    if (localStorage.getItem(todayKey)) return;
+    loginActivityFired.current = true;
+    usersApi.recordLoginActivity()
+      .then(() => localStorage.setItem(todayKey, '1'))
+      .catch(() => { /* best-effort */ });
+  }, [currentUser]);
+
+  // Achievement engine progress (for badge summary)
+  const { data: myProgress } = useQuery({
+    queryKey: ['achievements', 'engine', 'me'],
+    queryFn: () => achievementsApi.getMyProgress(),
+    enabled: !!currentUser && !hasRole('admin'),
+  });
 
   const updateMutation = useMutation({
     mutationFn: (data: { name: string }) => usersApi.updateMe(data),
@@ -365,8 +394,8 @@ export function ProfilePage() {
         </TabsList>
 
         {/* Profile tab */}
-        <TabsContent value="profile" className="mt-6">
-          <Card className="max-w-lg">
+        <TabsContent value="profile" className="mt-6 space-y-6 max-w-lg">
+          <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>{user?.name}</CardTitle>
@@ -392,6 +421,42 @@ export function ProfilePage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Achievement badge summary (non-admin only) */}
+          {myProgress && !hasRole('admin') && (() => {
+            const unlockedIds = new Set(myProgress.unlocks.map((u) => u.definition_id));
+            const studentDefs = myProgress.definitions.filter((d) => d.entity_type === 'student');
+            const earnedDefs = studentDefs.filter((d) => unlockedIds.has(d.id));
+            const totalPoints = earnedDefs.reduce((s, d) => s + d.points, 0);
+            return (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">My Badges</CardTitle>
+                    <Link to="/achievements" className="text-xs font-bold underline opacity-60">
+                      View all
+                    </Link>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm mb-3 opacity-70">
+                    {earnedDefs.length} badge{earnedDefs.length !== 1 ? 's' : ''} earned &middot; {totalPoints} pts
+                  </p>
+                  {earnedDefs.length === 0 ? (
+                    <p className="text-xs opacity-50">Attend events and log in daily to earn badges.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1">
+                      {earnedDefs.map((d) => (
+                        <Badge key={d.id} variant={TIER_VARIANT[d.tier] ?? 'neutral'} className="text-xs">
+                          {d.title}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })()}
         </TabsContent>
 
         {/* Preferences tab */}

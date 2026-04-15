@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Select,
@@ -14,30 +15,12 @@ import {
 } from '@/components/ui/select';
 import { adminApi } from '@/api/admin';
 import { clubsApi } from '@/api/clubs';
-import { achievementsApi, Achievement } from '@/api/achievements';
+import { achievementsApi, Achievement, AchievementDefinition, EngineProgress } from '@/api/achievements';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useAuth } from '@/contexts/AuthContext';
 
 const ALL_TERMS = '__all_terms__';
 const ALL_CLUBS = '__all_clubs__';
-
-// ─── Static achievement rule catalog ─────────────────────────────────────────
-// These rules describe how achievements are earned. A backend catalog table
-// (achievement_definitions) can replace this in a future migration.
-
-const STUDENT_RULES = [
-  { code: 'attend_1', tier: 'Bronze', points: 5, title: 'First Steps', description: 'Attend your first event' },
-  { code: 'attend_5', tier: 'Bronze', points: 10, title: 'Regular Attendee', description: 'Attend 5 events' },
-  { code: 'attend_10', tier: 'Silver', points: 20, title: 'Dedicated Member', description: 'Attend 10 events' },
-  { code: 'attend_25', tier: 'Gold', points: 50, title: 'Event Champion', description: 'Attend 25 events' },
-];
-
-const CLUB_RULES = [
-  { code: 'host_1', tier: 'Bronze', points: 10, title: 'First Event', description: 'Host your first published event' },
-  { code: 'participants_50', tier: 'Gold', points: 20, title: 'Popular Club', description: 'Reach 50 participants in a single event' },
-  { code: 'attend_100', tier: 'Gold', points: 30, title: 'High Engagement', description: 'Accumulate 100 total attendances across all events' },
-  { code: 'members_20', tier: 'Silver', points: 15, title: 'Growing Community', description: 'Reach 20 active members' },
-];
 
 const TIER_VARIANT: Record<string, 'accent' | 'neutral' | 'secondary'> = {
   Gold: 'accent',
@@ -45,20 +28,81 @@ const TIER_VARIANT: Record<string, 'accent' | 'neutral' | 'secondary'> = {
   Bronze: 'neutral',
 };
 
-function RuleCard({ rule }: { rule: typeof STUDENT_RULES[number] }) {
+// ─── Badge progress card ──────────────────────────────────────────────────────
+
+function BadgeCard({
+  definition,
+  currentValue,
+  unlocked,
+}: {
+  definition: AchievementDefinition;
+  currentValue: number;
+  unlocked: boolean;
+}) {
+  const pct = Math.min(100, Math.round((currentValue / definition.threshold) * 100));
+
   return (
-    <Card>
-      <CardContent className="flex items-start gap-3 py-4">
-        <Badge variant={TIER_VARIANT[rule.tier] ?? 'neutral'} className="shrink-0 mt-0.5">
-          {rule.tier}
-        </Badge>
-        <div className="flex-1 min-w-0">
-          <p className="font-bold text-sm">{rule.title}</p>
-          <p className="text-xs opacity-60 mt-0.5">{rule.description}</p>
+    <Card className={unlocked ? 'ring-2 ring-offset-1 ring-main' : 'opacity-80'}>
+      <CardContent className="py-4 flex items-start gap-3">
+        <div className="shrink-0 mt-0.5">
+          <Badge variant={TIER_VARIANT[definition.tier] ?? 'neutral'}>{definition.tier}</Badge>
         </div>
-        <Badge variant="neutral" className="shrink-0 text-xs">{rule.points} pts</Badge>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+            <p className="font-bold text-sm">{definition.title}</p>
+            {unlocked && <span className="text-xs text-green-600 font-bold">✓ Earned</span>}
+          </div>
+          <p className="text-xs opacity-60 mb-2">{definition.description}</p>
+          {!unlocked && (
+            <div className="space-y-1">
+              <Progress value={pct} className="h-1.5" />
+              <p className="text-xs opacity-50">
+                {currentValue} / {definition.threshold}
+              </p>
+            </div>
+          )}
+        </div>
+        <Badge variant="neutral" className="shrink-0 text-xs">{definition.points} pts</Badge>
       </CardContent>
     </Card>
+  );
+}
+
+// ─── Engine progress panel ────────────────────────────────────────────────────
+
+function EngineProgressPanel({
+  progress,
+  entityType,
+}: {
+  progress: EngineProgress;
+  entityType: 'student' | 'club';
+}) {
+  const unlockedIds = new Set(progress.unlocks.map((u) => u.definition_id));
+  const defs = progress.definitions.filter((d) => d.entity_type === entityType);
+  const earnedPoints = defs
+    .filter((d) => unlockedIds.has(d.id))
+    .reduce((sum, d) => sum + d.points, 0);
+  const earnedCount = defs.filter((d) => unlockedIds.has(d.id)).length;
+
+  return (
+    <div>
+      <div className="flex items-center gap-4 mb-4">
+        <div className="text-sm font-bold">
+          {earnedCount} / {defs.length} badges earned
+        </div>
+        <Badge variant="accent" className="text-sm">{earnedPoints} pts total</Badge>
+      </div>
+      <div className="flex flex-col gap-3">
+        {defs.map((def) => (
+          <BadgeCard
+            key={def.id}
+            definition={def}
+            currentValue={(progress.metrics as Record<string, number>)[def.metric] ?? 0}
+            unlocked={unlockedIds.has(def.id)}
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -132,6 +176,13 @@ export function AchievementsPage() {
     enabled: !!currentUser && !isAdmin,
   });
 
+  // Engine progress (student badges)
+  const { data: myProgress } = useQuery({
+    queryKey: ['achievements', 'engine', 'me'],
+    queryFn: () => achievementsApi.getMyProgress(),
+    enabled: !!currentUser && !isAdmin,
+  });
+
   // Determine which club this leader owns (first match)
   const ownedClub = isLeader && currentUser
     ? (clubsData?.data ?? []).find((c) => c.leader_id === currentUser.id)
@@ -140,6 +191,13 @@ export function AchievementsPage() {
   const { data: clubAchievementsData } = useQuery({
     queryKey: ['achievements', 'club', ownedClub?.id],
     queryFn: () => achievementsApi.listForClub(ownedClub!.id),
+    enabled: !!ownedClub,
+  });
+
+  // Club engine progress (leader)
+  const { data: clubProgress } = useQuery({
+    queryKey: ['achievements', 'engine', 'club', ownedClub?.id],
+    queryFn: () => achievementsApi.getClubProgress(ownedClub!.id),
     enabled: !!ownedClub,
   });
 
@@ -163,7 +221,6 @@ export function AchievementsPage() {
   const clubAchievements = clubAchievementsData?.data ?? [];
   const allAchievements = allStudentAchievementsData?.data ?? allClubAchievementsData?.data ?? [];
 
-  // Build a map of club_id → club name for display
   const clubMap = new Map(clubs.map((c) => [c.id, c.name]));
 
   async function handleDownload() {
@@ -186,7 +243,6 @@ export function AchievementsPage() {
     }
   }
 
-  // Determine default tab
   const defaultTab = isAdmin ? 'students' : 'my';
 
   return (
@@ -200,13 +256,18 @@ export function AchievementsPage() {
           {!isAdmin && (
             <TabsTrigger value="my">{t('achievements.myAchievements', 'My Achievements')}</TabsTrigger>
           )}
+          {!isAdmin && (
+            <TabsTrigger value="badges">Badges</TabsTrigger>
+          )}
           {isAdmin && (
             <TabsTrigger value="students">{t('achievements.studentAchievements', 'Student Achievements')}</TabsTrigger>
           )}
           {(isLeader && ownedClub) || isAdmin ? (
             <TabsTrigger value="club">{t('achievements.myClubAchievements', 'Club Achievements')}</TabsTrigger>
           ) : null}
-          <TabsTrigger value="howto">{t('achievements.howToEarn', 'How to Earn')}</TabsTrigger>
+          {(isLeader && ownedClub) && (
+            <TabsTrigger value="club-badges">Club Badges</TabsTrigger>
+          )}
         </TabsList>
 
         {/* ── My Achievements (student / leader) ── */}
@@ -265,6 +326,17 @@ export function AchievementsPage() {
           </TabsContent>
         )}
 
+        {/* ── Student Badges with progress ── */}
+        {!isAdmin && (
+          <TabsContent value="badges" className="mt-4">
+            {myProgress ? (
+              <EngineProgressPanel progress={myProgress} entityType="student" />
+            ) : (
+              <p className="text-sm opacity-60">Loading badges…</p>
+            )}
+          </TabsContent>
+        )}
+
         {/* ── Student Achievements (admin) ── */}
         {isAdmin && (
           <TabsContent value="students" className="mt-4">
@@ -285,33 +357,17 @@ export function AchievementsPage() {
           </TabsContent>
         )}
 
-        {/* ── How to Earn ── */}
-        <TabsContent value="howto" className="mt-4">
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <div>
-              <h2 className="mb-3 text-lg font-black">
-                {t('achievements.studentRules', 'Student Achievements')}
-              </h2>
-              <p className="mb-4 text-sm opacity-60">
-                {t('achievements.studentRulesDesc', 'Earn these by attending events and engaging with clubs.')}
-              </p>
-              <div className="flex flex-col gap-3">
-                {STUDENT_RULES.map((r) => <RuleCard key={r.code} rule={r} />)}
-              </div>
-            </div>
-            <div>
-              <h2 className="mb-3 text-lg font-black">
-                {t('achievements.clubRules', 'Club Achievements')}
-              </h2>
-              <p className="mb-4 text-sm opacity-60">
-                {t('achievements.clubRulesDesc', 'Clubs earn these by hosting events and growing their community.')}
-              </p>
-              <div className="flex flex-col gap-3">
-                {CLUB_RULES.map((r) => <RuleCard key={r.code} rule={r} />)}
-              </div>
-            </div>
-          </div>
-        </TabsContent>
+        {/* ── Club Badges with progress (leader) ── */}
+        {isLeader && ownedClub && (
+          <TabsContent value="club-badges" className="mt-4">
+            <p className="mb-4 text-sm opacity-60">{ownedClub.name}</p>
+            {clubProgress ? (
+              <EngineProgressPanel progress={clubProgress} entityType="club" />
+            ) : (
+              <p className="text-sm opacity-60">Loading badges…</p>
+            )}
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

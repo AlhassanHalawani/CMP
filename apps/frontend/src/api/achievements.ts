@@ -12,6 +12,35 @@ export interface Achievement {
   semester_id: number | null;
 }
 
+export interface AchievementDefinition {
+  id: number;
+  code: string;
+  entity_type: 'student' | 'club';
+  title: string;
+  title_ar: string;
+  description: string;
+  description_ar: string;
+  tier: 'Bronze' | 'Silver' | 'Gold';
+  points: number;
+  metric: string;
+  threshold: number;
+  is_active: number;
+}
+
+export interface AchievementUnlock {
+  id: number;
+  definition_id: number;
+  entity_type: string;
+  entity_id: number;
+  unlocked_at: string;
+}
+
+export interface EngineProgress {
+  definitions: AchievementDefinition[];
+  unlocks: AchievementUnlock[];
+  metrics: Record<string, number>;
+}
+
 export const achievementsApi = {
   listAll: (params?: { user_id?: number; club_id?: number; semester_id?: number }) =>
     api.get<{ data: Achievement[] }>('/achievements', { params }).then((r) => r.data),
@@ -30,4 +59,10 @@ export const achievementsApi = {
     const response = await api.get(`/achievements/user/${userId}/report?${query}`, { responseType: 'blob' });
     return response.data as Blob;
   },
+
+  getMyProgress: () =>
+    api.get<EngineProgress>('/achievements/engine/progress/me').then((r) => r.data),
+
+  getClubProgress: (clubId: number) =>
+    api.get<EngineProgress>(`/achievements/engine/progress/club/${clubId}`).then((r) => r.data),
 };

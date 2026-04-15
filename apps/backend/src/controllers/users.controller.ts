@@ -4,9 +4,23 @@ import { UserModel } from '../models/user.model';
 import { logAction } from '../services/audit.service';
 import { syncUserRealmRole } from '../services/keycloakAdmin.service';
 import { logger } from '../utils/logger';
+import { db } from '../config/database';
+import { evaluateStudentAchievements } from '../services/achievement-engine.service';
 
 export function getMe(req: AuthRequest, res: Response) {
   res.json(req.user);
+}
+
+export function recordLoginActivity(req: AuthRequest, res: Response) {
+  const userId = req.user!.id;
+  const today = new Date().toISOString().slice(0, 10);
+
+  db.prepare(
+    `INSERT OR IGNORE INTO user_login_activity (user_id, login_date) VALUES (?, ?)`,
+  ).run(userId, today);
+
+  const newUnlocks = evaluateStudentAchievements(userId);
+  res.json({ date: today, new_unlocks: newUnlocks });
 }
 
 export function updateMe(req: AuthRequest, res: Response) {

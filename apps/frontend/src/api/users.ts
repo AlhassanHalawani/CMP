@@ -30,4 +30,5 @@ export const usersApi = {
   getPreferences: () => api.get<UiPreferences>('/users/me/preferences').then((r) => r.data),
   updatePreferences: (data: Partial<UiPreferences>) =>
     api.patch<UiPreferences>('/users/me/preferences', data).then((r) => r.data),
+  recordLoginActivity: () => api.post('/users/me/login-activity').then((r) => r.data),
 };

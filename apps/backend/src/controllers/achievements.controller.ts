@@ -4,6 +4,7 @@ import { AchievementModel } from '../models/achievement.model';
 import { generateAchievementReport } from '../services/pdf.service';
 import { logAction } from '../services/audit.service';
 import { isAdmin, leaderOwnsClub } from '../services/ownership.service';
+import { getStudentProgress, getClubProgress } from '../services/achievement-engine.service';
 
 export function listAll(req: Request, res: Response) {
   const userId = req.query.user_id ? parseInt(req.query.user_id as string) : undefined;
@@ -79,4 +80,18 @@ export async function downloadReport(req: Request, res: Response) {
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename=achievements-${userId}.pdf`);
   res.send(pdfBuffer);
+}
+
+export function getMyEngineProgress(req: AuthRequest, res: Response) {
+  const userId = req.user!.id;
+  res.json(getStudentProgress(userId));
+}
+
+export function getClubEngineProgress(req: AuthRequest, res: Response) {
+  const clubId = parseInt(req.params.clubId);
+  if (isNaN(clubId)) {
+    res.status(400).json({ error: 'Invalid club ID' });
+    return;
+  }
+  res.json(getClubProgress(clubId));
 }

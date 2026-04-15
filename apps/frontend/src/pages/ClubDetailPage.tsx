@@ -35,9 +35,16 @@ import { ImageCard } from '@/components/ui/image-card';
 import { clubsApi } from '@/api/clubs';
 import { eventsApi } from '@/api/events';
 import { membershipsApi, type MembershipWithUser } from '@/api/memberships';
+import { achievementsApi } from '@/api/achievements';
 import { ClubFormDialog } from '@/components/clubs/ClubFormDialog';
 import { useAppToast } from '@/contexts/ToastContext';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+
+const TIER_VARIANT: Record<string, 'accent' | 'neutral' | 'secondary'> = {
+  Gold: 'accent',
+  Silver: 'secondary',
+  Bronze: 'neutral',
+};
 
 function statusBadgeVariant(status: string): 'default' | 'secondary' | 'outline' {
   if (status === 'active') return 'default';
@@ -190,6 +197,11 @@ export function ClubDetailPage() {
   // Suppress join/leave while currentUser is loading to avoid a brief false-positive
   // that would show the Join button to a club owner before their DB id resolves.
   const showJoinLeave = !isAdmin && !isClubOwner && !currentUserLoading;
+
+  const { data: clubBadges } = useQuery({
+    queryKey: ['achievements', 'engine', 'club', clubId],
+    queryFn: () => achievementsApi.getClubProgress(clubId),
+  });
 
   const logoUploadMutation = useMutation({
     mutationFn: (file: File) => clubsApi.uploadLogo(clubId, file),
@@ -408,6 +420,28 @@ export function ClubDetailPage() {
           </Card>
         </div>
       )}
+
+      {/* Club badges */}
+      {clubBadges && clubBadges.unlocks.length > 0 && (() => {
+        const unlockedIds = new Set(clubBadges.unlocks.map((u) => u.definition_id));
+        const earned = clubBadges.definitions.filter((d) => unlockedIds.has(d.id));
+        const totalPoints = earned.reduce((s, d) => s + d.points, 0);
+        return (
+          <div className="mb-8">
+            <div className="flex items-center gap-3 mb-2">
+              <h2 className="text-xl font-bold">Club Badges</h2>
+              <Badge variant="accent">{totalPoints} pts</Badge>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {earned.map((d) => (
+                <Badge key={d.id} variant={TIER_VARIANT[d.tier] ?? 'neutral'}>
+                  {d.title}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Recent events showcase */}
       {recentEvents.length > 0 && (

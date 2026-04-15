@@ -8,6 +8,7 @@ import { generateQr } from '../services/qrcode.service';
 import { generateAttendanceReport } from '../services/pdf.service';
 import { isAdmin, leaderOwnsEvent } from '../services/ownership.service';
 import { logAction } from '../services/audit.service';
+import { evaluateStudentAchievements } from '../services/achievement-engine.service';
 
 export async function generateEventQr(req: AuthRequest, res: Response) {
   const eventId = parseInt(req.params.eventId);
@@ -87,6 +88,10 @@ export function checkIn(req: AuthRequest, res: Response) {
     method: 'qr',
     qr_token: token,
   });
+
+  // Best-effort: evaluate student achievements after check-in
+  try { evaluateStudentAchievements(req.user!.id); } catch { /* ignore */ }
+
   res.status(201).json(attendance);
 }
 
@@ -129,6 +134,10 @@ export function manualCheckIn(req: AuthRequest, res: Response) {
     return;
   }
   const attendance = AttendanceModel.checkIn({ event_id: eventId, user_id, method: 'manual' });
+
+  // Best-effort: evaluate student achievements after manual check-in
+  try { evaluateStudentAchievements(user_id); } catch { /* ignore */ }
+
   res.status(201).json(attendance);
 }
 

@@ -7,6 +7,7 @@ import { MembershipModel } from '../models/membership.model';
 import { logAction } from '../services/audit.service';
 import { isAdmin, leaderOwnsClub, leaderOwnsEvent, getLeaderClubIds } from '../services/ownership.service';
 import { notify, notifyRole } from '../services/notifications.service';
+import { evaluateClubAchievements } from '../services/achievement-engine.service';
 
 export function listEvents(req: Request, res: Response) {
   const authReq = req as AuthRequest;
@@ -242,6 +243,9 @@ export async function submitEvent(req: AuthRequest, res: Response) {
       targetUrl: `/events/${id}`,
     });
 
+    // Best-effort: evaluate club achievements after a new event is published
+    try { evaluateClubAchievements(event.club_id); } catch { /* ignore */ }
+
     res.json(updated);
     return;
   }
@@ -287,6 +291,9 @@ export async function approveEvent(req: AuthRequest, res: Response) {
       targetUrl: `/events/${id}`,
     });
   }
+
+  // Best-effort: evaluate club achievements after an event is approved
+  try { evaluateClubAchievements(event.club_id); } catch { /* ignore */ }
 
   res.json(updated);
 }
