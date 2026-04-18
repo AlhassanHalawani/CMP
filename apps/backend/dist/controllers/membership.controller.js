@@ -10,6 +10,9 @@ const club_model_1 = require("../models/club.model");
 const ownership_service_1 = require("../services/ownership.service");
 const notifications_service_1 = require("../services/notifications.service");
 const audit_service_1 = require("../services/audit.service");
+const achievement_engine_service_1 = require("../services/achievement-engine.service");
+const badge_engine_service_1 = require("../services/badge-engine.service");
+const gamification_service_1 = require("../services/gamification.service");
 async function joinClub(req, res) {
     const clubId = parseInt(req.params.id);
     const userId = req.user.id;
@@ -109,6 +112,36 @@ async function updateMembership(req, res) {
             body: `Your membership request to "${club.name}" has been approved.`,
             type: 'success',
         });
+        // Award XP for joining a club (only when membership becomes active, not at pending stage)
+        try {
+            const xpResult = (0, gamification_service_1.awardXp)({
+                userId: targetUserId,
+                actionKey: 'membership_joined',
+                referenceKey: `membership:${clubId}:${targetUserId}`,
+                sourceType: 'club',
+                sourceId: clubId,
+            });
+            if (xpResult?.level_up) {
+                await (0, notifications_service_1.notify)({
+                    userId: targetUserId,
+                    eventType: 'level_up',
+                    title: 'Level Up!',
+                    body: `You reached Level ${xpResult.new_level}. Keep it up!`,
+                    type: 'success',
+                    targetUrl: '/profile',
+                });
+            }
+        }
+        catch { /* best-effort */ }
+        // Best-effort: evaluate club achievements and student badges after a new member is approved
+        try {
+            (0, achievement_engine_service_1.evaluateClubAchievements)(clubId);
+        }
+        catch { /* ignore */ }
+        try {
+            (0, badge_engine_service_1.evaluateStudentBadges)(targetUserId);
+        }
+        catch { /* ignore */ }
     }
     else {
         await (0, notifications_service_1.notify)({

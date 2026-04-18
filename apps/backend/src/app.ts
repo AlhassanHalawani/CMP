@@ -17,6 +17,8 @@ import adminRouter from './routes/admin.routes';
 import leaderRequestsRouter from './routes/leader-requests.routes';
 import analyticsRouter from './routes/analytics.routes';
 import userPreferencesRouter from './routes/userPreferences.routes';
+import dailyQuestionsRouter from './routes/dailyQuestions.routes';
+import badgesRouter from './routes/badges.routes';
 import { startEventReminderJob } from './jobs/event-reminders.job';
 
 // ensure db is initialized on startup
@@ -50,6 +52,8 @@ app.use('/api/admin', adminRouter);
 app.use('/api/leader-requests', leaderRequestsRouter);
 app.use('/api/analytics', analyticsRouter);
 app.use('/api/users', userPreferencesRouter);
+app.use('/api/daily-questions', dailyQuestionsRouter);
+app.use('/api/badges', badgesRouter);
 
 // --- error handler (must be last) ---
 app.use(errorHandler);

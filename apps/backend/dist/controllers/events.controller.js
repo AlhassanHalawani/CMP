@@ -20,6 +20,7 @@ const membership_model_1 = require("../models/membership.model");
 const audit_service_1 = require("../services/audit.service");
 const ownership_service_1 = require("../services/ownership.service");
 const notifications_service_1 = require("../services/notifications.service");
+const achievement_engine_service_1 = require("../services/achievement-engine.service");
 function listEvents(req, res) {
     const authReq = req;
     const user = authReq.user;
@@ -231,6 +232,11 @@ async function submitEvent(req, res) {
             type: 'success',
             targetUrl: `/events/${id}`,
         });
+        // Best-effort: evaluate club achievements after a new event is published
+        try {
+            (0, achievement_engine_service_1.evaluateClubAchievements)(event.club_id);
+        }
+        catch { /* ignore */ }
         res.json(updated);
         return;
     }
@@ -269,6 +275,11 @@ async function approveEvent(req, res) {
             targetUrl: `/events/${id}`,
         });
     }
+    // Best-effort: evaluate club achievements after an event is approved
+    try {
+        (0, achievement_engine_service_1.evaluateClubAchievements)(event.club_id);
+    }
+    catch { /* ignore */ }
     res.json(updated);
 }
 async function rejectEvent(req, res) {

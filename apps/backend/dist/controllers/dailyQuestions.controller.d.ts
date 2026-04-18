@@ -1,0 +1,11 @@
+import { Response } from 'express';
+import { AuthRequest } from '../middleware/auth';
+export declare function getStudentFeed(req: AuthRequest, res: Response): Promise<void>;
+export declare function answerQuestion(req: AuthRequest, res: Response): Promise<void>;
+export declare function getMyStreak(req: AuthRequest, res: Response): void;
+export declare function getMyHistory(req: AuthRequest, res: Response): void;
+export declare function createDailyQuestion(req: AuthRequest, res: Response): void;
+export declare function updateDailyQuestion(req: AuthRequest, res: Response): void;
+export declare function deleteDailyQuestion(req: AuthRequest, res: Response): void;
+export declare function publishDailyQuestion(req: AuthRequest, res: Response): void;
+export declare function getManagedQuestions(req: AuthRequest, res: Response): void;

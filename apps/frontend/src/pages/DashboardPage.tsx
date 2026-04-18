@@ -20,6 +20,7 @@ import { eventsApi } from '@/api/events';
 import { clubsApi } from '@/api/clubs';
 import { kpiApi } from '@/api/kpi';
 import { analyticsApi } from '@/api/analytics';
+import { gamificationApi } from '@/api/gamification';
 
 // ─── Visitors Chart (admin only) ─────────────────────────────────────────────
 
@@ -251,7 +252,15 @@ function GlobalDashboard() {
   const { t } = useTranslation();
   const { language } = useLanguage();
   const { hasRole } = useAuth();
+  const { currentUser } = useCurrentUser();
   const canViewKpi = hasRole('admin') || hasRole('club_leader');
+  const isStudent = !hasRole('admin') && !hasRole('club_leader');
+
+  const { data: gamification } = useQuery({
+    queryKey: ['gamification', 'me'],
+    queryFn: () => gamificationApi.getMyGamification(),
+    enabled: isStudent && !!currentUser,
+  });
 
   const { data: eventsData, isLoading: eventsLoading } = useQuery({
     queryKey: ['events', 'upcoming'],
@@ -286,6 +295,33 @@ function GlobalDashboard() {
   return (
     <div>
       {hasRole('admin') && <VisitorsChart />}
+
+      {/* Gamification summary — students only */}
+      {isStudent && gamification && (
+        <Card className="mb-6">
+          <CardContent className="pt-4">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <span className="text-sm font-bold opacity-70">Level </span>
+                <span className="text-2xl font-black text-[var(--main)]">{gamification.current_level}</span>
+                <span className="text-sm opacity-50 ml-2">· {gamification.current_xp} XP</span>
+              </div>
+              <span className="text-xs opacity-50">
+                {gamification.xp_to_next_level > 0
+                  ? `${gamification.xp_to_next_level} XP to Lv.${gamification.current_level + 1}`
+                  : 'Max level'}
+              </span>
+            </div>
+            <div className="w-full h-2 rounded-full bg-[var(--bg)] border border-border overflow-hidden">
+              <div
+                className="h-full rounded-full bg-[var(--main)] transition-all"
+                style={{ width: `${gamification.progress_percent}%` }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mb-8">
         <div className="lg:col-span-2">
           <Card>

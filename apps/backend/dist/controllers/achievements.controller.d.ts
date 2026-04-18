@@ -6,3 +6,5 @@ export declare function listForClub(req: Request, res: Response): void;
 export declare function create(req: AuthRequest, res: Response): void;
 export declare function remove(req: AuthRequest, res: Response): void;
 export declare function downloadReport(req: Request, res: Response): Promise<void>;
+export declare function getMyEngineProgress(req: AuthRequest, res: Response): void;
+export declare function getClubEngineProgress(req: AuthRequest, res: Response): void;

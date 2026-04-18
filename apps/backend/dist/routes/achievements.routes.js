@@ -6,6 +6,8 @@ const roles_1 = require("../middleware/roles");
 const achievements_controller_1 = require("../controllers/achievements.controller");
 const router = (0, express_1.Router)();
 router.get('/', auth_1.authenticate, (0, roles_1.requireRole)('admin'), achievements_controller_1.listAll);
+router.get('/engine/progress/me', auth_1.authenticate, achievements_controller_1.getMyEngineProgress);
+router.get('/engine/progress/club/:clubId', auth_1.authenticate, achievements_controller_1.getClubEngineProgress);
 router.get('/user/:userId', auth_1.authenticate, achievements_controller_1.listForUser);
 router.get('/user/:userId/report', auth_1.authenticate, achievements_controller_1.downloadReport);
 router.get('/club/:clubId', auth_1.authenticate, achievements_controller_1.listForClub);

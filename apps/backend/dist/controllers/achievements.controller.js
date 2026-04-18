@@ -6,10 +6,13 @@ exports.listForClub = listForClub;
 exports.create = create;
 exports.remove = remove;
 exports.downloadReport = downloadReport;
+exports.getMyEngineProgress = getMyEngineProgress;
+exports.getClubEngineProgress = getClubEngineProgress;
 const achievement_model_1 = require("../models/achievement.model");
 const pdf_service_1 = require("../services/pdf.service");
 const audit_service_1 = require("../services/audit.service");
 const ownership_service_1 = require("../services/ownership.service");
+const achievement_engine_service_1 = require("../services/achievement-engine.service");
 function listAll(req, res) {
     const userId = req.query.user_id ? parseInt(req.query.user_id) : undefined;
     const clubId = req.query.club_id ? parseInt(req.query.club_id) : undefined;
@@ -73,5 +76,17 @@ async function downloadReport(req, res) {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=achievements-${userId}.pdf`);
     res.send(pdfBuffer);
+}
+function getMyEngineProgress(req, res) {
+    const userId = req.user.id;
+    res.json((0, achievement_engine_service_1.getStudentProgress)(userId));
+}
+function getClubEngineProgress(req, res) {
+    const clubId = parseInt(req.params.clubId);
+    if (isNaN(clubId)) {
+        res.status(400).json({ error: 'Invalid club ID' });
+        return;
+    }
+    res.json((0, achievement_engine_service_1.getClubProgress)(clubId));
 }
 //# sourceMappingURL=achievements.controller.js.map

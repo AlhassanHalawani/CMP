@@ -7,9 +7,11 @@
     "dashboard": "Dashboard",
     "clubs": "Clubs",
     "events": "Events",
+    "badges": "Badges",
     "achievements": "Achievements",
     "kpi": "KPI",
     "leaderboard": "Leaderboard",
+    "dailyQuestions": "Daily Questions",
     "notifications": "Notifications",
     "admin": "Admin",
     "reports": "Reports",
@@ -104,6 +106,16 @@
     "time": "Time",
     "qrMethod": "QR",
     "manualMethod": "Manual"
+  },
+  "badges": {
+    "title": "Badges",
+    "earned": "badges earned",
+    "featured": "Featured Badge",
+    "unlocked": "Unlocked",
+    "locked": "Locked — Keep Going",
+    "noBadges": "No badges available yet.",
+    "adminNote": "Badges are awarded to students. Switch to a student account to view them.",
+    "viewAll": "View all badges"
   },
   "achievements": {
     "title": "Achievements",
@@ -207,5 +219,44 @@
     "finalCtaBody": "Create your CMP account with your KAU email and join the FCIT club community.",
     "finalCtaSignup": "Create your CMP account",
     "finalCtaLogin": "Login instead"
+  },
+  "dailyQuestions": {
+    "title": "Daily Questions",
+    "tabFeed": "Today's Questions",
+    "tabManage": "Manage",
+    "noQuestionsToday": "No questions today",
+    "checkBackTomorrow": "Check back tomorrow for new questions.",
+    "allAnswered": "You've answered all questions for today. Great work!",
+    "submit": "Submit Answer",
+    "correct": "Correct!",
+    "incorrect": "Incorrect",
+    "betterLuck": "Better luck next time.",
+    "streak": {
+      "current": "{{count}}-day streak",
+      "best": "Best streak: {{count}} days"
+    },
+    "newQuestion": "New Question",
+    "editQuestion": "Edit Question",
+    "questionText": "Question",
+    "activeDate": "Active Date",
+    "options": "Answer Choices",
+    "option": "Option",
+    "markCorrect": "Mark as correct",
+    "clickToMarkCorrect": "Click a letter to mark it as the correct answer.",
+    "explanation": "Explanation (optional)",
+    "participationXp": "Participation XP",
+    "correctBonusXp": "Correct Bonus XP",
+    "created": "Question created",
+    "updated": "Question updated",
+    "deleted": "Question deleted",
+    "published": "Question published",
+    "publish": "Publish",
+    "allClubs": "All clubs",
+    "selectClubFirst": "Select a club to manage its questions.",
+    "status": "Status",
+    "statusAll": "All",
+    "statusDraft": "Draft",
+    "statusPublished": "Published",
+    "responses": "responses"
   }
 }

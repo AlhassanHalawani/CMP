@@ -17,6 +17,10 @@ const qrcode_service_1 = require("../services/qrcode.service");
 const pdf_service_1 = require("../services/pdf.service");
 const ownership_service_1 = require("../services/ownership.service");
 const audit_service_1 = require("../services/audit.service");
+const achievement_engine_service_1 = require("../services/achievement-engine.service");
+const badge_engine_service_1 = require("../services/badge-engine.service");
+const gamification_service_1 = require("../services/gamification.service");
+const notifications_service_1 = require("../services/notifications.service");
 async function generateEventQr(req, res) {
     const eventId = parseInt(req.params.eventId);
     const user = req.user;
@@ -38,7 +42,7 @@ async function generateEventQr(req, res) {
     const qrDataUrl = await (0, qrcode_service_1.generateQr)(token);
     res.json({ token, qr: qrDataUrl });
 }
-function checkIn(req, res) {
+async function checkIn(req, res) {
     const { token } = req.body;
     if (!token || typeof token !== 'string') {
         res.status(400).json({ error: 'Token is required' });
@@ -91,9 +95,38 @@ function checkIn(req, res) {
         method: 'qr',
         qr_token: token,
     });
+    // Best-effort: evaluate student achievements/badges and award XP after check-in
+    try {
+        (0, achievement_engine_service_1.evaluateStudentAchievements)(req.user.id);
+    }
+    catch { /* ignore */ }
+    try {
+        (0, badge_engine_service_1.evaluateStudentBadges)(req.user.id);
+    }
+    catch { /* ignore */ }
+    try {
+        const xpResult = (0, gamification_service_1.awardXp)({
+            userId: req.user.id,
+            actionKey: 'event_attended',
+            referenceKey: `attendance:${parsed.eventId}:${req.user.id}`,
+            sourceType: 'event',
+            sourceId: parsed.eventId,
+        });
+        if (xpResult?.level_up) {
+            await (0, notifications_service_1.notify)({
+                userId: req.user.id,
+                eventType: 'level_up',
+                title: 'Level Up!',
+                body: `You reached Level ${xpResult.new_level}. Keep it up!`,
+                type: 'success',
+                targetUrl: '/profile',
+            });
+        }
+    }
+    catch { /* ignore */ }
     res.status(201).json(attendance);
 }
-function manualCheckIn(req, res) {
+async function manualCheckIn(req, res) {
     const eventId = parseInt(req.params.eventId);
     const { user_id } = req.body;
     const user = req.user;
@@ -129,6 +162,35 @@ function manualCheckIn(req, res) {
         return;
     }
     const attendance = attendance_model_1.AttendanceModel.checkIn({ event_id: eventId, user_id, method: 'manual' });
+    // Best-effort: evaluate student achievements/badges and award XP after manual check-in
+    try {
+        (0, achievement_engine_service_1.evaluateStudentAchievements)(user_id);
+    }
+    catch { /* ignore */ }
+    try {
+        (0, badge_engine_service_1.evaluateStudentBadges)(user_id);
+    }
+    catch { /* ignore */ }
+    try {
+        const xpResult = (0, gamification_service_1.awardXp)({
+            userId: user_id,
+            actionKey: 'event_attended',
+            referenceKey: `attendance:${eventId}:${user_id}`,
+            sourceType: 'event',
+            sourceId: eventId,
+        });
+        if (xpResult?.level_up) {
+            await (0, notifications_service_1.notify)({
+                userId: user_id,
+                eventType: 'level_up',
+                title: 'Level Up!',
+                body: `You reached Level ${xpResult.new_level}. Keep it up!`,
+                type: 'success',
+                targetUrl: '/profile',
+            });
+        }
+    }
+    catch { /* ignore */ }
     res.status(201).json(attendance);
 }
 async function getAttendanceList(req, res) {

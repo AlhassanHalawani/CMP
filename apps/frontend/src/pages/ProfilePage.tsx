@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -29,16 +29,18 @@ import {
 } from '@/components/ui/dialog';
 import { usersApi } from '@/api/users';
 import { clubsApi } from '@/api/clubs';
-import { achievementsApi } from '@/api/achievements';
 import { leaderRequestsApi } from '@/api/admin';
+import { gamificationApi } from '@/api/gamification';
+import { badgesApi } from '@/api/badges';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useAppToast } from '@/contexts/ToastContext';
 import { Sun, Moon } from 'lucide-react';
 
-const TIER_VARIANT: Record<string, 'accent' | 'neutral' | 'secondary'> = {
-  Gold: 'accent',
-  Silver: 'secondary',
-  Bronze: 'neutral',
+const RARITY_VARIANT: Record<string, 'accent' | 'neutral' | 'secondary' | 'default'> = {
+  legendary: 'accent',
+  epic: 'default',
+  rare: 'secondary',
+  common: 'neutral',
 };
 
 // ─── Segmented button helper ──────────────────────────────────────────────────
@@ -351,25 +353,20 @@ export function ProfilePage() {
   const queryClient = useQueryClient();
   const { currentUser } = useCurrentUser();
   const [name, setName] = useState(user?.name || '');
-  const loginActivityFired = useRef(false);
 
   const isStudent = !hasRole('admin') && !hasRole('club_leader');
 
-  // Record login activity once per day (drives login-streak achievement)
-  useEffect(() => {
-    if (!currentUser || loginActivityFired.current) return;
-    const todayKey = `cmp_login_${new Date().toISOString().slice(0, 10)}`;
-    if (localStorage.getItem(todayKey)) return;
-    loginActivityFired.current = true;
-    usersApi.recordLoginActivity()
-      .then(() => localStorage.setItem(todayKey, '1'))
-      .catch(() => { /* best-effort */ });
-  }, [currentUser]);
+  // Badge progress summary
+  const { data: badgeProgress } = useQuery({
+    queryKey: ['badges', 'progress'],
+    queryFn: badgesApi.getMyProgress,
+    enabled: !!currentUser && !hasRole('admin'),
+  });
 
-  // Achievement engine progress (for badge summary)
-  const { data: myProgress } = useQuery({
-    queryKey: ['achievements', 'engine', 'me'],
-    queryFn: () => achievementsApi.getMyProgress(),
+  // XP / level progress
+  const { data: gamification } = useQuery({
+    queryKey: ['gamification', 'me'],
+    queryFn: () => gamificationApi.getMyGamification(),
     enabled: !!currentUser && !hasRole('admin'),
   });
 
@@ -422,35 +419,90 @@ export function ProfilePage() {
             </CardContent>
           </Card>
 
-          {/* Achievement badge summary (non-admin only) */}
-          {myProgress && !hasRole('admin') && (() => {
-            const unlockedIds = new Set(myProgress.unlocks.map((u) => u.definition_id));
-            const studentDefs = myProgress.definitions.filter((d) => d.entity_type === 'student');
-            const earnedDefs = studentDefs.filter((d) => unlockedIds.has(d.id));
-            const totalPoints = earnedDefs.reduce((s, d) => s + d.points, 0);
+          {/* XP / Level card (non-admin only) */}
+          {gamification && !hasRole('admin') && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">XP & Level</CardTitle>
+                  <span className="text-2xl font-black text-[var(--main)]">
+                    Lv.{gamification.current_level}
+                  </span>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <div className="flex justify-between text-xs mb-1 opacity-70">
+                    <span>{gamification.current_xp} XP</span>
+                    <span>
+                      {gamification.xp_to_next_level > 0
+                        ? `${gamification.xp_to_next_level} XP to Level ${gamification.current_level + 1}`
+                        : 'Max level reached'}
+                    </span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-[var(--bg)] border border-border overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-[var(--main)] transition-all"
+                      style={{ width: `${gamification.progress_percent}%` }}
+                    />
+                  </div>
+                </div>
+                {gamification.recent_actions.length > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold opacity-60">Recent XP</p>
+                    {gamification.recent_actions.slice(0, 5).map((a, i) => (
+                      <div key={i} className="flex justify-between text-xs">
+                        <span className="opacity-70 capitalize">{a.action_key.replace(/_/g, ' ')}</span>
+                        <span className="font-bold text-[var(--main)]">+{a.xp_delta}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Badge summary (non-admin only) */}
+          {badgeProgress && !hasRole('admin') && (() => {
+            const unlocked = badgeProgress.badges.filter((b) => b.unlocked);
+            const featured = badgeProgress.featured_badge_definition_id
+              ? badgeProgress.badges.find((b) => b.id === badgeProgress.featured_badge_definition_id)
+              : null;
             return (
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">My Badges</CardTitle>
-                    <Link to="/achievements" className="text-xs font-bold underline opacity-60">
-                      View all
+                    <CardTitle className="text-base">{t('nav.badges')}</CardTitle>
+                    <Link to="/badges" className="text-xs font-bold underline opacity-60">
+                      {t('badges.viewAll')}
                     </Link>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm mb-3 opacity-70">
-                    {earnedDefs.length} badge{earnedDefs.length !== 1 ? 's' : ''} earned &middot; {totalPoints} pts
+                <CardContent className="space-y-3">
+                  {featured && (
+                    <div className="flex items-center gap-2 p-2 rounded-base border border-[var(--main)] bg-[var(--bg)]">
+                      <span className="size-6 rounded-full bg-[var(--main)] text-main-foreground flex items-center justify-center text-xs font-black shrink-0">★</span>
+                      <div>
+                        <p className="text-xs opacity-60">{t('badges.featured')}</p>
+                        <p className="text-sm font-bold">{featured.name}</p>
+                      </div>
+                    </div>
+                  )}
+                  <p className="text-sm opacity-70">
+                    {unlocked.length} / {badgeProgress.badges.length} {t('badges.earned')}
                   </p>
-                  {earnedDefs.length === 0 ? (
-                    <p className="text-xs opacity-50">Attend events and log in daily to earn badges.</p>
+                  {unlocked.length === 0 ? (
+                    <p className="text-xs opacity-50">Join clubs and attend events to earn badges.</p>
                   ) : (
                     <div className="flex flex-wrap gap-1">
-                      {earnedDefs.map((d) => (
-                        <Badge key={d.id} variant={TIER_VARIANT[d.tier] ?? 'neutral'} className="text-xs">
-                          {d.title}
+                      {unlocked.slice(0, 6).map((b) => (
+                        <Badge key={b.id} variant={RARITY_VARIANT[b.rarity] ?? 'neutral'} className="text-xs capitalize">
+                          {b.name}
                         </Badge>
                       ))}
+                      {unlocked.length > 6 && (
+                        <Badge variant="neutral" className="text-xs">+{unlocked.length - 6}</Badge>
+                      )}
                     </div>
                   )}
                 </CardContent>

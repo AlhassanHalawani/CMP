@@ -13,6 +13,9 @@ const VALID_EVENT_TYPES = [
     'event_approved',
     'event_rejected',
     'event_submitted',
+    'membership_requested',
+    'membership_approved',
+    'membership_declined',
 ];
 const VALID_CHANNELS = ['in_app', 'email'];
 function list(req, res) {

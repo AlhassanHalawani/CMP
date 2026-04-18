@@ -7,9 +7,11 @@
     "dashboard": "لوحة التحكم",
     "clubs": "الأندية",
     "events": "الفعاليات",
+    "badges": "الشارات",
     "achievements": "الإنجازات",
     "kpi": "مؤشرات الأداء",
     "leaderboard": "لوحة المتصدرين",
+    "dailyQuestions": "الأسئلة اليومية",
     "notifications": "الإشعارات",
     "admin": "الإدارة",
     "reports": "التقارير",
@@ -104,6 +106,16 @@
     "time": "الوقت",
     "qrMethod": "QR",
     "manualMethod": "يدوي"
+  },
+  "badges": {
+    "title": "الشارات",
+    "earned": "شارات مكتسبة",
+    "featured": "الشارة المميزة",
+    "unlocked": "المفتوحة",
+    "locked": "مقفلة — استمر",
+    "noBadges": "لا توجد شارات بعد.",
+    "adminNote": "الشارات تُمنح للطلاب. استخدم حساب طالب لعرضها.",
+    "viewAll": "عرض جميع الشارات"
   },
   "achievements": {
     "title": "الإنجازات",
@@ -207,5 +219,44 @@
     "finalCtaBody": "أنشئ حسابك في CMP ببريدك الجامعي وانضم إلى مجتمع أندية الكلية.",
     "finalCtaSignup": "إنشاء حساب CMP",
     "finalCtaLogin": "تسجيل الدخول بدلاً من ذلك"
+  },
+  "dailyQuestions": {
+    "title": "الأسئلة اليومية",
+    "tabFeed": "أسئلة اليوم",
+    "tabManage": "الإدارة",
+    "noQuestionsToday": "لا توجد أسئلة اليوم",
+    "checkBackTomorrow": "تحقق غداً للاطلاع على الأسئلة الجديدة.",
+    "allAnswered": "لقد أجبت على جميع أسئلة اليوم. عمل رائع!",
+    "submit": "إرسال الإجابة",
+    "correct": "إجابة صحيحة!",
+    "incorrect": "إجابة خاطئة",
+    "betterLuck": "حظاً أوفر في المرة القادمة.",
+    "streak": {
+      "current": "سلسلة {{count}} يوم",
+      "best": "أفضل سلسلة: {{count}} يوم"
+    },
+    "newQuestion": "سؤال جديد",
+    "editQuestion": "تعديل السؤال",
+    "questionText": "السؤال",
+    "activeDate": "تاريخ النشر",
+    "options": "خيارات الإجابة",
+    "option": "خيار",
+    "markCorrect": "تحديد كإجابة صحيحة",
+    "clickToMarkCorrect": "انقر على الحرف لتحديده كإجابة صحيحة.",
+    "explanation": "الشرح (اختياري)",
+    "participationXp": "نقاط المشاركة",
+    "correctBonusXp": "نقاط الإجابة الصحيحة",
+    "created": "تم إنشاء السؤال",
+    "updated": "تم تحديث السؤال",
+    "deleted": "تم حذف السؤال",
+    "published": "تم نشر السؤال",
+    "publish": "نشر",
+    "allClubs": "جميع الأندية",
+    "selectClubFirst": "اختر نادياً لإدارة أسئلته.",
+    "status": "الحالة",
+    "statusAll": "الكل",
+    "statusDraft": "مسودة",
+    "statusPublished": "منشور",
+    "responses": "إجابات"
   }
 }

@@ -7,6 +7,9 @@ export interface User {
   name: string;
   role: 'student' | 'club_leader' | 'admin';
   avatar_url: string | null;
+  xp_total: number;
+  current_level: number;
+  profile_completed_at: string | null;
   created_at: string;
 }
 

@@ -9,6 +9,9 @@ import { generateAttendanceReport } from '../services/pdf.service';
 import { isAdmin, leaderOwnsEvent } from '../services/ownership.service';
 import { logAction } from '../services/audit.service';
 import { evaluateStudentAchievements } from '../services/achievement-engine.service';
+import { evaluateStudentBadges } from '../services/badge-engine.service';
+import { awardXp } from '../services/gamification.service';
+import { notify } from '../services/notifications.service';
 
 export async function generateEventQr(req: AuthRequest, res: Response) {
   const eventId = parseInt(req.params.eventId);
@@ -35,7 +38,7 @@ export async function generateEventQr(req: AuthRequest, res: Response) {
   res.json({ token, qr: qrDataUrl });
 }
 
-export function checkIn(req: AuthRequest, res: Response) {
+export async function checkIn(req: AuthRequest, res: Response) {
   const { token } = req.body;
   if (!token || typeof token !== 'string') {
     res.status(400).json({ error: 'Token is required' });
@@ -89,13 +92,33 @@ export function checkIn(req: AuthRequest, res: Response) {
     qr_token: token,
   });
 
-  // Best-effort: evaluate student achievements after check-in
+  // Best-effort: evaluate student achievements/badges and award XP after check-in
   try { evaluateStudentAchievements(req.user!.id); } catch { /* ignore */ }
+  try { evaluateStudentBadges(req.user!.id); } catch { /* ignore */ }
+  try {
+    const xpResult = awardXp({
+      userId: req.user!.id,
+      actionKey: 'event_attended',
+      referenceKey: `attendance:${parsed.eventId}:${req.user!.id}`,
+      sourceType: 'event',
+      sourceId: parsed.eventId,
+    });
+    if (xpResult?.level_up) {
+      await notify({
+        userId: req.user!.id,
+        eventType: 'level_up',
+        title: 'Level Up!',
+        body: `You reached Level ${xpResult.new_level}. Keep it up!`,
+        type: 'success',
+        targetUrl: '/profile',
+      });
+    }
+  } catch { /* ignore */ }
 
   res.status(201).json(attendance);
 }
 
-export function manualCheckIn(req: AuthRequest, res: Response) {
+export async function manualCheckIn(req: AuthRequest, res: Response) {
   const eventId = parseInt(req.params.eventId);
   const { user_id } = req.body;
   const user = req.user!;
@@ -135,8 +158,28 @@ export function manualCheckIn(req: AuthRequest, res: Response) {
   }
   const attendance = AttendanceModel.checkIn({ event_id: eventId, user_id, method: 'manual' });
 
-  // Best-effort: evaluate student achievements after manual check-in
+  // Best-effort: evaluate student achievements/badges and award XP after manual check-in
   try { evaluateStudentAchievements(user_id); } catch { /* ignore */ }
+  try { evaluateStudentBadges(user_id); } catch { /* ignore */ }
+  try {
+    const xpResult = awardXp({
+      userId: user_id,
+      actionKey: 'event_attended',
+      referenceKey: `attendance:${eventId}:${user_id}`,
+      sourceType: 'event',
+      sourceId: eventId,
+    });
+    if (xpResult?.level_up) {
+      await notify({
+        userId: user_id,
+        eventType: 'level_up',
+        title: 'Level Up!',
+        body: `You reached Level ${xpResult.new_level}. Keep it up!`,
+        type: 'success',
+        targetUrl: '/profile',
+      });
+    }
+  } catch { /* ignore */ }
 
   res.status(201).json(attendance);
 }

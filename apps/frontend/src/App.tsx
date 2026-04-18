@@ -18,14 +18,18 @@ import { ProfilePage } from '@/pages/ProfilePage';
 import { KpiPage } from '@/pages/KpiPage';
 import { EventAttendancePage } from '@/pages/EventAttendancePage';
 import { ReportsPage } from '@/pages/ReportsPage';
+import { DailyQuestionsPage } from '@/pages/DailyQuestionsPage';
+import { BadgesPage } from '@/pages/BadgesPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { PageViewTracker } from '@/components/app/PageViewTracker';
+import { LoginActivityTracker } from '@/components/app/LoginActivityTracker';
 
 export default function App() {
   return (
     <BrowserRouter>
       <ErrorBoundary>
         <PageViewTracker />
+        <LoginActivityTracker />
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
@@ -42,6 +46,8 @@ export default function App() {
           <Route path="/kpi" element={<ProtectedRoute roles={['admin', 'club_leader']}><KpiPage /></ProtectedRoute>} />
           <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
           <Route path="/reports" element={<ProtectedRoute roles={['admin', 'club_leader']}><ReportsPage /></ProtectedRoute>} />
+          <Route path="/daily-questions" element={<ProtectedRoute><DailyQuestionsPage /></ProtectedRoute>} />
+          <Route path="/badges" element={<ProtectedRoute><BadgesPage /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminPage /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
 
