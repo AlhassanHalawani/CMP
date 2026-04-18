@@ -8,9 +8,7 @@
     "clubs": "Clubs",
     "events": "Events",
     "badges": "Badges",
-    "achievements": "Achievements",
     "kpi": "KPI",
-    "leaderboard": "Leaderboard",
     "dailyQuestions": "Daily Questions",
     "notifications": "Notifications",
     "admin": "Admin",
@@ -138,7 +136,17 @@
     "leaderboardChart": "Leaderboard Chart",
     "rankings": "Rankings",
     "metricsBreakdown": "Metrics Breakdown",
-    "noActivityYet": "No activity yet"
+    "noActivityYet": "No activity yet",
+    "rank": "Rank",
+    "club": "Club",
+    "attendance": "Attend.",
+    "members": "Members",
+    "xp": "XP",
+    "student": "Student",
+    "studentXp": "Student XP",
+    "studentRankings": "Student Rankings",
+    "noClubsYet": "No clubs yet",
+    "noStudentsYet": "No students yet"
   },
   "notifications": {
     "tab": "Notifications",

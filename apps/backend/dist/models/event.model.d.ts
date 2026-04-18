@@ -18,6 +18,7 @@ export interface Event {
     checkin_open: number;
     checkin_finalized: number;
     category: string | null;
+    twitter_url: string | null;
     registration_count?: number;
 }
 export declare const EventModel: {

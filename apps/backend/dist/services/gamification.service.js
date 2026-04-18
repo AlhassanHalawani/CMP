@@ -7,15 +7,10 @@ exports.awardXp = awardXp;
 exports.rebuildUserXp = rebuildUserXp;
 const database_1 = require("../config/database");
 // ─── XP rule map ──────────────────────────────────────────────────────────────
+// Allowed XP sources: event attendance, badge unlocks, daily questions.
 exports.XP_RULES = {
-    membership_joined: 40,
     event_attended: 25,
-    daily_login: 5,
-    profile_completed: 20,
-    weekly_task_completed: 15,
-    daily_quiz_answered: 10,
-    club_activity_participated: 20,
-    // Daily question events use per-question XP passed via xpOverride
+    badge_unlocked: 50,
     daily_question_participation: 5,
     daily_question_correct_bonus: 10,
 };
@@ -29,7 +24,6 @@ const LEVEL_THRESHOLDS = [
     { level: 6, min: 1200, max: 1699 },
 ];
 const MAX_LEVEL = LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1].level;
-const MAX_LEVEL_FLOOR = LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1].min;
 function calculateLevel(xpTotal) {
     for (const t of LEVEL_THRESHOLDS) {
         if (xpTotal <= t.max)
@@ -42,7 +36,6 @@ function getLevelProgress(xpTotal) {
     const threshold = LEVEL_THRESHOLDS.find((t) => t.level === level);
     const isMaxLevel = level === MAX_LEVEL;
     const current_level_floor = threshold.min;
-    // At max level, next_level_xp is the same as the floor so progress stays at 100%
     const next_level_xp = isMaxLevel
         ? threshold.max + 1
         : (LEVEL_THRESHOLDS.find((t) => t.level === level + 1)?.min ?? threshold.max + 1);
@@ -63,25 +56,21 @@ function awardXp(opts) {
     const xpDelta = opts.xpOverride ?? exports.XP_RULES[opts.actionKey];
     if (xpDelta === undefined || xpDelta === null)
         return null;
-    // Fetch current state before any change
     const userRow = database_1.db
         .prepare('SELECT xp_total, current_level FROM users WHERE id = ?')
         .get(opts.userId);
     if (!userRow)
         return null;
     const previousLevel = userRow.current_level;
-    // Insert transaction — silently skip if reference_key already exists (idempotent)
     const insertResult = database_1.db
         .prepare(`INSERT OR IGNORE INTO xp_transactions
          (user_id, action_key, xp_delta, source_type, source_id, reference_key, metadata_json)
        VALUES (?, ?, ?, ?, ?, ?, ?)`)
         .run(opts.userId, opts.actionKey, xpDelta, opts.sourceType ?? null, opts.sourceId ?? null, opts.referenceKey, opts.metadata ? JSON.stringify(opts.metadata) : null);
-    // If nothing was inserted, this action was already rewarded
     if (insertResult.changes === 0) {
         const progress = getLevelProgress(userRow.xp_total);
         return { xp_awarded: 0, level_up: false, previous_level: previousLevel, new_level: previousLevel, progress };
     }
-    // Recompute totals from ledger (single source of truth)
     const totalsRow = database_1.db
         .prepare('SELECT COALESCE(SUM(xp_delta), 0) as total FROM xp_transactions WHERE user_id = ?')
         .get(opts.userId);
@@ -97,22 +86,9 @@ function awardXp(opts) {
         progress,
     };
 }
-// ─── Rebuild XP from existing history (backfill / repair) ────────────────────
+// ─── Rebuild XP from allowed sources (backfill / repair) ─────────────────────
 function rebuildUserXp(userId) {
-    // Memberships
-    const memberships = database_1.db
-        .prepare(`SELECT club_id FROM memberships WHERE user_id = ? AND status = 'active'`)
-        .all(userId);
-    for (const m of memberships) {
-        awardXp({
-            userId,
-            actionKey: 'membership_joined',
-            referenceKey: `membership:${m.club_id}:${userId}`,
-            sourceType: 'membership',
-            sourceId: m.club_id,
-        });
-    }
-    // Attendance
+    // Attendance (event_attended)
     const attendances = database_1.db
         .prepare(`SELECT event_id FROM attendance WHERE user_id = ?`)
         .all(userId);
@@ -125,15 +101,17 @@ function rebuildUserXp(userId) {
             sourceId: a.event_id,
         });
     }
-    // Login activity
-    const logins = database_1.db
-        .prepare(`SELECT login_date FROM user_login_activity WHERE user_id = ?`)
+    // Badge unlocks (badge_unlocked)
+    const badgeUnlocks = database_1.db
+        .prepare(`SELECT badge_definition_id FROM badge_unlocks WHERE user_id = ?`)
         .all(userId);
-    for (const l of logins) {
+    for (const b of badgeUnlocks) {
         awardXp({
             userId,
-            actionKey: 'daily_login',
-            referenceKey: `login:${userId}:${l.login_date}`,
+            actionKey: 'badge_unlocked',
+            referenceKey: `badge:${b.badge_definition_id}:${userId}`,
+            sourceType: 'badge',
+            sourceId: b.badge_definition_id,
         });
     }
 }

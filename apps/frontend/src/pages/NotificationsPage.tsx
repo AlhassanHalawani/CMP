@@ -1,13 +1,16 @@
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { isAxiosError } from 'axios';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { notificationsApi, type NotificationPreference, type Notification } from '@/api/notifications';
+import { notificationsApi, parseNotificationActions, type NotificationPreference, type Notification } from '@/api/notifications';
+import { membershipsApi } from '@/api/memberships';
+import { useAppToast } from '@/contexts/ToastContext';
 
 const PREF_KEYS = [
   'event_approved',
@@ -19,24 +22,70 @@ const PREF_KEYS = [
 
 function getPrefEnabled(prefs: NotificationPreference[], eventType: string, channel: 'in_app' | 'email'): boolean {
   const row = prefs.find((p) => p.event_type === eventType && p.channel === channel);
-  // Default: in_app enabled, email disabled
   if (!row) return channel === 'in_app';
   return row.enabled === 1;
 }
 
+function MembershipActions({ n, onMarkRead }: { n: Notification; onMarkRead: (id: number) => void }) {
+  const queryClient = useQueryClient();
+  const { showToast } = useAppToast();
+  const actions = parseNotificationActions(n);
+  if (!actions || actions.type !== 'membership_request') return null;
+
+  const approveMutation = useMutation({
+    mutationFn: () => membershipsApi.updateMembership(actions.club_id, actions.requester_id, 'active'),
+    onSuccess: () => {
+      onMarkRead(n.id);
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      showToast('Approved', `${actions.requester_name} has been approved.`);
+    },
+    onError: (err: unknown) => {
+      const msg = isAxiosError(err) ? err.response?.data?.error ?? 'Failed to approve.' : 'Failed to approve.';
+      showToast('Error', msg);
+    },
+  });
+
+  const denyMutation = useMutation({
+    mutationFn: () => membershipsApi.updateMembership(actions.club_id, actions.requester_id, 'inactive'),
+    onSuccess: () => {
+      onMarkRead(n.id);
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      showToast('Denied', `${actions.requester_name}'s request was denied.`);
+    },
+    onError: (err: unknown) => {
+      const msg = isAxiosError(err) ? err.response?.data?.error ?? 'Failed to deny.' : 'Failed to deny.';
+      showToast('Error', msg);
+    },
+  });
+
+  const isPending = approveMutation.isPending || denyMutation.isPending;
+
+  return (
+    <div className="mt-3 flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
+      <Button size="sm" onClick={() => approveMutation.mutate()} disabled={isPending}>
+        {approveMutation.isPending ? 'Approving…' : 'Approve'}
+      </Button>
+      <Button size="sm" variant="destructive" onClick={() => denyMutation.mutate()} disabled={isPending}>
+        {denyMutation.isPending ? 'Denying…' : 'Deny'}
+      </Button>
+    </div>
+  );
+}
+
 function NotificationCard({ n, onMarkRead }: { n: Notification; onMarkRead: (id: number) => void }) {
   const navigate = useNavigate();
+  const actions = parseNotificationActions(n);
+  const hasActions = actions?.type === 'membership_request';
 
   const handleClick = () => {
     if (!n.is_read) onMarkRead(n.id);
-    if (n.target_url) navigate(n.target_url);
+    if (n.target_url && !hasActions) navigate(n.target_url);
   };
 
-  const isClickable = !!n.target_url;
+  const isClickable = !!n.target_url && !hasActions;
 
   return (
     <Card
-      key={n.id}
       className={`${n.is_read ? 'opacity-60' : ''} ${isClickable ? 'cursor-pointer hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none transition-all' : ''}`}
       onClick={isClickable ? handleClick : undefined}
     >
@@ -47,6 +96,15 @@ function NotificationCard({ n, onMarkRead }: { n: Notification; onMarkRead: (id:
         </div>
         {n.body && <p className="mt-1 text-sm">{n.body}</p>}
         <p className="mt-1 text-xs opacity-60">{new Date(n.created_at).toLocaleString()}</p>
+        {hasActions && <MembershipActions n={n} onMarkRead={onMarkRead} />}
+        {n.target_url && hasActions && (
+          <button
+            className="mt-2 text-xs underline opacity-60 hover:opacity-100"
+            onClick={() => { if (!n.is_read) onMarkRead(n.id); navigate(n.target_url!); }}
+          >
+            View club members
+          </button>
+        )}
       </CardContent>
     </Card>
   );

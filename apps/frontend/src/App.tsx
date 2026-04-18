@@ -10,8 +10,6 @@ import { ClubsPage } from '@/pages/ClubsPage';
 import { ClubDetailPage } from '@/pages/ClubDetailPage';
 import { EventsPage } from '@/pages/EventsPage';
 import { EventDetailPage } from '@/pages/EventDetailPage';
-import { AchievementsPage } from '@/pages/AchievementsPage';
-import { LeaderboardPage } from '@/pages/LeaderboardPage';
 import { NotificationsPage } from '@/pages/NotificationsPage';
 import { AdminPage } from '@/pages/AdminPage';
 import { ProfilePage } from '@/pages/ProfilePage';
@@ -22,14 +20,12 @@ import { DailyQuestionsPage } from '@/pages/DailyQuestionsPage';
 import { BadgesPage } from '@/pages/BadgesPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { PageViewTracker } from '@/components/app/PageViewTracker';
-import { LoginActivityTracker } from '@/components/app/LoginActivityTracker';
 
 export default function App() {
   return (
     <BrowserRouter>
       <ErrorBoundary>
         <PageViewTracker />
-        <LoginActivityTracker />
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
@@ -41,8 +37,6 @@ export default function App() {
           <Route path="/events" element={<ProtectedRoute><EventsPage /></ProtectedRoute>} />
           <Route path="/events/:id" element={<ProtectedRoute><EventDetailPage /></ProtectedRoute>} />
           <Route path="/events/:id/attendance" element={<ProtectedRoute roles={['admin', 'club_leader']}><EventAttendancePage /></ProtectedRoute>} />
-          <Route path="/achievements" element={<ProtectedRoute><AchievementsPage /></ProtectedRoute>} />
-          <Route path="/leaderboard" element={<ProtectedRoute><LeaderboardPage /></ProtectedRoute>} />
           <Route path="/kpi" element={<ProtectedRoute roles={['admin', 'club_leader']}><KpiPage /></ProtectedRoute>} />
           <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
           <Route path="/reports" element={<ProtectedRoute roles={['admin', 'club_leader']}><ReportsPage /></ProtectedRoute>} />

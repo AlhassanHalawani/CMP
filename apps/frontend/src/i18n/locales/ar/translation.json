@@ -8,9 +8,7 @@
     "clubs": "الأندية",
     "events": "الفعاليات",
     "badges": "الشارات",
-    "achievements": "الإنجازات",
     "kpi": "مؤشرات الأداء",
-    "leaderboard": "لوحة المتصدرين",
     "dailyQuestions": "الأسئلة اليومية",
     "notifications": "الإشعارات",
     "admin": "الإدارة",
@@ -138,7 +136,17 @@
     "leaderboardChart": "رسم بياني للمتصدرين",
     "rankings": "الترتيب",
     "metricsBreakdown": "تفاصيل المقاييس",
-    "noActivityYet": "لا يوجد نشاط بعد"
+    "noActivityYet": "لا يوجد نشاط بعد",
+    "rank": "الترتيب",
+    "club": "النادي",
+    "attendance": "حضور",
+    "members": "أعضاء",
+    "xp": "نقاط XP",
+    "student": "طالب",
+    "studentXp": "XP الطلاب",
+    "studentRankings": "ترتيب الطلاب",
+    "noClubsYet": "لا توجد أندية بعد",
+    "noStudentsYet": "لا يوجد طلاب بعد"
   },
   "notifications": {
     "tab": "الإشعارات",

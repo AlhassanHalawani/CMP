@@ -20,6 +20,7 @@ export interface Event {
   checkin_open: number;       // 0 | 1
   checkin_finalized: number;  // 0 | 1
   category: string | null;
+  twitter_url: string | null;
   registration_count?: number; // computed via subquery
 }
 
@@ -106,8 +107,8 @@ export const EventModel = {
   create(data: Omit<Event, 'id' | 'created_at' | 'registration_count'>): Event {
     const result = db
       .prepare(
-        `INSERT INTO events (club_id, title, title_ar, description, description_ar, location, starts_at, ends_at, capacity, status, members_only, delivery_mode, created_by, category)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO events (club_id, title, title_ar, description, description_ar, location, starts_at, ends_at, capacity, status, members_only, delivery_mode, created_by, category, twitter_url)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         data.club_id,
@@ -123,7 +124,8 @@ export const EventModel = {
         data.members_only ?? 0,
         data.delivery_mode ?? 'physical',
         data.created_by,
-        data.category ?? null
+        data.category ?? null,
+        data.twitter_url ?? null
       );
     return EventModel.findById(result.lastInsertRowid as number)!;
   },

@@ -5,8 +5,8 @@ const database_1 = require("../config/database");
 exports.NotificationModel = {
     create(data) {
         const result = database_1.db
-            .prepare('INSERT INTO notifications (user_id, title, body, type, target_url) VALUES (?, ?, ?, ?, ?)')
-            .run(data.user_id, data.title, data.body || null, data.type || 'info', data.target_url ?? null);
+            .prepare('INSERT INTO notifications (user_id, title, body, type, target_url, actions_json) VALUES (?, ?, ?, ?, ?, ?)')
+            .run(data.user_id, data.title, data.body || null, data.type || 'info', data.target_url ?? null, data.actions_json ? JSON.stringify(data.actions_json) : null);
         return database_1.db.prepare('SELECT * FROM notifications WHERE id = ?').get(result.lastInsertRowid);
     },
     listForUser(userId, params) {

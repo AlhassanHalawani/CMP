@@ -6,6 +6,7 @@ export interface Notification {
     type: 'info' | 'success' | 'warning' | 'error';
     is_read: number;
     target_url: string | null;
+    actions_json: string | null;
     created_at: string;
 }
 export declare const NotificationModel: {
@@ -15,6 +16,7 @@ export declare const NotificationModel: {
         body?: string;
         type?: string;
         target_url?: string | null;
+        actions_json?: Record<string, unknown> | null;
     }): Notification;
     listForUser(userId: number, params?: {
         limit?: number;

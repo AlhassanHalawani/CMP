@@ -12,15 +12,23 @@ interface NotifyOptions {
   body: string;
   type?: NotifType;
   targetUrl?: string | null;
+  actionsJson?: Record<string, unknown> | null;
 }
 
 export async function notify(opts: NotifyOptions): Promise<void> {
-  const { userId, eventType, title, body, type = 'info', targetUrl } = opts;
+  const { userId, eventType, title, body, type = 'info', targetUrl, actionsJson } = opts;
 
   // In-app: default enabled (null = no preference row = enabled)
   const inAppPref = getPreference(userId, eventType, 'in_app');
   if (inAppPref !== false) {
-    NotificationModel.create({ user_id: userId, title, body, type, target_url: targetUrl ?? null });
+    NotificationModel.create({
+      user_id: userId,
+      title,
+      body,
+      type,
+      target_url: targetUrl ?? null,
+      actions_json: actionsJson ?? null,
+    });
   }
 
   // Email: default disabled (null = no preference row = disabled)

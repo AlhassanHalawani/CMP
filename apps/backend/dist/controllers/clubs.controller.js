@@ -110,13 +110,10 @@ function getClubStats(req, res) {
        JOIN events e ON e.id = a.event_id
        WHERE e.club_id = ? AND e.status = 'published'`)
         .get(clubId);
-    const { achievements_awarded } = database_1.db
-        .prepare(`SELECT COUNT(*) AS achievements_awarded FROM achievements WHERE club_id = ?`)
-        .get(clubId);
     const { active_members } = database_1.db
         .prepare(`SELECT COUNT(*) AS active_members FROM memberships WHERE club_id = ? AND status = 'active'`)
         .get(clubId);
-    res.json({ published_events, total_attendance, achievements_awarded, active_members });
+    res.json({ published_events, total_attendance, active_members });
 }
 /**
  * POST /api/clubs/:id/assign-leader  (admin only)
@@ -223,11 +220,7 @@ function getClubDashboard(req, res) {
        FROM registrations r
        JOIN events e ON e.id = r.event_id AND e.club_id = ?`)
         .get(clubId);
-    const { achievement_count } = database_1.db
-        .prepare(`SELECT COUNT(*) AS achievement_count FROM achievements WHERE club_id = ?`)
-        .get(clubId);
     const attendance_rate = total_registered > 0 ? Math.round((total_attendance / total_registered) * 100) : 0;
-    const total_points = total_attendance + achievement_count;
     const recent_events = database_1.db
         .prepare(`SELECT id, title, title_ar, starts_at, status, category
        FROM events WHERE club_id = ? ORDER BY starts_at DESC LIMIT 5`)
@@ -243,7 +236,6 @@ function getClubDashboard(req, res) {
         unique_attendees,
         total_attendance,
         attendance_rate,
-        total_points,
         recent_events,
     });
 }

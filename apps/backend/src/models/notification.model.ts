@@ -8,14 +8,31 @@ export interface Notification {
   type: 'info' | 'success' | 'warning' | 'error';
   is_read: number;
   target_url: string | null;
+  actions_json: string | null;
   created_at: string;
 }
 
 export const NotificationModel = {
-  create(data: { user_id: number; title: string; body?: string; type?: string; target_url?: string | null }): Notification {
+  create(data: {
+    user_id: number;
+    title: string;
+    body?: string;
+    type?: string;
+    target_url?: string | null;
+    actions_json?: Record<string, unknown> | null;
+  }): Notification {
     const result = db
-      .prepare('INSERT INTO notifications (user_id, title, body, type, target_url) VALUES (?, ?, ?, ?, ?)')
-      .run(data.user_id, data.title, data.body || null, data.type || 'info', data.target_url ?? null);
+      .prepare(
+        'INSERT INTO notifications (user_id, title, body, type, target_url, actions_json) VALUES (?, ?, ?, ?, ?, ?)',
+      )
+      .run(
+        data.user_id,
+        data.title,
+        data.body || null,
+        data.type || 'info',
+        data.target_url ?? null,
+        data.actions_json ? JSON.stringify(data.actions_json) : null,
+      );
     return db.prepare('SELECT * FROM notifications WHERE id = ?').get(result.lastInsertRowid) as Notification;
   },
 

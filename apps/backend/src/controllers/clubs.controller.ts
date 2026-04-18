@@ -116,15 +116,11 @@ export function getClubStats(req: Request, res: Response) {
     )
     .get(clubId) as { total_attendance: number };
 
-  const { achievements_awarded } = db
-    .prepare(`SELECT COUNT(*) AS achievements_awarded FROM achievements WHERE club_id = ?`)
-    .get(clubId) as { achievements_awarded: number };
-
   const { active_members } = db
     .prepare(`SELECT COUNT(*) AS active_members FROM memberships WHERE club_id = ? AND status = 'active'`)
     .get(clubId) as { active_members: number };
 
-  res.json({ published_events, total_attendance, achievements_awarded, active_members });
+  res.json({ published_events, total_attendance, active_members });
 }
 
 /**
@@ -263,13 +259,8 @@ export function getClubDashboard(req: AuthRequest, res: Response) {
     )
     .get(clubId) as { total_registered: number };
 
-  const { achievement_count } = db
-    .prepare(`SELECT COUNT(*) AS achievement_count FROM achievements WHERE club_id = ?`)
-    .get(clubId) as { achievement_count: number };
-
   const attendance_rate =
     total_registered > 0 ? Math.round((total_attendance / total_registered) * 100) : 0;
-  const total_points = total_attendance + achievement_count;
 
   const recent_events = db
     .prepare(
@@ -289,7 +280,6 @@ export function getClubDashboard(req: AuthRequest, res: Response) {
     unique_attendees,
     total_attendance,
     attendance_rate,
-    total_points,
     recent_events,
   });
 }

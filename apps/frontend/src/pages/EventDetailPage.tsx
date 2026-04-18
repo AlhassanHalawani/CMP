@@ -38,6 +38,54 @@ import { EventFormDialog } from '@/components/events/EventFormDialog';
 import { useAppToast } from '@/contexts/ToastContext';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
+function TwitterEmbed({ url }: { url: string }) {
+  // Extract tweet ID from URL (supports twitter.com and x.com)
+  const match = url.match(/\/status\/(\d+)/);
+  const tweetId = match?.[1];
+
+  if (!tweetId) {
+    return (
+      <Card className="mb-6">
+        <CardContent>
+          <a href={url} target="_blank" rel="noreferrer" className="text-sm underline break-all">
+            {url}
+          </a>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Lightweight oEmbed iframe approach — no external SDK needed
+  const embedUrl = `https://platform.twitter.com/embed/Tweet.html?id=${tweetId}&theme=light&dnt=true`;
+
+  return (
+    <Card className="mb-6">
+      <CardContent>
+        <p className="text-sm font-bold mb-2">Post</p>
+        <iframe
+          src={embedUrl}
+          className="w-full border-0 rounded"
+          style={{ minHeight: 300 }}
+          title="Twitter/X post"
+          loading="lazy"
+          sandbox="allow-scripts allow-same-origin allow-popups"
+          onError={(e) => {
+            // On load failure, replace with a plain link
+            const iframe = e.currentTarget as HTMLIFrameElement;
+            const link = document.createElement('a');
+            link.href = url;
+            link.target = '_blank';
+            link.rel = 'noreferrer';
+            link.textContent = url;
+            link.className = 'text-sm underline break-all';
+            iframe.replaceWith(link);
+          }}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
 const STATUS_BADGE_CLASS: Record<string, string> = {
   draft: 'bg-secondary-background text-foreground',
   submitted: 'bg-blue-500 text-white',
@@ -381,6 +429,10 @@ export function EventDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {event.twitter_url && (
+        <TwitterEmbed url={event.twitter_url} />
+      )}
 
       {event.status === 'published' && (
         <div className="flex flex-wrap gap-3 mb-6">

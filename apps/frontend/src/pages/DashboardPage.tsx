@@ -144,7 +144,6 @@ function ClubLeaderDashboard({ clubId }: { clubId: number }) {
         { name: t('clubs.publishedEvents', 'Published Events'), value: dash.published_events },
         { name: t('clubs.totalAttendance', 'Total Attendance'), value: dash.total_attendance },
         { name: t('clubs.activeMembers', 'Members'), value: dash.active_members },
-        { name: t('clubs.totalPoints', 'Points'), value: dash.total_points },
       ]
     : [];
 
@@ -168,10 +167,6 @@ function ClubLeaderDashboard({ clubId }: { clubId: number }) {
             <p className="text-4xl font-black">{dash?.total_attendance ?? '…'}</p>
             {dash && <p className="text-xs opacity-60 mt-1">{dash.attendance_rate}% rate</p>}
           </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-1"><CardTitle className="text-sm">{t('clubs.totalPoints', 'Points')}</CardTitle></CardHeader>
-          <CardContent><p className="text-4xl font-black">{dash?.total_points ?? '…'}</p></CardContent>
         </Card>
       </div>
 

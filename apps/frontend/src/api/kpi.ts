@@ -11,9 +11,7 @@ export interface LeaderboardEntry {
   club_name: string;
   department: string | null;
   attendance_count: number;
-  achievement_count: number;
   member_count: number;
-  total_score: number;
   rank: number;
 }
 
@@ -21,11 +19,10 @@ export interface StudentKpiEntry {
   user_id: number;
   name: string;
   email: string;
+  xp_total: number;
   attendance_count: number;
-  achievement_count: number;
   registration_count: number;
   active_memberships: number;
-  engagement_score: number;
   rank: number;
 }
 

@@ -20,9 +20,8 @@ export interface LeaderboardEntry {
   club_name: string;
   department: string | null;
   attendance_count: number;
-  achievement_count: number;
   member_count: number;
-  total_score: number;
+  // Club ranking formula: attendance_count DESC (primary), member_count DESC (tiebreaker)
   rank: number;
 }
 
@@ -30,11 +29,10 @@ export interface StudentKpiEntry {
   user_id: number;
   name: string;
   email: string;
+  xp_total: number;
   attendance_count: number;
-  achievement_count: number;
   registration_count: number;
   active_memberships: number;
-  engagement_score: number;
   rank: number;
 }
 
@@ -47,12 +45,8 @@ export const KpiModel = {
   },
 
   getClubSummary(clubId: number, semesterId?: number): ClubKpiSummary[] {
-    // Compute live from base tables instead of reading precomputed kpi_metrics rows
     const semAttWhere = semesterId
       ? `AND a.checked_in_at BETWEEN (SELECT starts_at FROM semesters WHERE id = ${semesterId}) AND (SELECT ends_at FROM semesters WHERE id = ${semesterId})`
-      : '';
-    const semAchWhere = semesterId
-      ? `AND ach.awarded_at BETWEEN (SELECT starts_at FROM semesters WHERE id = ${semesterId}) AND (SELECT ends_at FROM semesters WHERE id = ${semesterId})`
       : '';
 
     const { attendance_count } = db.prepare(`
@@ -62,31 +56,19 @@ export const KpiModel = {
       ${semAttWhere}
     `).get(clubId) as { attendance_count: number };
 
-    const { achievement_count } = db.prepare(`
-      SELECT COUNT(ach.id) AS achievement_count
-      FROM achievements ach
-      WHERE ach.club_id = ? ${semAchWhere}
-    `).get(clubId) as { achievement_count: number };
-
     const { member_count } = db.prepare(`
       SELECT COUNT(*) AS member_count FROM memberships WHERE club_id = ? AND status = 'active'
     `).get(clubId) as { member_count: number };
 
     return [
       { club_id: clubId, metric_key: 'attendance_count', total: attendance_count },
-      { club_id: clubId, metric_key: 'achievement_count', total: achievement_count },
       { club_id: clubId, metric_key: 'member_count', total: member_count },
-      { club_id: clubId, metric_key: 'total_score', total: attendance_count + achievement_count },
     ];
   },
 
   getLeaderboard(semesterId?: number, department?: string): LeaderboardEntry[] {
-    // Compute live from base tables so the leaderboard shows real data even when kpi_metrics is empty
     const semAttJoin = semesterId
       ? `JOIN semesters sem_a ON sem_a.id = ${semesterId} AND a.checked_in_at BETWEEN sem_a.starts_at AND sem_a.ends_at`
-      : '';
-    const semAchJoin = semesterId
-      ? `JOIN semesters sem_b ON sem_b.id = ${semesterId} AND ach.awarded_at BETWEEN sem_b.starts_at AND sem_b.ends_at`
       : '';
     const departmentWhere = department ? 'WHERE c.department = ?' : '';
 
@@ -99,9 +81,7 @@ export const KpiModel = {
         c.name AS club_name,
         c.department,
         COALESCE(att.attendance_count, 0) AS attendance_count,
-        COALESCE(ach.achievement_count, 0) AS achievement_count,
-        COALESCE(mem.member_count, 0) AS member_count,
-        COALESCE(att.attendance_count, 0) + COALESCE(ach.achievement_count, 0) AS total_score
+        COALESCE(mem.member_count, 0) AS member_count
       FROM clubs c
       LEFT JOIN (
         SELECT e.club_id, COUNT(a.id) AS attendance_count
@@ -111,36 +91,26 @@ export const KpiModel = {
         GROUP BY e.club_id
       ) att ON att.club_id = c.id
       LEFT JOIN (
-        SELECT ach.club_id, COUNT(ach.id) AS achievement_count
-        FROM achievements ach
-        ${semAchJoin}
-        GROUP BY ach.club_id
-      ) ach ON ach.club_id = c.id
-      LEFT JOIN (
         SELECT m.club_id, COUNT(*) AS member_count
         FROM memberships m WHERE m.status = 'active'
         GROUP BY m.club_id
       ) mem ON mem.club_id = c.id
       ${departmentWhere}
-      ORDER BY total_score DESC, c.name ASC
+      ORDER BY attendance_count DESC, member_count DESC, c.name ASC
     `;
 
     const rows = db.prepare(sql).all(...params) as Omit<LeaderboardEntry, 'rank'>[];
 
     let rank = 1;
     return rows.map((row, i) => {
-      if (i > 0 && row.total_score < (rows[i - 1] as any).total_score) rank = i + 1;
+      if (i > 0 && row.attendance_count < (rows[i - 1] as any).attendance_count) rank = i + 1;
       return { ...row, rank };
     });
   },
 
   getStudentKpi(semesterId?: number): StudentKpiEntry[] {
-    // Build semester-aware attendance and achievement subqueries using parameterized joins
     const attSemJoin = semesterId
       ? 'JOIN semesters sem_a ON sem_a.id = ? AND a.checked_in_at BETWEEN sem_a.starts_at AND sem_a.ends_at'
-      : '';
-    const achSemJoin = semesterId
-      ? 'JOIN semesters sem_c ON sem_c.id = ? AND ach.awarded_at BETWEEN sem_c.starts_at AND sem_c.ends_at'
       : '';
 
     const sql = `
@@ -148,11 +118,10 @@ export const KpiModel = {
         u.id   AS user_id,
         u.name,
         u.email,
+        COALESCE(u.xp_total, 0) AS xp_total,
         COALESCE(att.attendance_count,   0) AS attendance_count,
-        COALESCE(ach.achievement_count,  0) AS achievement_count,
         COALESCE(reg.registration_count, 0) AS registration_count,
-        COALESCE(mem.active_memberships, 0) AS active_memberships,
-        (COALESCE(att.attendance_count, 0) + COALESCE(ach.achievement_count, 0)) AS engagement_score
+        COALESCE(mem.active_memberships, 0) AS active_memberships
       FROM users u
       LEFT JOIN (
         SELECT a.user_id, COUNT(*) AS attendance_count
@@ -161,12 +130,6 @@ export const KpiModel = {
         ${attSemJoin}
         GROUP BY a.user_id
       ) att ON att.user_id = u.id
-      LEFT JOIN (
-        SELECT ach.user_id, COUNT(*) AS achievement_count
-        FROM achievements ach
-        ${achSemJoin}
-        GROUP BY ach.user_id
-      ) ach ON ach.user_id = u.id
       LEFT JOIN (
         SELECT r.user_id, COUNT(*) AS registration_count
         FROM registrations r
@@ -179,18 +142,17 @@ export const KpiModel = {
         GROUP BY m.user_id
       ) mem ON mem.user_id = u.id
       WHERE u.role = 'student'
-      ORDER BY engagement_score DESC, u.name ASC
+      ORDER BY xp_total DESC, u.name ASC
     `;
 
     const params: any[] = [];
     if (semesterId) params.push(semesterId); // for attSemJoin
-    if (semesterId) params.push(semesterId); // for achSemJoin
 
     const rows = db.prepare(sql).all(...params) as Omit<StudentKpiEntry, 'rank'>[];
 
     let rank = 1;
     return rows.map((row, i) => {
-      if (i > 0 && row.engagement_score < (rows[i - 1] as any).engagement_score) rank = i + 1;
+      if (i > 0 && row.xp_total < (rows[i - 1] as any).xp_total) rank = i + 1;
       return { ...row, rank };
     });
   },
@@ -203,7 +165,7 @@ export const KpiModel = {
 
     const { starts_at, ends_at } = semester;
 
-    const computedKeys = ['attendance_count', 'achievement_count', 'member_count', 'total_score'];
+    const computedKeys = ['attendance_count', 'member_count'];
 
     db.transaction(() => {
       // Delete old computed rows for this semester
@@ -226,19 +188,6 @@ export const KpiModel = {
           .run(row.club_id, semesterId, 'attendance_count', row.cnt);
       }
 
-      // Achievement count per club
-      const achievements = db.prepare(`
-        SELECT club_id, COUNT(id) AS cnt
-        FROM achievements
-        WHERE awarded_at BETWEEN ? AND ?
-        GROUP BY club_id
-      `).all(starts_at, ends_at) as { club_id: number; cnt: number }[];
-
-      for (const row of achievements) {
-        db.prepare('INSERT INTO kpi_metrics (club_id, semester_id, metric_key, metric_value) VALUES (?, ?, ?, ?)')
-          .run(row.club_id, semesterId, 'achievement_count', row.cnt);
-      }
-
       // Active member count per club
       const members = db.prepare(`
         SELECT club_id, COUNT(*) AS cnt
@@ -250,28 +199,12 @@ export const KpiModel = {
         db.prepare('INSERT INTO kpi_metrics (club_id, semester_id, metric_key, metric_value) VALUES (?, ?, ?, ?)')
           .run(row.club_id, semesterId, 'member_count', row.cnt);
       }
-
-      // Build a map of all affected club_ids
-      const clubIds = new Set([
-        ...attendances.map((r) => r.club_id),
-        ...achievements.map((r) => r.club_id),
-        ...members.map((r) => r.club_id),
-      ]);
-
-      // Total score = attendance_count + achievement_count
-      for (const clubId of clubIds) {
-        const attRow = attendances.find((r) => r.club_id === clubId);
-        const achRow = achievements.find((r) => r.club_id === clubId);
-        const total = (attRow?.cnt ?? 0) + (achRow?.cnt ?? 0);
-        db.prepare('INSERT INTO kpi_metrics (club_id, semester_id, metric_key, metric_value) VALUES (?, ?, ?, ?)')
-          .run(clubId, semesterId, 'total_score', total);
-      }
     })();
 
     return (db.prepare(`
       SELECT COUNT(DISTINCT club_id) AS n
       FROM kpi_metrics
-      WHERE semester_id = ? AND metric_key = 'total_score'
+      WHERE semester_id = ? AND metric_key = 'attendance_count'
     `).get(semesterId) as any).n as number;
   },
 };

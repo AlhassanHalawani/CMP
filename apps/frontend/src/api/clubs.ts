@@ -14,7 +14,6 @@ export interface Club {
 export interface ClubStats {
   published_events: number;
   total_attendance: number;
-  achievements_awarded: number;
   active_members: number;
 }
 
@@ -29,7 +28,6 @@ export interface ClubDashboard {
   unique_attendees: number;
   total_attendance: number;
   attendance_rate: number;
-  total_points: number;
   recent_events: Array<{
     id: number;
     title: string;

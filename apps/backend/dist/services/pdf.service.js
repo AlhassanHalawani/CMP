@@ -219,11 +219,11 @@ async function generateKpiReport(leaderboard, semesterName) {
         doc.fontSize(10).font('Helvetica').fillColor('#666')
             .text(`Generated: ${new Date().toISOString().slice(0, 10)}`, { align: 'center' });
         doc.moveDown(1.5);
-        // Column layout
-        const colX = [50, 120, 250, 320, 390, 460, 510];
-        const headers = ['Rank', 'Club', 'Dept', 'Attend.', 'Achiev.', 'Members', 'Score'];
+        // Column layout (rank, club, dept, attendance, members)
+        const colX = [50, 120, 260, 350, 430, 510];
+        const headers = ['Rank', 'Club', 'Dept', 'Attend.', 'Members'];
         doc.fillColor('#000').fontSize(9).font('Helvetica-Bold');
-        headers.forEach((h, i) => doc.text(h, colX[i], doc.y, { width: colX[i + 1] ? colX[i + 1] - colX[i] - 5 : 60, continued: i < headers.length - 1 }));
+        headers.forEach((h, i) => doc.text(h, colX[i], doc.y, { width: colX[i + 1] ? colX[i + 1] - colX[i] - 5 : 70, continued: i < headers.length - 1 }));
         doc.moveDown(0.3);
         doc.moveTo(50, doc.y).lineTo(560, doc.y).strokeColor('#ccc').stroke();
         doc.moveDown(0.4);
@@ -238,12 +238,10 @@ async function generateKpiReport(leaderboard, semesterName) {
             doc.fillColor('#000').fontSize(9).font(club.rank <= 3 ? 'Helvetica-Bold' : 'Helvetica');
             const cells = [
                 String(club.rank),
-                club.club_name.slice(0, 18),
-                (club.department ?? '—').slice(0, 10),
+                club.club_name.slice(0, 22),
+                (club.department ?? '—').slice(0, 12),
                 String(club.attendance_count),
-                String(club.achievement_count),
                 String(club.member_count),
-                String(club.total_score),
             ];
             cells.forEach((c, i) => {
                 doc.text(c, colX[i], y, { width: colX[i + 1] ? colX[i + 1] - colX[i] - 5 : 60, continued: i < cells.length - 1 });

@@ -36,16 +36,14 @@ export async function getLeaderboard(req: Request, res: Response) {
   const leaderboard = KpiModel.getLeaderboard(semesterId, department);
 
   if (format === 'csv') {
-    const rows = [['Rank', 'Club', 'Department', 'Attendance', 'Achievements', 'Members', 'Total Score']];
+    const rows = [['Rank', 'Club', 'Department', 'Attendance', 'Members']];
     for (const club of leaderboard) {
       rows.push([
         String(club.rank),
         club.club_name,
         club.department ?? '',
         String(club.attendance_count),
-        String(club.achievement_count),
         String(club.member_count),
-        String(club.total_score),
       ]);
     }
     const csv = rows.map((r) => r.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\n');

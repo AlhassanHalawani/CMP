@@ -40,15 +40,15 @@ import { clubsApi } from '@/api/clubs';
 import { useAuth } from '@/contexts/AuthContext';
 
 const leaderboardChartConfig: ChartConfig = {
-  total_score: {
-    label: 'Score',
+  attendance_count: {
+    label: 'Attendance',
     color: 'var(--color-main, #facc15)',
   },
 };
 
 const studentChartConfig: ChartConfig = {
-  engagement_score: {
-    label: 'Engagement',
+  xp_total: {
+    label: 'XP',
     color: 'var(--color-main, #facc15)',
   },
 };
@@ -108,24 +108,19 @@ export function KpiPage() {
   const leaderboardData = leaderboard?.data ?? [];
   const summaryData = clubSummary?.data ?? [];
   const studentData = studentKpi?.data ?? [];
-  const maxScore = leaderboardData[0]?.total_score ?? 0;
-  const maxEngagement = studentData[0]?.engagement_score ?? 0;
+  const maxAttendance = leaderboardData[0]?.attendance_count ?? 0;
+  const maxXp = studentData[0]?.xp_total ?? 0;
 
-  // Unique departments from clubs list
   const departments = Array.from(
     new Set((clubs?.data ?? []).map((c: any) => c.department).filter(Boolean)),
   ) as string[];
 
-  // Human-readable labels for raw metric keys
   const METRIC_LABELS: Record<string, string> = {
-    attendance_count: 'Attendance',
-    achievement_count: 'Achievements',
-    member_count: 'Members',
-    total_score: 'Total Score',
+    attendance_count: t('kpi.attendance', 'Attendance'),
+    member_count: t('kpi.members', 'Members'),
   };
 
-  // Stable set of primary metrics (excludes total_score from bar chart)
-  const PRIMARY_METRICS = ['attendance_count', 'achievement_count', 'member_count'];
+  const PRIMARY_METRICS = ['attendance_count', 'member_count'];
 
   const metricMap = new Map(summaryData.map((s) => [s.metric_key, s.total]));
 
@@ -133,8 +128,6 @@ export function KpiPage() {
     name: METRIC_LABELS[key] ?? key,
     value: metricMap.get(key) ?? 0,
   }));
-
-  const totalScore = metricMap.get('total_score') ?? 0;
 
   const summaryChartConfig: ChartConfig = {
     value: { label: 'Count', color: 'var(--color-main, #facc15)' },
@@ -246,13 +239,12 @@ export function KpiPage() {
           {isAdmin && <TabsTrigger value="students">{t('kpi.students', 'Students')}</TabsTrigger>}
         </TabsList>
 
-        {/* Leaderboard tab */}
+        {/* Leaderboard tab — clubs ranked by attendance */}
         <TabsContent value="leaderboard">
           {leaderboardLoading ? (
             <div className="flex justify-center p-12"><Spinner size="lg" /></div>
           ) : (
             <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-2">
-              {/* Bar chart */}
               <Card>
                 <CardHeader>
                   <CardTitle>{t('kpi.leaderboardChart')}</CardTitle>
@@ -269,14 +261,13 @@ export function KpiPage() {
                         <XAxis type="number" />
                         <YAxis type="category" dataKey="club_name" width={75} tick={{ fontSize: 12 }} />
                         <ChartTooltip content={<ChartTooltipContent />} />
-                        <Bar dataKey="total_score" fill="var(--color-total_score)" radius={[0, 4, 4, 0]} />
+                        <Bar dataKey="attendance_count" fill="var(--color-attendance_count)" radius={[0, 4, 4, 0]} />
                       </BarChart>
                     </ChartContainer>
                   )}
                 </CardContent>
               </Card>
 
-              {/* Ranked table */}
               <Card>
                 <CardHeader>
                   <CardTitle>{t('kpi.rankings')}</CardTitle>
@@ -288,14 +279,13 @@ export function KpiPage() {
                         <TableHead className="w-12">{t('kpi.rank', 'Rank')}</TableHead>
                         <TableHead>{t('kpi.club', 'Club')}</TableHead>
                         <TableHead className="text-right">{t('kpi.attendance', 'Attend.')}</TableHead>
-                        <TableHead className="text-right">{t('kpi.achievements', 'Achiev.')}</TableHead>
-                        <TableHead className="text-right">{t('kpi.score', 'Score')}</TableHead>
+                        <TableHead className="text-right">{t('kpi.members', 'Members')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {leaderboardData.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={5} className="py-8 text-center text-sm opacity-50">
+                          <TableCell colSpan={4} className="py-8 text-center text-sm opacity-50">
                             {t('kpi.noClubsYet', 'No clubs yet')}
                           </TableCell>
                         </TableRow>
@@ -313,17 +303,12 @@ export function KpiPage() {
                                 <div className="text-xs opacity-50">{entry.department}</div>
                               )}
                               <Progress
-                                value={maxScore > 0 ? (entry.total_score / maxScore) * 100 : 0}
+                                value={maxAttendance > 0 ? (entry.attendance_count / maxAttendance) * 100 : 0}
                                 className="mt-1 h-1.5"
                               />
                             </TableCell>
                             <TableCell className="text-right text-sm">{entry.attendance_count}</TableCell>
-                            <TableCell className="text-right text-sm">{entry.achievement_count}</TableCell>
-                            <TableCell className="text-right">
-                              <Badge variant="accent" className="text-sm px-2 py-0.5">
-                                {entry.total_score}
-                              </Badge>
-                            </TableCell>
+                            <TableCell className="text-right text-sm">{entry.member_count}</TableCell>
                           </TableRow>
                         ))
                       )}
@@ -360,7 +345,6 @@ export function KpiPage() {
             <div className="flex justify-center p-12"><Spinner size="lg" /></div>
           ) : (
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              {/* Bar chart — primary metrics */}
               <Card>
                 <CardHeader>
                   <CardTitle>{t('kpi.metricsBreakdown')}</CardTitle>
@@ -384,7 +368,6 @@ export function KpiPage() {
                 </CardContent>
               </Card>
 
-              {/* Metric stat cards */}
               <div className="space-y-3">
                 {barData.map((metric) => (
                   <Card key={metric.name}>
@@ -396,31 +379,21 @@ export function KpiPage() {
                     </CardContent>
                   </Card>
                 ))}
-                {/* Total Score — separate highlight card */}
-                <Card className="border-[var(--main)] border-2">
-                  <CardContent className="flex items-center justify-between py-4">
-                    <span className="font-black">{METRIC_LABELS['total_score']}</span>
-                    <Badge variant="accent" className="text-xl px-4 py-1">
-                      {totalScore}
-                    </Badge>
-                  </CardContent>
-                </Card>
               </div>
             </div>
           )}
         </TabsContent>
 
-        {/* Students tab — admin only */}
+        {/* Students tab — admin only, ranked by XP */}
         {isAdmin && (
           <TabsContent value="students">
             {studentLoading ? (
               <div className="flex justify-center p-12"><Spinner size="lg" /></div>
             ) : (
               <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-2">
-                {/* Student engagement bar chart */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>{t('kpi.studentEngagement', 'Student Engagement')}</CardTitle>
+                    <CardTitle>{t('kpi.studentXp', 'Student XP')}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     {studentData.length === 0 ? (
@@ -434,14 +407,13 @@ export function KpiPage() {
                           <XAxis type="number" />
                           <YAxis type="category" dataKey="name" width={105} tick={{ fontSize: 11 }} />
                           <ChartTooltip content={<ChartTooltipContent />} />
-                          <Bar dataKey="engagement_score" fill="var(--color-engagement_score)" radius={[0, 4, 4, 0]} />
+                          <Bar dataKey="xp_total" fill="var(--color-xp_total)" radius={[0, 4, 4, 0]} />
                         </BarChart>
                       </ChartContainer>
                     )}
                   </CardContent>
                 </Card>
 
-                {/* Student table */}
                 <Card>
                   <CardHeader>
                     <CardTitle>{t('kpi.studentRankings', 'Student Rankings')}</CardTitle>
@@ -453,14 +425,13 @@ export function KpiPage() {
                           <TableHead className="w-12">{t('kpi.rank', 'Rank')}</TableHead>
                           <TableHead>{t('kpi.student', 'Student')}</TableHead>
                           <TableHead className="text-right">{t('kpi.attendance', 'Attend.')}</TableHead>
-                          <TableHead className="text-right">{t('kpi.achievements', 'Achiev.')}</TableHead>
-                          <TableHead className="text-right">{t('kpi.score', 'Score')}</TableHead>
+                          <TableHead className="text-right">{t('kpi.xp', 'XP')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {studentData.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={5} className="py-8 text-center text-sm opacity-50">
+                            <TableCell colSpan={4} className="py-8 text-center text-sm opacity-50">
                               {t('kpi.noStudentsYet', 'No students yet')}
                             </TableCell>
                           </TableRow>
@@ -476,15 +447,14 @@ export function KpiPage() {
                                 <div className="font-bold">{entry.name}</div>
                                 <div className="text-xs opacity-50">{entry.email}</div>
                                 <Progress
-                                  value={maxEngagement > 0 ? (entry.engagement_score / maxEngagement) * 100 : 0}
+                                  value={maxXp > 0 ? (entry.xp_total / maxXp) * 100 : 0}
                                   className="mt-1 h-1.5"
                                 />
                               </TableCell>
                               <TableCell className="text-right text-sm">{entry.attendance_count}</TableCell>
-                              <TableCell className="text-right text-sm">{entry.achievement_count}</TableCell>
                               <TableCell className="text-right">
                                 <Badge variant="accent" className="text-sm px-2 py-0.5">
-                                  {entry.engagement_score}
+                                  {entry.xp_total}
                                 </Badge>
                               </TableCell>
                             </TableRow>

@@ -13,6 +13,8 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 
+const TWITTER_URL_PATTERN = /^https:\/\/(twitter\.com|x\.com)\/\w+\/status\/\d+/;
+
 type EventPayload = {
   club_id: number;
   title: string;
@@ -26,6 +28,7 @@ type EventPayload = {
   members_only: number;
   delivery_mode: 'physical' | 'online';
   status: 'draft' | 'submitted' | 'published' | 'rejected' | 'cancelled' | 'completed';
+  twitter_url: string | null;
 };
 
 type EventFormValues = {
@@ -40,6 +43,7 @@ type EventFormValues = {
   capacity: string;
   delivery_mode: 'physical' | 'online';
   status: EventPayload['status'];
+  twitter_url: string;
 };
 
 type ClubOption = {
@@ -72,6 +76,7 @@ const emptyValues: EventFormValues = {
   capacity: '',
   delivery_mode: 'physical',
   status: 'draft',
+  twitter_url: '',
 };
 
 function toDateTimeLocal(value?: string): string {
@@ -115,6 +120,7 @@ export function EventFormDialog({
       capacity: initialValues?.capacity ? String(initialValues.capacity) : '',
       delivery_mode: initialValues?.delivery_mode ?? 'physical',
       status: initialValues?.status ?? 'draft',
+      twitter_url: initialValues?.twitter_url ?? '',
     }),
     [initialValues]
   );
@@ -157,6 +163,12 @@ export function EventFormDialog({
       return;
     }
 
+    const twitterUrl = values.twitter_url.trim();
+    if (twitterUrl && !TWITTER_URL_PATTERN.test(twitterUrl)) {
+      setLocalError('Twitter/X URL must be a valid post URL (e.g. https://x.com/user/status/123).');
+      return;
+    }
+
     await onSubmit({
       club_id: Number(values.club_id),
       title: values.title.trim(),
@@ -170,6 +182,7 @@ export function EventFormDialog({
       members_only: membersOnly ? 1 : 0,
       delivery_mode: values.delivery_mode,
       status: values.status,
+      twitter_url: twitterUrl || null,
     });
   };
 
@@ -272,6 +285,12 @@ export function EventFormDialog({
             <Switch id="members-only" checked={membersOnly} onCheckedChange={setMembersOnly} />
             <label htmlFor="members-only" className="text-sm font-medium cursor-pointer">Members only</label>
           </div>
+
+          <Input
+            placeholder="Twitter/X post URL (optional, e.g. https://x.com/user/status/123)"
+            value={values.twitter_url}
+            onChange={(e) => updateField('twitter_url', e.target.value)}
+          />
 
           {(localError || errorMessage) && <p className="text-sm font-bold text-red-600">{localError || errorMessage}</p>}
 

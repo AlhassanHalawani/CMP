@@ -5,9 +5,7 @@ import { ClubModel } from '../models/club.model';
 import { canManageClub } from '../services/ownership.service';
 import { notify } from '../services/notifications.service';
 import { logAction } from '../services/audit.service';
-import { evaluateClubAchievements } from '../services/achievement-engine.service';
 import { evaluateStudentBadges } from '../services/badge-engine.service';
-import { awardXp } from '../services/gamification.service';
 
 export async function joinClub(req: AuthRequest, res: Response) {
   const clubId = parseInt(req.params.id);
@@ -38,6 +36,14 @@ export async function joinClub(req: AuthRequest, res: Response) {
         title: 'New Membership Request',
         body: `${req.user!.name} has requested to join "${club.name}".`,
         type: 'info',
+        targetUrl: `/clubs/${clubId}`,
+        actionsJson: {
+          type: 'membership_request',
+          club_id: clubId,
+          requester_id: userId,
+          requester_name: req.user!.name,
+          club_name: club.name,
+        },
       });
     }
     res.status(201).json(updated);
@@ -52,6 +58,14 @@ export async function joinClub(req: AuthRequest, res: Response) {
       title: 'New Membership Request',
       body: `${req.user!.name} has requested to join "${club.name}".`,
       type: 'info',
+      targetUrl: `/clubs/${clubId}`,
+      actionsJson: {
+        type: 'membership_request',
+        club_id: clubId,
+        requester_id: userId,
+        requester_name: req.user!.name,
+        club_name: club.name,
+      },
     });
   }
   res.status(201).json(membership);
@@ -124,28 +138,7 @@ export async function updateMembership(req: AuthRequest, res: Response) {
       body: `Your membership request to "${club.name}" has been approved.`,
       type: 'success',
     });
-    // Award XP for joining a club (only when membership becomes active, not at pending stage)
-    try {
-      const xpResult = awardXp({
-        userId: targetUserId,
-        actionKey: 'membership_joined',
-        referenceKey: `membership:${clubId}:${targetUserId}`,
-        sourceType: 'club',
-        sourceId: clubId,
-      });
-      if (xpResult?.level_up) {
-        await notify({
-          userId: targetUserId,
-          eventType: 'level_up',
-          title: 'Level Up!',
-          body: `You reached Level ${xpResult.new_level}. Keep it up!`,
-          type: 'success',
-          targetUrl: '/profile',
-        });
-      }
-    } catch { /* best-effort */ }
-    // Best-effort: evaluate club achievements and student badges after a new member is approved
-    try { evaluateClubAchievements(clubId); } catch { /* ignore */ }
+    // Best-effort: evaluate student badges after a new member is approved
     try { evaluateStudentBadges(targetUserId); } catch { /* ignore */ }
   } else {
     await notify({
