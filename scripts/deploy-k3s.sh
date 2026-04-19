@@ -21,6 +21,22 @@ if [[ -z "$CR_PAT" ]];         then echo "error: CR_PAT is required" >&2;       
 if [[ -z "$BACKEND_IMAGE" ]];  then echo "error: BACKEND_IMAGE is required" >&2;  exit 1; fi
 if [[ -z "$FRONTEND_IMAGE" ]]; then echo "error: FRONTEND_IMAGE is required" >&2; exit 1; fi
 
+# Ensure kubectl can reach the cluster; fall back to k3s admin kubeconfig
+if ! kubectl cluster-info &>/dev/null; then
+  K3S_YAML=/etc/rancher/k3s/k3s.yaml
+  if [[ -f "$K3S_YAML" ]]; then
+    echo "kubectl auth failed — refreshing kubeconfig from $K3S_YAML"
+    mkdir -p ~/.kube
+    sudo cp "$K3S_YAML" ~/.kube/config
+    sudo chown "$(id -u):$(id -g)" ~/.kube/config
+    chmod 600 ~/.kube/config
+  else
+    echo "error: kubectl cannot authenticate and $K3S_YAML not found." >&2
+    echo "       Copy the k3s kubeconfig manually: sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config" >&2
+    exit 1
+  fi
+fi
+
 echo "Deploying to namespace: ${NAMESPACE}"
 echo "Backend:  ${BACKEND_IMAGE}"
 echo "Frontend: ${FRONTEND_IMAGE}"
