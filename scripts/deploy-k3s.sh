@@ -22,17 +22,20 @@ if [[ -z "$BACKEND_IMAGE" ]];  then echo "error: BACKEND_IMAGE is required" >&2;
 if [[ -z "$FRONTEND_IMAGE" ]]; then echo "error: FRONTEND_IMAGE is required" >&2; exit 1; fi
 
 # Ensure kubectl can reach the cluster; fall back to k3s admin kubeconfig
+K3S_YAML=/etc/rancher/k3s/k3s.yaml
 if ! kubectl cluster-info &>/dev/null; then
-  K3S_YAML=/etc/rancher/k3s/k3s.yaml
   if [[ -f "$K3S_YAML" ]]; then
-    echo "kubectl auth failed — refreshing kubeconfig from $K3S_YAML"
-    mkdir -p ~/.kube
-    sudo cp "$K3S_YAML" ~/.kube/config
-    sudo chown "$(id -u):$(id -g)" ~/.kube/config
-    chmod 600 ~/.kube/config
+    echo "kubectl auth failed — falling back to $K3S_YAML"
+    export KUBECONFIG="$K3S_YAML"
   else
     echo "error: kubectl cannot authenticate and $K3S_YAML not found." >&2
-    echo "       Copy the k3s kubeconfig manually: sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config" >&2
+    echo "       Run: sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config && sudo chown \$(id -u):\$(id -g) ~/.kube/config" >&2
+    exit 1
+  fi
+  # Verify the fallback actually works
+  if ! kubectl cluster-info &>/dev/null; then
+    echo "error: kubectl still cannot authenticate even with $K3S_YAML." >&2
+    echo "       Check k3s is running: sudo systemctl status k3s" >&2
     exit 1
   fi
 fi
