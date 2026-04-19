@@ -48,7 +48,8 @@ export function createTestDb() {
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       checkin_open INTEGER NOT NULL DEFAULT 0,
       checkin_finalized INTEGER NOT NULL DEFAULT 0,
-      category TEXT
+      category TEXT,
+      twitter_url TEXT
     );
     CREATE TABLE IF NOT EXISTS notifications (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -58,6 +59,7 @@ export function createTestDb() {
       type TEXT NOT NULL DEFAULT 'info' CHECK (type IN ('info', 'success', 'warning', 'error')),
       is_read INTEGER NOT NULL DEFAULT 0,
       target_url TEXT,
+      actions_json TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
     CREATE TABLE IF NOT EXISTS notification_preferences (
