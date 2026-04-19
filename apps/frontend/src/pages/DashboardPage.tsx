@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -113,49 +113,33 @@ const leaderboardChartConfig: ChartConfig = {
 
 // ─── Tweet / X.com embed ─────────────────────────────────────────────────────
 
-declare global {
-  interface Window {
-    twttr?: { widgets: { load: (el?: HTMLElement) => void } };
+function extractTweetId(url: string): string | null {
+  try {
+    const parts = new URL(url).pathname.split('/');
+    const idx = parts.indexOf('status');
+    return idx !== -1 && parts[idx + 1] ? parts[idx + 1] : null;
+  } catch {
+    return null;
   }
 }
 
 function TweetEmbed({ url }: { url: string }) {
-  const ref = useRef<HTMLDivElement>(null);
+  const tweetId = extractTweetId(url);
+  if (!tweetId) return null;
 
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    const render = () => {
-      if (window.twttr?.widgets) {
-        el.innerHTML = '';
-        const a = document.createElement('a');
-        a.className = 'twitter-tweet';
-        a.setAttribute('data-theme', 'dark');
-        a.href = url;
-        el.appendChild(a);
-        window.twttr.widgets.load(el);
-      }
-    };
-
-    if (window.twttr?.widgets) {
-      render();
-    } else {
-      const existing = document.getElementById('twitter-wjs');
-      if (!existing) {
-        const s = document.createElement('script');
-        s.id = 'twitter-wjs';
-        s.src = 'https://platform.twitter.com/widgets.js';
-        s.async = true;
-        s.onload = render;
-        document.head.appendChild(s);
-      } else {
-        existing.addEventListener('load', render);
-      }
-    }
-  }, [url]);
-
-  return <div ref={ref} className="min-h-[100px]" />;
+  return (
+    <div className="rounded-base overflow-hidden border border-border w-full">
+      <iframe
+        src={`https://platform.twitter.com/embed/Tweet.html?id=${tweetId}&theme=dark&chrome=nofooter`}
+        className="w-full block"
+        style={{ height: '480px', border: 'none' }}
+        scrolling="no"
+        title="X post"
+        loading="lazy"
+        sandbox="allow-scripts allow-same-origin allow-popups"
+      />
+    </div>
+  );
 }
 
 // ─── Student event feed card ──────────────────────────────────────────────────
@@ -225,62 +209,65 @@ function StudentDashboard() {
   });
 
   return (
-    <div className="max-w-2xl">
-      {/* XP / Level bar */}
-      {gamification && (
-        <Card className="mb-6">
-          <CardContent className="pt-4">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <span className="text-sm font-bold opacity-70">Level </span>
-                <span className="text-2xl font-black text-[var(--main)]">{gamification.current_level}</span>
-                <span className="text-sm opacity-50 ml-2">· {gamification.current_xp} XP</span>
+    <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_2fr]">
+      {/* Left column: XP + personal stats */}
+      <div className="space-y-6">
+        {gamification && (
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <span className="text-sm font-bold opacity-70">Level </span>
+                  <span className="text-2xl font-black text-[var(--main)]">{gamification.current_level}</span>
+                  <span className="text-sm opacity-50 ml-2">· {gamification.current_xp} XP</span>
+                </div>
+                <span className="text-xs opacity-50">
+                  {gamification.xp_to_next_level > 0
+                    ? `${gamification.xp_to_next_level} XP to Lv.${gamification.current_level + 1}`
+                    : 'Max level'}
+                </span>
               </div>
-              <span className="text-xs opacity-50">
-                {gamification.xp_to_next_level > 0
-                  ? `${gamification.xp_to_next_level} XP to Lv.${gamification.current_level + 1}`
-                  : 'Max level'}
-              </span>
-            </div>
-            <div className="w-full h-2 rounded-full bg-[var(--bg)] border border-border overflow-hidden">
-              <div
-                className="h-full rounded-full bg-[var(--main)] transition-all"
-                style={{ width: `${gamification.progress_percent}%` }}
-              />
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              <div className="w-full h-2 rounded-full bg-[var(--bg)] border border-border overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-[var(--main)] transition-all"
+                  style={{ width: `${gamification.progress_percent}%` }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-      {/* Personal stat cards */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <Card>
-          <CardHeader className="pb-1"><CardTitle className="text-xs opacity-60">Registered</CardTitle></CardHeader>
-          <CardContent><p className="text-3xl font-black">{myStats?.events_registered ?? '…'}</p><p className="text-xs opacity-50">events</p></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-1"><CardTitle className="text-xs opacity-60">Attended</CardTitle></CardHeader>
-          <CardContent><p className="text-3xl font-black">{myStats?.events_attended ?? '…'}</p><p className="text-xs opacity-50">events</p></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-1"><CardTitle className="text-xs opacity-60">Clubs</CardTitle></CardHeader>
-          <CardContent><p className="text-3xl font-black">{myStats?.clubs_joined ?? '…'}</p><p className="text-xs opacity-50">joined</p></CardContent>
-        </Card>
+        <div className="grid grid-cols-3 gap-3 lg:grid-cols-1">
+          <Card>
+            <CardHeader className="pb-1"><CardTitle className="text-xs opacity-60">Registered</CardTitle></CardHeader>
+            <CardContent><p className="text-3xl font-black">{myStats?.events_registered ?? '…'}</p><p className="text-xs opacity-50">events</p></CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-1"><CardTitle className="text-xs opacity-60">Attended</CardTitle></CardHeader>
+            <CardContent><p className="text-3xl font-black">{myStats?.events_attended ?? '…'}</p><p className="text-xs opacity-50">events</p></CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-1"><CardTitle className="text-xs opacity-60">Clubs</CardTitle></CardHeader>
+            <CardContent><p className="text-3xl font-black">{myStats?.clubs_joined ?? '…'}</p><p className="text-xs opacity-50">joined</p></CardContent>
+          </Card>
+        </div>
       </div>
 
-      {/* Event feed */}
-      <h2 className="mb-4 text-xl font-black">{t('dashboard.upcomingEvents')}</h2>
-      {eventsLoading ? (
-        <div className="flex justify-center p-8"><Spinner size="lg" /></div>
-      ) : eventsData?.data.length === 0 ? (
-        <p className="text-sm opacity-50">{t('common.noData')}</p>
-      ) : (
-        <div className="flex flex-col gap-6">
-          {eventsData?.data.map((event) => (
-            <EventFeedCard key={event.id} event={event} language={language} />
-          ))}
-        </div>
-      )}
+      {/* Right column: event feed */}
+      <div>
+        <h2 className="mb-4 text-xl font-black">{t('dashboard.upcomingEvents')}</h2>
+        {eventsLoading ? (
+          <div className="flex justify-center p-8"><Spinner size="lg" /></div>
+        ) : eventsData?.data.length === 0 ? (
+          <p className="text-sm opacity-50">{t('common.noData')}</p>
+        ) : (
+          <div className="flex flex-col gap-6">
+            {eventsData?.data.map((event) => (
+              <EventFeedCard key={event.id} event={event} language={language} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
