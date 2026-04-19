@@ -21,8 +21,15 @@ export interface UiPreferences {
   font_weight_base: string;
 }
 
+export interface MyStats {
+  events_registered: number;
+  events_attended: number;
+  clubs_joined: number;
+}
+
 export const usersApi = {
   getMe: () => api.get<User>('/users/me').then((r) => r.data),
+  getMyStats: () => api.get<MyStats>('/users/me/stats').then((r) => r.data),
   updateMe: (data: { name?: string; avatar_url?: string }) => api.patch<User>('/users/me', data).then((r) => r.data),
   list: (params?: { role?: string; limit?: number; offset?: number }) =>
     api.get<{ data: User[]; total: number }>('/users', { params }).then((r) => r.data),

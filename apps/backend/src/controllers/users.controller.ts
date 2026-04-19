@@ -109,6 +109,20 @@ export function getGamification(req: AuthRequest, res: Response) {
   res.json({ ...progress, recent_actions: recentActions });
 }
 
+export function getMyStats(req: AuthRequest, res: Response) {
+  const userId = req.user!.id;
+  const eventsRegistered = (
+    db.prepare("SELECT COUNT(*) as c FROM registrations WHERE user_id = ? AND status != 'cancelled'").get(userId) as any
+  ).c;
+  const eventsAttended = (
+    db.prepare('SELECT COUNT(*) as c FROM attendance WHERE user_id = ?').get(userId) as any
+  ).c;
+  const clubsJoined = (
+    db.prepare("SELECT COUNT(*) as c FROM memberships WHERE user_id = ? AND status = 'active'").get(userId) as any
+  ).c;
+  res.json({ events_registered: eventsRegistered, events_attended: eventsAttended, clubs_joined: clubsJoined });
+}
+
 export function getXpHistory(req: AuthRequest, res: Response) {
   const userId = req.user!.id;
   const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);

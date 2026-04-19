@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.syncUserRealmRole = syncUserRealmRole;
+exports.deleteKeycloakUser = deleteKeycloakUser;
 exports.createKeycloakUser = createKeycloakUser;
 const env_1 = require("../config/env");
 const logger_1 = require("../utils/logger");
@@ -96,6 +97,18 @@ async function syncUserRealmRole(keycloakUserId, newRole, previousRole) {
     }
     const next = await getRealmRole(token, newRole);
     await assignRealmRoleToUser(token, keycloakUserId, next);
+}
+async function deleteKeycloakUser(keycloakUserId) {
+    const token = await getAdminToken();
+    const url = `${env_1.env.keycloak.url}/admin/realms/${env_1.env.keycloak.realm}/users/${keycloakUserId}`;
+    const res = await fetch(url, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok && res.status !== 404) {
+        const text = await res.text();
+        throw new Error(`Failed to delete Keycloak user: ${res.status} ${text}`);
+    }
 }
 async function createKeycloakUser(payload) {
     const token = await getAdminToken();

@@ -5,7 +5,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useUiPreferences, COLOR_PRESETS } from '@/contexts/UiPreferencesContext';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -43,148 +42,6 @@ const RARITY_VARIANT: Record<string, 'accent' | 'neutral' | 'secondary' | 'defau
   rare: 'secondary',
   common: 'neutral',
 };
-
-// ─── Segmented button helper ──────────────────────────────────────────────────
-
-function SegmentedButtons<T extends string>({
-  options,
-  value,
-  onChange,
-}: {
-  options: T[];
-  value: T;
-  onChange: (v: T) => void;
-}) {
-  return (
-    <div className="flex flex-wrap gap-1">
-      {options.map((opt) => (
-        <Button
-          key={opt}
-          size="sm"
-          variant={value === opt ? 'default' : 'outline'}
-          className="min-w-[3rem] text-xs"
-          onClick={() => onChange(opt)}
-          type="button"
-        >
-          {opt}
-        </Button>
-      ))}
-    </div>
-  );
-}
-
-// ─── Customize Styling Dialog ─────────────────────────────────────────────────
-
-function CustomizeStylingDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
-  const { draft, setDraft, previewDraft, savePreferences, resetPreferences, isSaving } = useUiPreferences();
-  const { showToast } = useAppToast();
-
-  const handleSave = () => {
-    savePreferences();
-    showToast('Preferences saved', 'Your styling preferences have been applied.');
-    onOpenChange(false);
-  };
-
-  const handleReset = () => {
-    resetPreferences();
-    showToast('Preferences reset', 'Styling has been reset to defaults.');
-    onOpenChange(false);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Customize styling</DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-5 py-2">
-          {/* Color preset */}
-          <div>
-            <label className="block text-sm font-bold mb-2">Color preset</label>
-            <Select value={draft.color_preset} onValueChange={(v) => { setDraft({ color_preset: v }); previewDraft(); }}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(COLOR_PRESETS).map(([key, { label, main }]) => (
-                  <SelectItem key={key} value={key}>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="inline-block size-3 rounded-sm border border-border"
-                        style={{ background: main }}
-                      />
-                      {label}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Border radius */}
-          <div>
-            <label className="block text-sm font-bold mb-2">Border radius</label>
-            <SegmentedButtons
-              options={['0px', '5px', '10px', '15px']}
-              value={draft.radius_base as '0px' | '5px' | '10px' | '15px'}
-              onChange={(v) => { setDraft({ radius_base: v }); previewDraft(); }}
-            />
-          </div>
-
-          {/* Horizontal box shadow */}
-          <div>
-            <label className="block text-sm font-bold mb-2">Horizontal shadow</label>
-            <SegmentedButtons
-              options={['-4px', '-2px', '0px', '2px', '4px']}
-              value={draft.box_shadow_x as '-4px' | '-2px' | '0px' | '2px' | '4px'}
-              onChange={(v) => { setDraft({ box_shadow_x: v }); previewDraft(); }}
-            />
-          </div>
-
-          {/* Vertical box shadow */}
-          <div>
-            <label className="block text-sm font-bold mb-2">Vertical shadow</label>
-            <SegmentedButtons
-              options={['-4px', '-2px', '0px', '2px', '4px']}
-              value={draft.box_shadow_y as '-4px' | '-2px' | '0px' | '2px' | '4px'}
-              onChange={(v) => { setDraft({ box_shadow_y: v }); previewDraft(); }}
-            />
-          </div>
-
-          {/* Heading font weight */}
-          <div>
-            <label className="block text-sm font-bold mb-2">Heading font weight</label>
-            <SegmentedButtons
-              options={['700', '800', '900']}
-              value={draft.font_weight_heading as '700' | '800' | '900'}
-              onChange={(v) => { setDraft({ font_weight_heading: v }); previewDraft(); }}
-            />
-          </div>
-
-          {/* Base font weight */}
-          <div>
-            <label className="block text-sm font-bold mb-2">Base font weight</label>
-            <SegmentedButtons
-              options={['500', '600', '700']}
-              value={draft.font_weight_base as '500' | '600' | '700'}
-              onChange={(v) => { setDraft({ font_weight_base: v }); previewDraft(); }}
-            />
-          </div>
-        </div>
-
-        <DialogFooter className="flex gap-2 mt-4">
-          <Button variant="outline" onClick={handleReset} type="button">
-            Reset
-          </Button>
-          <Button onClick={handleSave} disabled={isSaving} type="button">
-            {isSaving ? 'Saving…' : 'Save changes'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 // ─── Club Leader Request section ──────────────────────────────────────────────
 
@@ -304,7 +161,6 @@ function LeaderRequestSection() {
 
 function PreferencesTab() {
   const { theme, toggleTheme } = useTheme();
-  const [stylingOpen, setStylingOpen] = useState(false);
 
   return (
     <div className="space-y-6 max-w-lg">
@@ -330,17 +186,8 @@ function PreferencesTab() {
               </Button>
             </div>
           </div>
-
-          <div>
-            <label className="block text-sm font-bold mb-2">UI Styling</label>
-            <Button variant="outline" size="sm" onClick={() => setStylingOpen(true)}>
-              Customize styling
-            </Button>
-          </div>
         </CardContent>
       </Card>
-
-      <CustomizeStylingDialog open={stylingOpen} onOpenChange={setStylingOpen} />
     </div>
   );
 }
@@ -411,7 +258,9 @@ export function ProfilePage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>{user?.name}</CardTitle>
-                <Badge variant="accent">{user?.roles?.join(', ')}</Badge>
+                <Badge variant="accent">
+                  {user?.roles?.filter((r) => ['student', 'club_leader', 'admin'].includes(r)).join(', ')}
+                </Badge>
               </div>
             </CardHeader>
             <CardContent>

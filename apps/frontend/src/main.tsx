@@ -5,7 +5,6 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { AppToastProvider } from '@/contexts/ToastContext';
-import { UiPreferencesProvider } from '@/contexts/UiPreferencesContext';
 import '@/i18n/config';
 import '@/styles/globals.css';
 import App from './App';
@@ -26,9 +25,7 @@ createRoot(document.getElementById('root')!).render(
         <ThemeProvider>
           <AppToastProvider>
             <LanguageProvider>
-              <UiPreferencesProvider>
-                <App />
-              </UiPreferencesProvider>
+              <App />
             </LanguageProvider>
           </AppToastProvider>
         </ThemeProvider>

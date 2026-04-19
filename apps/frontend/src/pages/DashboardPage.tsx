@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -21,6 +21,7 @@ import { clubsApi } from '@/api/clubs';
 import { kpiApi } from '@/api/kpi';
 import { analyticsApi } from '@/api/analytics';
 import { gamificationApi } from '@/api/gamification';
+import { usersApi } from '@/api/users';
 
 // ─── Visitors Chart (admin only) ─────────────────────────────────────────────
 
@@ -109,6 +110,180 @@ const leaderboardChartConfig: ChartConfig = {
     color: 'var(--color-main, #facc15)',
   },
 };
+
+// ─── Tweet / X.com embed ─────────────────────────────────────────────────────
+
+declare global {
+  interface Window {
+    twttr?: { widgets: { load: (el?: HTMLElement) => void } };
+  }
+}
+
+function TweetEmbed({ url }: { url: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const render = () => {
+      if (window.twttr?.widgets) {
+        el.innerHTML = '';
+        const a = document.createElement('a');
+        a.className = 'twitter-tweet';
+        a.setAttribute('data-theme', 'dark');
+        a.href = url;
+        el.appendChild(a);
+        window.twttr.widgets.load(el);
+      }
+    };
+
+    if (window.twttr?.widgets) {
+      render();
+    } else {
+      const existing = document.getElementById('twitter-wjs');
+      if (!existing) {
+        const s = document.createElement('script');
+        s.id = 'twitter-wjs';
+        s.src = 'https://platform.twitter.com/widgets.js';
+        s.async = true;
+        s.onload = render;
+        document.head.appendChild(s);
+      } else {
+        existing.addEventListener('load', render);
+      }
+    }
+  }, [url]);
+
+  return <div ref={ref} className="min-h-[100px]" />;
+}
+
+// ─── Student event feed card ──────────────────────────────────────────────────
+
+function EventFeedCard({ event, language }: { event: import('@/api/events').Event; language: string }) {
+  const title = language === 'ar' ? event.title_ar : event.title;
+  const description = language === 'ar' ? event.description_ar : event.description;
+
+  return (
+    <Card className="overflow-hidden">
+      <CardContent className="pt-4 pb-0 px-4">
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <Link to={`/events/${event.id}`} className="font-black text-lg hover:underline leading-tight">
+            {title}
+          </Link>
+          <Badge variant="secondary" className="shrink-0 text-xs">
+            {new Date(event.starts_at).toLocaleDateString()}
+          </Badge>
+        </div>
+        {event.location && (
+          <Badge variant="accent" className="text-xs mb-3">{event.location}</Badge>
+        )}
+        {description && (
+          <p className="text-sm opacity-70 mb-4 line-clamp-2">{description}</p>
+        )}
+      </CardContent>
+
+      {event.twitter_url ? (
+        <div className="px-2 pb-4">
+          <TweetEmbed url={event.twitter_url} />
+        </div>
+      ) : (
+        <CardContent className="pt-0 pb-4">
+          <Link to={`/events/${event.id}`}>
+            <Button size="sm" variant="outline" className="w-full">View Event</Button>
+          </Link>
+        </CardContent>
+      )}
+    </Card>
+  );
+}
+
+// ─── Student Dashboard ────────────────────────────────────────────────────────
+
+function StudentDashboard() {
+  const { t } = useTranslation();
+  const { language } = useLanguage();
+  const { currentUser } = useCurrentUser();
+
+  const { data: gamification } = useQuery({
+    queryKey: ['gamification', 'me'],
+    queryFn: () => gamificationApi.getMyGamification(),
+    enabled: !!currentUser,
+  });
+
+  const { data: myStats } = useQuery({
+    queryKey: ['users', 'me', 'stats'],
+    queryFn: usersApi.getMyStats,
+    enabled: !!currentUser,
+  });
+
+  const { data: eventsData, isLoading: eventsLoading } = useQuery({
+    queryKey: ['events', 'upcoming', 'feed'],
+    queryFn: () => eventsApi.list({ status: 'published', limit: 10 }),
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+  });
+
+  return (
+    <div className="max-w-2xl">
+      {/* XP / Level bar */}
+      {gamification && (
+        <Card className="mb-6">
+          <CardContent className="pt-4">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <span className="text-sm font-bold opacity-70">Level </span>
+                <span className="text-2xl font-black text-[var(--main)]">{gamification.current_level}</span>
+                <span className="text-sm opacity-50 ml-2">· {gamification.current_xp} XP</span>
+              </div>
+              <span className="text-xs opacity-50">
+                {gamification.xp_to_next_level > 0
+                  ? `${gamification.xp_to_next_level} XP to Lv.${gamification.current_level + 1}`
+                  : 'Max level'}
+              </span>
+            </div>
+            <div className="w-full h-2 rounded-full bg-[var(--bg)] border border-border overflow-hidden">
+              <div
+                className="h-full rounded-full bg-[var(--main)] transition-all"
+                style={{ width: `${gamification.progress_percent}%` }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Personal stat cards */}
+      <div className="grid grid-cols-3 gap-4 mb-8">
+        <Card>
+          <CardHeader className="pb-1"><CardTitle className="text-xs opacity-60">Registered</CardTitle></CardHeader>
+          <CardContent><p className="text-3xl font-black">{myStats?.events_registered ?? '…'}</p><p className="text-xs opacity-50">events</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-1"><CardTitle className="text-xs opacity-60">Attended</CardTitle></CardHeader>
+          <CardContent><p className="text-3xl font-black">{myStats?.events_attended ?? '…'}</p><p className="text-xs opacity-50">events</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-1"><CardTitle className="text-xs opacity-60">Clubs</CardTitle></CardHeader>
+          <CardContent><p className="text-3xl font-black">{myStats?.clubs_joined ?? '…'}</p><p className="text-xs opacity-50">joined</p></CardContent>
+        </Card>
+      </div>
+
+      {/* Event feed */}
+      <h2 className="mb-4 text-xl font-black">{t('dashboard.upcomingEvents')}</h2>
+      {eventsLoading ? (
+        <div className="flex justify-center p-8"><Spinner size="lg" /></div>
+      ) : eventsData?.data.length === 0 ? (
+        <p className="text-sm opacity-50">{t('common.noData')}</p>
+      ) : (
+        <div className="flex flex-col gap-6">
+          {eventsData?.data.map((event) => (
+            <EventFeedCard key={event.id} event={event} language={language} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── Club Leader Dashboard ────────────────────────────────────────────────────
 
@@ -241,21 +416,11 @@ function ClubLeaderDashboard({ clubId }: { clubId: number }) {
   );
 }
 
-// ─── Admin / Student Dashboard ────────────────────────────────────────────────
+// ─── Admin Dashboard ──────────────────────────────────────────────────────────
 
-function GlobalDashboard() {
+function AdminDashboard() {
   const { t } = useTranslation();
   const { language } = useLanguage();
-  const { hasRole } = useAuth();
-  const { currentUser } = useCurrentUser();
-  const canViewKpi = hasRole('admin') || hasRole('club_leader');
-  const isStudent = !hasRole('admin') && !hasRole('club_leader');
-
-  const { data: gamification } = useQuery({
-    queryKey: ['gamification', 'me'],
-    queryFn: () => gamificationApi.getMyGamification(),
-    enabled: isStudent && !!currentUser,
-  });
 
   const { data: eventsData, isLoading: eventsLoading } = useQuery({
     queryKey: ['events', 'upcoming'],
@@ -276,7 +441,6 @@ function GlobalDashboard() {
     queryFn: () => kpiApi.getLeaderboard(),
     refetchInterval: 30_000,
     refetchOnWindowFocus: true,
-    enabled: canViewKpi,
   });
 
   const statsData = [
@@ -289,33 +453,7 @@ function GlobalDashboard() {
 
   return (
     <div>
-      {hasRole('admin') && <VisitorsChart />}
-
-      {/* Gamification summary — students only */}
-      {isStudent && gamification && (
-        <Card className="mb-6">
-          <CardContent className="pt-4">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <span className="text-sm font-bold opacity-70">Level </span>
-                <span className="text-2xl font-black text-[var(--main)]">{gamification.current_level}</span>
-                <span className="text-sm opacity-50 ml-2">· {gamification.current_xp} XP</span>
-              </div>
-              <span className="text-xs opacity-50">
-                {gamification.xp_to_next_level > 0
-                  ? `${gamification.xp_to_next_level} XP to Lv.${gamification.current_level + 1}`
-                  : 'Max level'}
-              </span>
-            </div>
-            <div className="w-full h-2 rounded-full bg-[var(--bg)] border border-border overflow-hidden">
-              <div
-                className="h-full rounded-full bg-[var(--main)] transition-all"
-                style={{ width: `${gamification.progress_percent}%` }}
-              />
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <VisitorsChart />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mb-8">
         <div className="lg:col-span-2">
@@ -338,44 +476,38 @@ function GlobalDashboard() {
         <div className="space-y-4">
           <Card>
             <CardHeader><CardTitle>{t('nav.clubs')}</CardTitle></CardHeader>
-            <CardContent>
-              <p className="text-4xl font-black">{clubsData?.total ?? '…'}</p>
-            </CardContent>
+            <CardContent><p className="text-4xl font-black">{clubsData?.total ?? '…'}</p></CardContent>
           </Card>
           <Card>
             <CardHeader><CardTitle>{t('nav.events')}</CardTitle></CardHeader>
-            <CardContent>
-              <p className="text-4xl font-black">{eventsData?.total ?? '…'}</p>
-            </CardContent>
+            <CardContent><p className="text-4xl font-black">{eventsData?.total ?? '…'}</p></CardContent>
           </Card>
         </div>
       </div>
 
-      {canViewKpi && (
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-black">{t('kpi.leaderboard')}</h2>
-            <Link to="/leaderboard" className="text-sm font-bold underline">{t('common.viewAll')}</Link>
-          </div>
-          {leaderboardEntries.length === 0 ? (
-            <p className="text-sm opacity-50">{t('kpi.noActivityRecorded', 'No activity recorded yet')}</p>
-          ) : (
-            <Card>
-              <CardContent className="pt-4">
-                <ChartContainer config={leaderboardChartConfig} className="h-[180px] w-full">
-                  <BarChart data={leaderboardEntries.slice(0, 5)} layout="vertical" margin={{ left: 80 }}>
-                    <CartesianGrid horizontal={false} />
-                    <XAxis type="number" />
-                    <YAxis type="category" dataKey="club_name" width={75} tick={{ fontSize: 11 }} />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="total_score" fill="var(--color-total_score)" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ChartContainer>
-              </CardContent>
-            </Card>
-          )}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-black">{t('kpi.leaderboard')}</h2>
+          <Link to="/leaderboard" className="text-sm font-bold underline">{t('common.viewAll')}</Link>
         </div>
-      )}
+        {leaderboardEntries.length === 0 ? (
+          <p className="text-sm opacity-50">{t('kpi.noActivityRecorded', 'No activity recorded yet')}</p>
+        ) : (
+          <Card>
+            <CardContent className="pt-4">
+              <ChartContainer config={leaderboardChartConfig} className="h-[180px] w-full">
+                <BarChart data={leaderboardEntries.slice(0, 5)} layout="vertical" margin={{ left: 80 }}>
+                  <CartesianGrid horizontal={false} />
+                  <XAxis type="number" />
+                  <YAxis type="category" dataKey="club_name" width={75} tick={{ fontSize: 11 }} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="total_score" fill="var(--color-total_score)" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
       <h2 className="mb-4 text-xl font-black">{t('dashboard.upcomingEvents')}</h2>
       {eventsLoading ? (
@@ -448,8 +580,10 @@ export function DashboardPage() {
           <p className="mb-6 text-sm opacity-60">{ownedClub.name}</p>
           <ClubLeaderDashboard clubId={ownedClub.id} />
         </>
+      ) : hasRole('admin') ? (
+        <AdminDashboard />
       ) : (
-        <GlobalDashboard />
+        <StudentDashboard />
       )}
     </div>
   );

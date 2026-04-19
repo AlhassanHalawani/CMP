@@ -31,4 +31,6 @@ export declare const UserModel: {
         offset?: number;
     }): User[];
     count(): number;
+    deleteById(id: number): void;
+    countByRole(role: User["role"]): number;
 };

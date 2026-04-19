@@ -10,8 +10,11 @@ router.get('/me', users_controller_1.getMe);
 router.patch('/me', users_controller_1.updateMe);
 router.post('/me/login-activity', users_controller_1.recordLoginActivity);
 router.get('/me/gamification', users_controller_1.getGamification);
+router.get('/me/stats', users_controller_1.getMyStats);
 router.get('/me/xp-history', users_controller_1.getXpHistory);
+router.delete('/me', users_controller_1.deleteMe);
 router.get('/', (0, roles_1.requireRole)('admin'), users_controller_1.listUsers);
 router.patch('/:id/role', (0, roles_1.requireRole)('admin'), users_controller_1.updateUserRole);
+router.delete('/:id', (0, roles_1.requireRole)('admin'), users_controller_1.deleteUser);
 exports.default = router;
 //# sourceMappingURL=users.routes.js.map

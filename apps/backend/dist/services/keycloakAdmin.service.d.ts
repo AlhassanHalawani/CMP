@@ -9,4 +9,5 @@ export interface CreateKeycloakUserPayload {
  * keycloakUserId is the user's `sub` (UUID) from the JWT.
  */
 export declare function syncUserRealmRole(keycloakUserId: string, newRole: string, previousRole: string | null): Promise<void>;
+export declare function deleteKeycloakUser(keycloakUserId: string): Promise<void>;
 export declare function createKeycloakUser(payload: CreateKeycloakUserPayload): Promise<void>;

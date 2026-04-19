@@ -63,5 +63,11 @@ exports.UserModel = {
     count() {
         return database_1.db.prepare('SELECT COUNT(*) as count FROM users').get().count;
     },
+    deleteById(id) {
+        database_1.db.prepare('DELETE FROM users WHERE id = ?').run(id);
+    },
+    countByRole(role) {
+        return database_1.db.prepare('SELECT COUNT(*) as count FROM users WHERE role = ?').get(role).count;
+    },
 };
 //# sourceMappingURL=user.model.js.map

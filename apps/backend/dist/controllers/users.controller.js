@@ -4,8 +4,11 @@ exports.getMe = getMe;
 exports.recordLoginActivity = recordLoginActivity;
 exports.updateMe = updateMe;
 exports.getGamification = getGamification;
+exports.getMyStats = getMyStats;
 exports.getXpHistory = getXpHistory;
 exports.listUsers = listUsers;
+exports.deleteMe = deleteMe;
+exports.deleteUser = deleteUser;
 exports.updateUserRole = updateUserRole;
 const user_model_1 = require("../models/user.model");
 const audit_service_1 = require("../services/audit.service");
@@ -98,6 +101,13 @@ function getGamification(req, res) {
         .all(userId);
     res.json({ ...progress, recent_actions: recentActions });
 }
+function getMyStats(req, res) {
+    const userId = req.user.id;
+    const eventsRegistered = database_1.db.prepare("SELECT COUNT(*) as c FROM registrations WHERE user_id = ? AND status != 'cancelled'").get(userId).c;
+    const eventsAttended = database_1.db.prepare('SELECT COUNT(*) as c FROM attendance WHERE user_id = ?').get(userId).c;
+    const clubsJoined = database_1.db.prepare("SELECT COUNT(*) as c FROM memberships WHERE user_id = ? AND status = 'active'").get(userId).c;
+    res.json({ events_registered: eventsRegistered, events_attended: eventsAttended, clubs_joined: clubsJoined });
+}
 function getXpHistory(req, res) {
     const userId = req.user.id;
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
@@ -117,6 +127,37 @@ function listUsers(req, res) {
     const users = user_model_1.UserModel.list({ role, limit, offset });
     const total = user_model_1.UserModel.count();
     res.json({ data: users, total });
+}
+async function deleteMe(req, res) {
+    const user = req.user;
+    if (user.role === 'admin' && user_model_1.UserModel.countByRole('admin') <= 1) {
+        res.status(400).json({ error: 'Cannot delete the only admin account.' });
+        return;
+    }
+    user_model_1.UserModel.deleteById(user.id);
+    (0, audit_service_1.logAction)({ actorId: user.id, action: 'delete_account', entityType: 'user', entityId: user.id, payload: {} });
+    (0, keycloakAdmin_service_1.deleteKeycloakUser)(user.keycloak_id).catch((err) => {
+        logger_1.logger.warn(`Keycloak user deletion failed for ${user.id}: ${err.message}`);
+    });
+    res.status(204).send();
+}
+async function deleteUser(req, res) {
+    const id = parseInt(req.params.id);
+    const target = user_model_1.UserModel.findById(id);
+    if (!target) {
+        res.status(404).json({ error: 'User not found' });
+        return;
+    }
+    if (target.role === 'admin' && user_model_1.UserModel.countByRole('admin') <= 1) {
+        res.status(400).json({ error: 'Cannot delete the only admin account.' });
+        return;
+    }
+    user_model_1.UserModel.deleteById(id);
+    (0, audit_service_1.logAction)({ actorId: req.user.id, action: 'delete_user', entityType: 'user', entityId: id, payload: { email: target.email } });
+    (0, keycloakAdmin_service_1.deleteKeycloakUser)(target.keycloak_id).catch((err) => {
+        logger_1.logger.warn(`Keycloak user deletion failed for ${id}: ${err.message}`);
+    });
+    res.status(204).send();
 }
 async function updateUserRole(req, res) {
     const id = parseInt(req.params.id);
