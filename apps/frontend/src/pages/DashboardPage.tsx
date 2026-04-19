@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -125,31 +125,41 @@ function extractTweetId(url: string): string | null {
 
 function TweetEmbed({ url }: { url: string }) {
   const tweetId = extractTweetId(url);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [height, setHeight] = useState(550);
+  const [height, setHeight] = useState(680);
 
   useEffect(() => {
+    if (!tweetId) return;
     const handler = (e: MessageEvent) => {
       try {
         const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
-        if (data?.method === 'twttr.private.resize' && typeof data?.params?.height === 'number') {
-          setHeight(data.params.height + 8);
+        // Match only resize messages for this specific tweet
+        if (
+          data?.method === 'twttr.private.resize' &&
+          typeof data?.params?.height === 'number' &&
+          (!data?.id || String(data.id) === tweetId)
+        ) {
+          setHeight(data.params.height + 48);
         }
-      } catch { /* ignore non-JSON messages */ }
+      } catch { /* ignore non-JSON */ }
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, []);
+  }, [tweetId]);
 
   if (!tweetId) return null;
 
   return (
-    <div className="rounded-base overflow-hidden border border-border w-full">
+    <div className="flex justify-center rounded-base overflow-hidden border border-border w-full bg-[#0d0f16]">
       <iframe
-        ref={iframeRef}
-        src={`https://platform.twitter.com/embed/Tweet.html?id=${tweetId}&theme=dark&chrome=nofooter`}
-        className="w-full block"
-        style={{ height: `${height}px`, border: 'none', transition: 'height 0.2s ease' }}
+        src={`https://platform.twitter.com/embed/Tweet.html?id=${tweetId}&theme=dark&chrome=nofooter&align=center`}
+        className="block"
+        style={{
+          width: '100%',
+          maxWidth: '550px',
+          height: `${height}px`,
+          border: 'none',
+          transition: 'height 0.25s ease',
+        }}
         scrolling="no"
         title="X post"
         loading="lazy"
