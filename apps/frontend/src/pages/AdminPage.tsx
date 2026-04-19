@@ -45,6 +45,7 @@ function UsersTab() {
 
   const [assignDialog, setAssignDialog] = useState<{ user: User } | null>(null);
   const [selectedClubId, setSelectedClubId] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
 
   const roleMutation = useMutation({
     mutationFn: ({ id, role }: { id: number; role: string }) => usersApi.updateRole(id, role),
@@ -55,6 +56,19 @@ function UsersTab() {
     onError: (err: unknown) => {
       const msg = isAxiosError(err) ? err.response?.data?.error : 'Failed to update role';
       showToast('Error', msg ?? 'Failed to update role');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => usersApi.deleteUser(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      setDeleteTarget(null);
+      showToast('User deleted', 'The user account has been permanently deleted.');
+    },
+    onError: (err: unknown) => {
+      const msg = isAxiosError(err) ? err.response?.data?.error : 'Failed to delete user';
+      showToast('Error', msg ?? 'Failed to delete user');
     },
   });
 
@@ -120,12 +134,42 @@ function UsersTab() {
               >
                 Assign to Club
               </Button>
+
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => setDeleteTarget(u)}
+              >
+                Delete
+              </Button>
             </div>
           </CardContent>
         </Card>
       ))}
 
       {users.length === 0 && <p className="text-sm">No users found.</p>}
+
+      {/* Delete user confirm dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete user</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm">
+            Permanently delete <strong>{deleteTarget?.name}</strong> ({deleteTarget?.email})? This cannot be undone.
+          </p>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              disabled={deleteMutation.isPending}
+              onClick={() => deleteMutation.mutate(deleteTarget!.id)}
+            >
+              {deleteMutation.isPending ? 'Deleting…' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Assign leader dialog */}
       <Dialog open={!!assignDialog} onOpenChange={(o) => { if (!o) setAssignDialog(null); }}>

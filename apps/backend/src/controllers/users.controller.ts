@@ -2,7 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { UserModel } from '../models/user.model';
 import { logAction } from '../services/audit.service';
-import { syncUserRealmRole } from '../services/keycloakAdmin.service';
+import { syncUserRealmRole, deleteKeycloakUser } from '../services/keycloakAdmin.service';
 import { logger } from '../utils/logger';
 import { db } from '../config/database';
 import { evaluateStudentAchievements } from '../services/achievement-engine.service';
@@ -133,6 +133,47 @@ export function listUsers(req: AuthRequest, res: Response) {
   const users = UserModel.list({ role, limit, offset });
   const total = UserModel.count();
   res.json({ data: users, total });
+}
+
+export async function deleteMe(req: AuthRequest, res: Response) {
+  const user = req.user!;
+
+  if (user.role === 'admin' && UserModel.countByRole('admin') <= 1) {
+    res.status(400).json({ error: 'Cannot delete the only admin account.' });
+    return;
+  }
+
+  UserModel.deleteById(user.id);
+  logAction({ actorId: user.id, action: 'delete_account', entityType: 'user', entityId: user.id, payload: {} });
+
+  deleteKeycloakUser(user.keycloak_id).catch((err: Error) => {
+    logger.warn(`Keycloak user deletion failed for ${user.id}: ${err.message}`);
+  });
+
+  res.status(204).send();
+}
+
+export async function deleteUser(req: AuthRequest, res: Response) {
+  const id = parseInt(req.params.id);
+  const target = UserModel.findById(id);
+  if (!target) {
+    res.status(404).json({ error: 'User not found' });
+    return;
+  }
+
+  if (target.role === 'admin' && UserModel.countByRole('admin') <= 1) {
+    res.status(400).json({ error: 'Cannot delete the only admin account.' });
+    return;
+  }
+
+  UserModel.deleteById(id);
+  logAction({ actorId: req.user!.id, action: 'delete_user', entityType: 'user', entityId: id, payload: { email: target.email } });
+
+  deleteKeycloakUser(target.keycloak_id).catch((err: Error) => {
+    logger.warn(`Keycloak user deletion failed for ${id}: ${err.message}`);
+  });
+
+  res.status(204).send();
 }
 
 export async function updateUserRole(req: AuthRequest, res: Response) {

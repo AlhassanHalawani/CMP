@@ -130,6 +130,19 @@ export async function syncUserRealmRole(
   await assignRealmRoleToUser(token, keycloakUserId, next);
 }
 
+export async function deleteKeycloakUser(keycloakUserId: string): Promise<void> {
+  const token = await getAdminToken();
+  const url = `${env.keycloak.url}/admin/realms/${env.keycloak.realm}/users/${keycloakUserId}`;
+  const res = await fetch(url, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok && res.status !== 404) {
+    const text = await res.text();
+    throw new Error(`Failed to delete Keycloak user: ${res.status} ${text}`);
+  }
+}
+
 export async function createKeycloakUser(payload: CreateKeycloakUserPayload): Promise<void> {
   const token = await getAdminToken();
   const url = `${env.keycloak.url}/admin/realms/${env.keycloak.realm}/users`;

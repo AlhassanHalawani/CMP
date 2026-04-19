@@ -35,6 +35,7 @@ import { badgesApi } from '@/api/badges';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useAppToast } from '@/contexts/ToastContext';
 import { Sun, Moon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const RARITY_VARIANT: Record<string, 'accent' | 'neutral' | 'secondary' | 'default'> = {
   legendary: 'accent',
@@ -348,11 +349,13 @@ function PreferencesTab() {
 
 export function ProfilePage() {
   const { t } = useTranslation();
-  const { user, hasRole } = useAuth();
+  const { user, hasRole, logout } = useAuth();
   const { showToast } = useAppToast();
   const queryClient = useQueryClient();
   const { currentUser } = useCurrentUser();
+  const navigate = useNavigate();
   const [name, setName] = useState(user?.name || '');
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const isStudent = !hasRole('admin') && !hasRole('club_leader');
 
@@ -377,6 +380,18 @@ export function ProfilePage() {
       showToast('Profile updated', 'Your name has been saved.');
     },
     onError: () => showToast('Error', 'Failed to update profile.'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => usersApi.deleteMe(),
+    onSuccess: () => {
+      logout();
+      navigate('/login');
+    },
+    onError: (err: unknown) => {
+      const msg = isAxiosError(err) ? err.response?.data?.error : 'Failed to delete account';
+      showToast('Error', msg ?? 'Failed to delete account');
+    },
   });
 
   return (
@@ -418,6 +433,38 @@ export function ProfilePage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Delete account */}
+          <Card className="border-red-300">
+            <CardHeader><CardTitle className="text-red-600 text-base">Danger zone</CardTitle></CardHeader>
+            <CardContent>
+              <p className="text-sm mb-3 opacity-70">Permanently delete your account and all associated data. This cannot be undone.</p>
+              <Button variant="destructive" size="sm" onClick={() => setDeleteOpen(true)}>
+                Delete my account
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Delete account</DialogTitle>
+              </DialogHeader>
+              <p className="text-sm">
+                Are you sure you want to permanently delete your account? All your data will be erased and you will be logged out immediately.
+              </p>
+              <DialogFooter className="mt-4">
+                <Button variant="outline" onClick={() => setDeleteOpen(false)}>Cancel</Button>
+                <Button
+                  variant="destructive"
+                  disabled={deleteMutation.isPending}
+                  onClick={() => deleteMutation.mutate()}
+                >
+                  {deleteMutation.isPending ? 'Deleting…' : 'Yes, delete my account'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {/* XP / Level card (non-admin only) */}
           {gamification && !hasRole('admin') && (

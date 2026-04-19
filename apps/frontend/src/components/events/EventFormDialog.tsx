@@ -12,8 +12,27 @@ import {
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 
 const TWITTER_URL_PATTERN = /^https:\/\/(twitter\.com|x\.com)\/\w+\/status\/\d+/;
+
+function extractTwitterUrl(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return '';
+  // Plain URL
+  if (TWITTER_URL_PATTERN.test(trimmed)) {
+    const match = trimmed.match(/^(https:\/\/(twitter\.com|x\.com)\/\w+\/status\/\d+)/);
+    return match ? match[1] : null;
+  }
+  // Full embed code — extract the status URL from the last <a href="..."> in the blockquote
+  const embedMatch = trimmed.match(/href="(https:\/\/(twitter\.com|x\.com)\/[^/]+\/status\/(\d+))[^"]*"/g);
+  if (embedMatch) {
+    const last = embedMatch[embedMatch.length - 1];
+    const urlMatch = last.match(/href="(https:\/\/(twitter\.com|x\.com)\/[^/]+\/status\/\d+)/);
+    return urlMatch ? urlMatch[1] : null;
+  }
+  return null;
+}
 
 type EventPayload = {
   club_id: number;
@@ -163,10 +182,15 @@ export function EventFormDialog({
       return;
     }
 
-    const twitterUrl = values.twitter_url.trim();
-    if (twitterUrl && !TWITTER_URL_PATTERN.test(twitterUrl)) {
-      setLocalError('Twitter/X URL must be a valid post URL (e.g. https://x.com/user/status/123).');
-      return;
+    const twitterInput = values.twitter_url.trim();
+    let twitterUrl: string | null = null;
+    if (twitterInput) {
+      const extracted = extractTwitterUrl(twitterInput);
+      if (extracted === null) {
+        setLocalError('Paste a valid X/Twitter post URL or the full embed code from x.com.');
+        return;
+      }
+      twitterUrl = extracted || null;
     }
 
     await onSubmit({
@@ -182,7 +206,7 @@ export function EventFormDialog({
       members_only: membersOnly ? 1 : 0,
       delivery_mode: values.delivery_mode,
       status: values.status,
-      twitter_url: twitterUrl || null,
+      twitter_url: twitterUrl,
     });
   };
 
@@ -286,10 +310,12 @@ export function EventFormDialog({
             <label htmlFor="members-only" className="text-sm font-medium cursor-pointer">Members only</label>
           </div>
 
-          <Input
-            placeholder="Twitter/X post URL (optional, e.g. https://x.com/user/status/123)"
+          <Textarea
+            placeholder="X/Twitter embed code or URL (optional) — paste the embed code copied from x.com, or a plain post URL"
             value={values.twitter_url}
             onChange={(e) => updateField('twitter_url', e.target.value)}
+            rows={3}
+            className="text-xs font-mono resize-y"
           />
 
           {(localError || errorMessage) && <p className="text-sm font-bold text-red-600">{localError || errorMessage}</p>}

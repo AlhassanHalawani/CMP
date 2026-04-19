@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -38,49 +38,48 @@ import { EventFormDialog } from '@/components/events/EventFormDialog';
 import { useAppToast } from '@/contexts/ToastContext';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
-function TwitterEmbed({ url }: { url: string }) {
-  // Extract tweet ID from URL (supports twitter.com and x.com)
-  const match = url.match(/\/status\/(\d+)/);
-  const tweetId = match?.[1];
-
-  if (!tweetId) {
-    return (
-      <Card className="mb-6">
-        <CardContent>
-          <a href={url} target="_blank" rel="noreferrer" className="text-sm underline break-all">
-            {url}
-          </a>
-        </CardContent>
-      </Card>
-    );
+declare global {
+  interface Window {
+    twttr?: { widgets: { load: (el?: HTMLElement) => void } };
   }
+}
 
-  // Lightweight oEmbed iframe approach — no external SDK needed
-  const embedUrl = `https://platform.twitter.com/embed/Tweet.html?id=${tweetId}&theme=light&dnt=true`;
+function TwitterEmbed({ url }: { url: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const load = () => {
+      if (window.twttr?.widgets && ref.current) {
+        window.twttr.widgets.load(ref.current);
+      }
+    };
+
+    if (window.twttr) {
+      load();
+    } else {
+      const existing = document.getElementById('twitter-widgets-js');
+      if (!existing) {
+        const script = document.createElement('script');
+        script.id = 'twitter-widgets-js';
+        script.src = 'https://platform.twitter.com/widgets.js';
+        script.async = true;
+        script.onload = load;
+        document.body.appendChild(script);
+      } else {
+        existing.addEventListener('load', load);
+      }
+    }
+  }, [url]);
 
   return (
     <Card className="mb-6">
       <CardContent>
         <p className="text-sm font-bold mb-2">Post</p>
-        <iframe
-          src={embedUrl}
-          className="w-full border-0 rounded"
-          style={{ minHeight: 300 }}
-          title="Twitter/X post"
-          loading="lazy"
-          sandbox="allow-scripts allow-same-origin allow-popups"
-          onError={(e) => {
-            // On load failure, replace with a plain link
-            const iframe = e.currentTarget as HTMLIFrameElement;
-            const link = document.createElement('a');
-            link.href = url;
-            link.target = '_blank';
-            link.rel = 'noreferrer';
-            link.textContent = url;
-            link.className = 'text-sm underline break-all';
-            iframe.replaceWith(link);
-          }}
-        />
+        <div ref={ref}>
+          <blockquote className="twitter-tweet" data-dnt="true" data-lang="ar">
+            <a href={url} />
+          </blockquote>
+        </div>
       </CardContent>
     </Card>
   );

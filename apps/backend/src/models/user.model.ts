@@ -84,4 +84,12 @@ export const UserModel = {
   count(): number {
     return (db.prepare('SELECT COUNT(*) as count FROM users').get() as any).count;
   },
+
+  deleteById(id: number): void {
+    db.prepare('DELETE FROM users WHERE id = ?').run(id);
+  },
+
+  countByRole(role: User['role']): number {
+    return (db.prepare('SELECT COUNT(*) as count FROM users WHERE role = ?').get(role) as any).count;
+  },
 };

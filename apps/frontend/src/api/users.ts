@@ -31,4 +31,6 @@ export const usersApi = {
   updatePreferences: (data: Partial<UiPreferences>) =>
     api.patch<UiPreferences>('/users/me/preferences', data).then((r) => r.data),
   recordLoginActivity: () => api.post('/users/me/login-activity').then((r) => r.data),
+  deleteMe: () => api.delete('/users/me'),
+  deleteUser: (id: number) => api.delete(`/users/${id}`),
 };
