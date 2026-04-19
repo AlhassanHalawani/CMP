@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -125,14 +125,31 @@ function extractTweetId(url: string): string | null {
 
 function TweetEmbed({ url }: { url: string }) {
   const tweetId = extractTweetId(url);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [height, setHeight] = useState(550);
+
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      try {
+        const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+        if (data?.method === 'twttr.private.resize' && typeof data?.params?.height === 'number') {
+          setHeight(data.params.height + 8);
+        }
+      } catch { /* ignore non-JSON messages */ }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
   if (!tweetId) return null;
 
   return (
     <div className="rounded-base overflow-hidden border border-border w-full">
       <iframe
+        ref={iframeRef}
         src={`https://platform.twitter.com/embed/Tweet.html?id=${tweetId}&theme=dark&chrome=nofooter`}
         className="w-full block"
-        style={{ height: '480px', border: 'none' }}
+        style={{ height: `${height}px`, border: 'none', transition: 'height 0.2s ease' }}
         scrolling="no"
         title="X post"
         loading="lazy"
@@ -209,65 +226,62 @@ function StudentDashboard() {
   });
 
   return (
-    <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_2fr]">
-      {/* Left column: XP + personal stats */}
-      <div className="space-y-6">
-        {gamification && (
-          <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <span className="text-sm font-bold opacity-70">Level </span>
-                  <span className="text-2xl font-black text-[var(--main)]">{gamification.current_level}</span>
-                  <span className="text-sm opacity-50 ml-2">· {gamification.current_xp} XP</span>
-                </div>
-                <span className="text-xs opacity-50">
-                  {gamification.xp_to_next_level > 0
-                    ? `${gamification.xp_to_next_level} XP to Lv.${gamification.current_level + 1}`
-                    : 'Max level'}
-                </span>
+    <div>
+      {/* XP bar */}
+      {gamification && (
+        <Card className="mb-6">
+          <CardContent className="pt-4">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <span className="text-sm font-bold opacity-70">Level </span>
+                <span className="text-2xl font-black text-[var(--main)]">{gamification.current_level}</span>
+                <span className="text-sm opacity-50 ml-2">· {gamification.current_xp} XP</span>
               </div>
-              <div className="w-full h-2 rounded-full bg-[var(--bg)] border border-border overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-[var(--main)] transition-all"
-                  style={{ width: `${gamification.progress_percent}%` }}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              <span className="text-xs opacity-50">
+                {gamification.xp_to_next_level > 0
+                  ? `${gamification.xp_to_next_level} XP to Lv.${gamification.current_level + 1}`
+                  : 'Max level'}
+              </span>
+            </div>
+            <div className="w-full h-2 rounded-full bg-[var(--bg)] border border-border overflow-hidden">
+              <div
+                className="h-full rounded-full bg-[var(--main)] transition-all"
+                style={{ width: `${gamification.progress_percent}%` }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-        <div className="grid grid-cols-3 gap-3 lg:grid-cols-1">
-          <Card>
-            <CardHeader className="pb-1"><CardTitle className="text-xs opacity-60">Registered</CardTitle></CardHeader>
-            <CardContent><p className="text-3xl font-black">{myStats?.events_registered ?? '…'}</p><p className="text-xs opacity-50">events</p></CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-1"><CardTitle className="text-xs opacity-60">Attended</CardTitle></CardHeader>
-            <CardContent><p className="text-3xl font-black">{myStats?.events_attended ?? '…'}</p><p className="text-xs opacity-50">events</p></CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-1"><CardTitle className="text-xs opacity-60">Clubs</CardTitle></CardHeader>
-            <CardContent><p className="text-3xl font-black">{myStats?.clubs_joined ?? '…'}</p><p className="text-xs opacity-50">joined</p></CardContent>
-          </Card>
+      {/* Personal stat cards */}
+      <div className="grid grid-cols-3 gap-4 mb-8">
+        <Card>
+          <CardHeader className="pb-1"><CardTitle className="text-xs opacity-60">Registered</CardTitle></CardHeader>
+          <CardContent><p className="text-3xl font-black">{myStats?.events_registered ?? '…'}</p><p className="text-xs opacity-50">events</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-1"><CardTitle className="text-xs opacity-60">Attended</CardTitle></CardHeader>
+          <CardContent><p className="text-3xl font-black">{myStats?.events_attended ?? '…'}</p><p className="text-xs opacity-50">events</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-1"><CardTitle className="text-xs opacity-60">Clubs</CardTitle></CardHeader>
+          <CardContent><p className="text-3xl font-black">{myStats?.clubs_joined ?? '…'}</p><p className="text-xs opacity-50">joined</p></CardContent>
+        </Card>
+      </div>
+
+      {/* Event feed: 2-col on md+, 1-col on mobile */}
+      <h2 className="mb-4 text-xl font-black">{t('dashboard.upcomingEvents')}</h2>
+      {eventsLoading ? (
+        <div className="flex justify-center p-8"><Spinner size="lg" /></div>
+      ) : eventsData?.data.length === 0 ? (
+        <p className="text-sm opacity-50">{t('common.noData')}</p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+          {eventsData?.data.map((event) => (
+            <EventFeedCard key={event.id} event={event} language={language} />
+          ))}
         </div>
-      </div>
-
-      {/* Right column: event feed */}
-      <div>
-        <h2 className="mb-4 text-xl font-black">{t('dashboard.upcomingEvents')}</h2>
-        {eventsLoading ? (
-          <div className="flex justify-center p-8"><Spinner size="lg" /></div>
-        ) : eventsData?.data.length === 0 ? (
-          <p className="text-sm opacity-50">{t('common.noData')}</p>
-        ) : (
-          <div className="flex flex-col gap-6">
-            {eventsData?.data.map((event) => (
-              <EventFeedCard key={event.id} event={event} language={language} />
-            ))}
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }
