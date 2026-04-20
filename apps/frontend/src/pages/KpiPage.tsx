@@ -38,6 +38,8 @@ import { kpiApi } from '@/api/kpi';
 import { adminApi } from '@/api/admin';
 import { clubsApi } from '@/api/clubs';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { KpiOverviewSection } from '@/components/KpiOverviewSection';
 
 const leaderboardChartConfig: ChartConfig = {
   attendance_count: {
@@ -60,6 +62,7 @@ export function KpiPage() {
   const { hasRole } = useAuth();
   const isAdmin = hasRole('admin');
   const queryClient = useQueryClient();
+  const { currentUser } = useCurrentUser();
 
   const [selectedSemester, setSelectedSemester] = useState<number | undefined>();
   const [selectedDepartment, setSelectedDepartment] = useState<string | undefined>();
@@ -110,6 +113,12 @@ export function KpiPage() {
   const studentData = studentKpi?.data ?? [];
   const maxAttendance = leaderboardData[0]?.attendance_count ?? 0;
   const maxXp = studentData[0]?.xp_total ?? 0;
+
+  const isLeader = !isAdmin && hasRole('club_leader');
+  const ownedClub = isLeader && currentUser
+    ? (clubs?.data ?? []).find((c: any) => c.leader_id === currentUser.id)
+    : undefined;
+  const overviewClubId = isAdmin ? undefined : ownedClub?.id;
 
   const departments = Array.from(
     new Set((clubs?.data ?? []).map((c: any) => c.department).filter(Boolean)),
@@ -232,12 +241,20 @@ export function KpiPage() {
         </div>
       )}
 
-      <Tabs defaultValue="leaderboard">
+      <Tabs defaultValue="overview">
         <TabsList>
+          <TabsTrigger value="overview">{t('kpi.overview')}</TabsTrigger>
           <TabsTrigger value="leaderboard">{t('kpi.leaderboard')}</TabsTrigger>
           <TabsTrigger value="club">{t('kpi.clubBreakdown')}</TabsTrigger>
           {isAdmin && <TabsTrigger value="students">{t('kpi.students', 'Students')}</TabsTrigger>}
         </TabsList>
+
+        {/* Overview tab — rolling 6-month live analytics */}
+        <TabsContent value="overview">
+          <div className="mt-4">
+            <KpiOverviewSection clubId={overviewClubId} showRankings={isAdmin} />
+          </div>
+        </TabsContent>
 
         {/* Leaderboard tab — clubs ranked by attendance */}
         <TabsContent value="leaderboard">

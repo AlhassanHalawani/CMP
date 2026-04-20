@@ -152,7 +152,21 @@
     "studentXp": "XP الطلاب",
     "studentRankings": "ترتيب الطلاب",
     "noClubsYet": "لا توجد أندية بعد",
-    "noStudentsYet": "لا يوجد طلاب بعد"
+    "noStudentsYet": "لا يوجد طلاب بعد",
+    "overview": "نظرة عامة",
+    "eventsLast6Months": "الفعاليات (6 أشهر)",
+    "attendanceLast6Months": "الحضور (6 أشهر)",
+    "uniqueAttendees": "حضور فريد",
+    "attendanceRate": "معدل الحضور",
+    "avgAttendancePerEvent": "متوسط لكل فعالية",
+    "activeClubs": "الأندية النشطة",
+    "eventsOverview": "نظرة عامة على الفعاليات",
+    "attendanceTrend": "اتجاه الحضور",
+    "registrationsTrend": "اتجاه التسجيلات",
+    "topClubsByEvents": "أفضل الأندية بالفعاليات",
+    "topClubsByAttendance": "أفضل الأندية بالحضور",
+    "last6Months": "آخر 6 أشهر",
+    "events": "فعاليات"
   },
   "notifications": {
     "tab": "الإشعارات",

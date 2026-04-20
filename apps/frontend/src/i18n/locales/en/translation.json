@@ -152,7 +152,21 @@
     "studentXp": "Student XP",
     "studentRankings": "Student Rankings",
     "noClubsYet": "No clubs yet",
-    "noStudentsYet": "No students yet"
+    "noStudentsYet": "No students yet",
+    "overview": "Overview",
+    "eventsLast6Months": "Events (6 mo.)",
+    "attendanceLast6Months": "Attendance (6 mo.)",
+    "uniqueAttendees": "Unique Attendees",
+    "attendanceRate": "Attendance Rate",
+    "avgAttendancePerEvent": "Avg. per Event",
+    "activeClubs": "Active Clubs",
+    "eventsOverview": "Events Overview",
+    "attendanceTrend": "Attendance Trend",
+    "registrationsTrend": "Registrations Trend",
+    "topClubsByEvents": "Top Clubs by Events",
+    "topClubsByAttendance": "Top Clubs by Attendance",
+    "last6Months": "last 6 months",
+    "events": "events"
   },
   "notifications": {
     "tab": "Notifications",

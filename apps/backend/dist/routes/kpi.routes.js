@@ -5,6 +5,7 @@ const auth_1 = require("../middleware/auth");
 const roles_1 = require("../middleware/roles");
 const kpi_controller_1 = require("../controllers/kpi.controller");
 const router = (0, express_1.Router)();
+router.get('/overview', auth_1.authenticate, (0, roles_1.requireRole)('admin', 'club_leader'), kpi_controller_1.getOverview);
 router.get('/leaderboard', kpi_controller_1.getLeaderboard);
 router.get('/students', auth_1.authenticate, (0, roles_1.requireRole)('admin', 'club_leader'), kpi_controller_1.getStudentKpi);
 router.get('/club/:clubId', kpi_controller_1.getClubSummary);

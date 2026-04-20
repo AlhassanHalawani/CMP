@@ -5,6 +5,30 @@ import { isAdmin, leaderOwnsClub } from '../services/ownership.service';
 import { generateKpiReport } from '../services/pdf.service';
 import { db } from '../config/database';
 
+export function getOverview(req: AuthRequest, res: Response) {
+  const user = req.user!;
+  const clubIdParam = req.query.club_id ? parseInt(req.query.club_id as string) : undefined;
+
+  if (isAdmin(user)) {
+    return res.json(KpiModel.getOverview({ clubId: clubIdParam }));
+  }
+
+  // Club leader: resolve their owned club via clubs.leader_id, not a user column
+  const ownedClub = db
+    .prepare('SELECT id FROM clubs WHERE leader_id = ?')
+    .get(user.id) as { id: number } | undefined;
+
+  if (!ownedClub) {
+    return res.status(403).json({ error: 'You do not lead any club' });
+  }
+
+  if (clubIdParam && clubIdParam !== ownedClub.id) {
+    return res.status(403).json({ error: 'You can only view overview for your own club' });
+  }
+
+  return res.json(KpiModel.getOverview({ clubId: ownedClub.id }));
+}
+
 export function recordMetric(req: AuthRequest, res: Response) {
   const user = req.user!;
   const clubId = req.body.club_id;

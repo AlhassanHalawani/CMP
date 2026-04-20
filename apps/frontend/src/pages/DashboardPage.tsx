@@ -22,6 +22,7 @@ import { kpiApi } from '@/api/kpi';
 import { analyticsApi } from '@/api/analytics';
 import { gamificationApi } from '@/api/gamification';
 import { usersApi } from '@/api/users';
+import { KpiOverviewSection } from '@/components/KpiOverviewSection';
 
 // ─── Visitors Chart (admin only) ─────────────────────────────────────────────
 
@@ -105,8 +106,8 @@ const statsChartConfig: ChartConfig = {
 };
 
 const leaderboardChartConfig: ChartConfig = {
-  total_score: {
-    label: 'Score',
+  attendance_count: {
+    label: 'Attendance',
     color: 'var(--color-main, #facc15)',
   },
 };
@@ -356,6 +357,9 @@ function ClubLeaderDashboard({ clubId }: { clubId: number }) {
         </Card>
       </div>
 
+      {/* 6-month rolling KPI overview */}
+      <KpiOverviewSection clubId={clubId} />
+
       {/* Stats chart + leaderboard */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 mb-8">
         <Card>
@@ -390,7 +394,7 @@ function ClubLeaderDashboard({ clubId }: { clubId: number }) {
                   <XAxis type="number" />
                   <YAxis type="category" dataKey="club_name" width={75} tick={{ fontSize: 11 }} />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="total_score" fill="var(--color-total_score)" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="attendance_count" fill="var(--color-attendance_count)" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ChartContainer>
             )}
@@ -466,6 +470,9 @@ function AdminDashboard() {
     <div>
       <VisitorsChart />
 
+      {/* Platform-wide 6-month rolling KPI overview */}
+      <KpiOverviewSection />
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mb-8">
         <div className="lg:col-span-2">
           <Card>
@@ -512,7 +519,7 @@ function AdminDashboard() {
                   <XAxis type="number" />
                   <YAxis type="category" dataKey="club_name" width={75} tick={{ fontSize: 11 }} />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="total_score" fill="var(--color-total_score)" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="attendance_count" fill="var(--color-attendance_count)" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ChartContainer>
             </CardContent>

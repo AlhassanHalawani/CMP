@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.getOverview = getOverview;
 exports.recordMetric = recordMetric;
 exports.getClubSummary = getClubSummary;
 exports.getLeaderboard = getLeaderboard;
@@ -9,6 +10,24 @@ const kpi_model_1 = require("../models/kpi.model");
 const ownership_service_1 = require("../services/ownership.service");
 const pdf_service_1 = require("../services/pdf.service");
 const database_1 = require("../config/database");
+function getOverview(req, res) {
+    const user = req.user;
+    const clubIdParam = req.query.club_id ? parseInt(req.query.club_id) : undefined;
+    if ((0, ownership_service_1.isAdmin)(user)) {
+        return res.json(kpi_model_1.KpiModel.getOverview({ clubId: clubIdParam }));
+    }
+    // Club leader: resolve their owned club via clubs.leader_id, not a user column
+    const ownedClub = database_1.db
+        .prepare('SELECT id FROM clubs WHERE leader_id = ?')
+        .get(user.id);
+    if (!ownedClub) {
+        return res.status(403).json({ error: 'You do not lead any club' });
+    }
+    if (clubIdParam && clubIdParam !== ownedClub.id) {
+        return res.status(403).json({ error: 'You can only view overview for your own club' });
+    }
+    return res.json(kpi_model_1.KpiModel.getOverview({ clubId: ownedClub.id }));
+}
 function recordMetric(req, res) {
     const user = req.user;
     const clubId = req.body.club_id;
