@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
-import { Download } from 'lucide-react';
+import { Camera, CameraOff, Download } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
@@ -35,6 +35,7 @@ import { clubsApi } from '@/api/clubs';
 import { eventsApi } from '@/api/events';
 import { attendanceApi } from '@/api/attendance';
 import { EventFormDialog } from '@/components/events/EventFormDialog';
+import { QrCameraScanner, type CameraErrorType } from '@/components/attendance/QrCameraScanner';
 import { useAppToast } from '@/contexts/ToastContext';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
@@ -112,6 +113,9 @@ export function EventDetailPage() {
   const [checkInToken, setCheckInToken] = useState('');
   const [checkInStatus, setCheckInStatus] = useState<'idle' | 'success' | 'error' | 'duplicate'>('idle');
   const [checkInMessage, setCheckInMessage] = useState('');
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [cameraError, setCameraError] = useState('');
+  const scanProcessing = useRef(false);
   const isAdmin = hasRole('admin');
   const isLeader = hasRole('club_leader');
   const { currentUser } = useCurrentUser();
@@ -174,13 +178,15 @@ export function EventDetailPage() {
   });
 
   const checkInMutation = useMutation({
-    mutationFn: () => attendanceApi.checkIn(checkInToken),
+    mutationFn: (token: string) => attendanceApi.checkIn(token),
     onSuccess: () => {
       setCheckInStatus('success');
       setCheckInMessage(t('attendance.checkInSuccess'));
       setCheckInToken('');
+      scanProcessing.current = false;
     },
     onError: (error: unknown) => {
+      scanProcessing.current = false;
       if (isAxiosError(error) && error.response?.status === 409) {
         setCheckInStatus('duplicate');
         setCheckInMessage(t('attendance.alreadyCheckedIn'));
@@ -193,6 +199,27 @@ export function EventDetailPage() {
       setCheckInMessage(message);
     },
   });
+
+  const handleScanDetected = useCallback((token: string) => {
+    if (scanProcessing.current) return;
+    scanProcessing.current = true;
+    setScannerOpen(false);
+    setCheckInToken(token);
+    setCheckInStatus('idle');
+    setCheckInMessage('');
+    checkInMutation.mutate(token);
+  }, [checkInMutation]);
+
+  const handleCameraError = useCallback((errorType: CameraErrorType) => {
+    setScannerOpen(false);
+    if (errorType === 'permission_denied') {
+      setCameraError(t('attendance.cameraPermissionDenied'));
+    } else if (errorType === 'no_camera') {
+      setCameraError(t('attendance.cameraUnsupported'));
+    } else {
+      setCameraError(t('attendance.cameraError'));
+    }
+  }, [t]);
 
   const deleteMutation = useMutation({
     mutationFn: () => eventsApi.delete(eventId),
@@ -452,6 +479,43 @@ export function EventDetailPage() {
         <Card className="mt-4">
           <CardContent>
             <h3 className="font-black mb-3">{t('attendance.checkInTitle')}</h3>
+
+            {/* Camera scanner */}
+            {scannerOpen && (
+              <div className="mb-3">
+                <p className="text-sm text-muted-foreground mb-2">{t('attendance.cameraHelp')}</p>
+                <QrCameraScanner
+                  isActive={scannerOpen}
+                  onDetected={handleScanDetected}
+                  onError={handleCameraError}
+                />
+              </div>
+            )}
+
+            {/* Open / Close camera button */}
+            <div className="mb-3">
+              {!scannerOpen ? (
+                <Button
+                  variant="outline"
+                  onClick={() => { setScannerOpen(true); setCameraError(''); }}
+                  disabled={checkInMutation.isPending}
+                >
+                  <Camera className="size-4 mr-1" />
+                  {t('attendance.openCamera')}
+                </Button>
+              ) : (
+                <Button variant="outline" onClick={() => setScannerOpen(false)}>
+                  <CameraOff className="size-4 mr-1" />
+                  {t('attendance.closeCamera')}
+                </Button>
+              )}
+            </div>
+
+            {cameraError && (
+              <p className="text-sm font-bold text-red-600 mb-3">{cameraError}</p>
+            )}
+
+            {/* Manual token input */}
             <div className="flex gap-3 mb-3">
               <Input
                 placeholder={t('attendance.tokenPlaceholder')}
@@ -463,12 +527,13 @@ export function EventDetailPage() {
                 }}
               />
               <Button
-                onClick={() => checkInMutation.mutate()}
+                onClick={() => checkInMutation.mutate(checkInToken)}
                 disabled={checkInMutation.isPending || !checkInToken.trim()}
               >
                 {checkInMutation.isPending ? t('common.loading') : t('attendance.checkInBtn')}
               </Button>
             </div>
+
             {checkInStatus === 'success' && (
               <p className="text-sm font-bold text-green-600">{checkInMessage}</p>
             )}

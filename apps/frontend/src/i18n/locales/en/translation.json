@@ -103,7 +103,13 @@
     "method": "Method",
     "time": "Time",
     "qrMethod": "QR",
-    "manualMethod": "Manual"
+    "manualMethod": "Manual",
+    "openCamera": "Open Camera",
+    "closeCamera": "Close Camera",
+    "cameraHelp": "Point your camera at the event QR code",
+    "cameraPermissionDenied": "Camera access was denied. Please allow camera access or enter the token manually.",
+    "cameraUnsupported": "No camera was found on this device. Please enter the token manually.",
+    "cameraError": "Could not start the camera. Please enter the token manually."
   },
   "badges": {
     "title": "Badges",
