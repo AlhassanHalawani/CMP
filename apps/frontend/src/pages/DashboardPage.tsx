@@ -34,6 +34,7 @@ const visitorsChartConfig: ChartConfig = {
 };
 
 function VisitorsChart() {
+  const { t } = useTranslation();
   const [range, setRange] = useState<TrafficRange>('30d');
 
   const { data, isLoading } = useQuery({
@@ -47,12 +48,12 @@ function VisitorsChart() {
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <CardTitle>Website Visitors</CardTitle>
+            <CardTitle>{t('dashboard.websiteVisitors')}</CardTitle>
             <CardDescription className="mt-1">
-              Showing visitors for the selected time range
+              {t('dashboard.visitorsSubtitle')}
               {data && (
                 <span className="ml-2 font-bold">
-                  — {data.totals.visitors} visitors · {data.totals.page_views} page views
+                  — {data.totals.visitors} {t('dashboard.visitors')} · {data.totals.page_views} {t('dashboard.pageViews')}
                 </span>
               )}
             </CardDescription>
@@ -173,6 +174,7 @@ function TweetEmbed({ url }: { url: string }) {
 // ─── Student event feed card ──────────────────────────────────────────────────
 
 function EventFeedCard({ event, language }: { event: import('@/api/events').Event; language: string }) {
+  const { t } = useTranslation();
   const title = language === 'ar' ? event.title_ar : event.title;
   const description = language === 'ar' ? event.description_ar : event.description;
 
@@ -202,7 +204,7 @@ function EventFeedCard({ event, language }: { event: import('@/api/events').Even
       ) : (
         <CardContent className="pt-0 pb-4">
           <Link to={`/events/${event.id}`}>
-            <Button size="sm" variant="outline" className="w-full">View Event</Button>
+            <Button size="sm" variant="outline" className="w-full">{t('dashboard.viewEvent')}</Button>
           </Link>
         </CardContent>
       )}
