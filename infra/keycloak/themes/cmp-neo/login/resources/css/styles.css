@@ -1,72 +1,306 @@
-:root {
-  --cmp-background: oklch(92.13% 0.0388 282.36);
-  --cmp-surface: oklch(100% 0 0);
-  --cmp-foreground: oklch(0% 0 0);
-  --cmp-main: oklch(66.34% 0.1806 277.2);
-  --cmp-border: oklch(0% 0 0);
-  --cmp-shadow: 4px 4px 0 0 var(--cmp-border);
-}
+/* CMP Neo — Keycloak Login Theme */
 
-body.login-pf,
-body {
-  background: var(--cmp-background) !important;
-  color: var(--cmp-foreground) !important;
-  font-weight: 500;
+/* ─── Page shell ─────────────────────────────────────────────────────────── */
+
+.cmp-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background-color: oklch(92.13% 0.0388 282.36);
   background-image:
-    linear-gradient(to right, color-mix(in srgb, var(--cmp-border) 10%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in srgb, var(--cmp-border) 10%, transparent) 1px, transparent 1px);
+    linear-gradient(to right, rgba(0, 0, 0, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.08) 1px, transparent 1px);
   background-size: 56px 56px;
+  background-attachment: fixed;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-weight: 500;
+  color: #000;
+  box-sizing: border-box;
 }
 
-.kc-page-title,
-#kc-page-title,
-h1,
-h2,
-h3 {
+/* ─── Card ───────────────────────────────────────────────────────────────── */
+
+.cmp-card {
+  width: 100%;
+  max-width: 384px;
+  background: #fff;
+  border: 2px solid #000;
+  box-shadow: 4px 4px 0 0 #000;
+  padding: 32px;
+  box-sizing: border-box;
+}
+
+/* ─── Brand block ────────────────────────────────────────────────────────── */
+
+.cmp-brand-block {
+  margin-bottom: 24px;
+}
+
+.cmp-brand-title {
+  font-size: 2rem;
+  font-weight: 900;
+  line-height: 1;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.02em;
+}
+
+.cmp-brand-sub {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: oklch(66.34% 0.1806 277.2);
+  margin: 0;
+}
+
+/* ─── Alert / message ────────────────────────────────────────────────────── */
+
+.cmp-alert {
+  padding: 10px 14px;
+  border: 2px solid #000;
+  margin-bottom: 16px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.cmp-alert--error   { background: #fef2f2; border-color: #dc2626; color: #dc2626; }
+.cmp-alert--warning { background: #fffbeb; border-color: #d97706; color: #d97706; }
+.cmp-alert--success { background: #f0fdf4; border-color: #16a34a; color: #16a34a; }
+.cmp-alert--info    { background: #eff6ff; border-color: #2563eb; color: #2563eb; }
+
+/* ─── Form title ─────────────────────────────────────────────────────────── */
+
+.cmp-form-title {
+  font-size: 1.125rem;
   font-weight: 800;
+  margin: 0 0 20px 0;
+  letter-spacing: -0.01em;
 }
 
-.kc-form-card,
-.card-pf,
-.pf-v5-c-card {
-  border: 2px solid var(--cmp-border) !important;
-  border-radius: 0 !important;
-  box-shadow: var(--cmp-shadow) !important;
-  background: var(--cmp-surface) !important;
+/* ─── Info text ──────────────────────────────────────────────────────────── */
+
+.cmp-info-text {
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  margin: 0 0 14px 0;
 }
 
-button,
-input,
-select,
-textarea,
-.pf-v5-c-form-control,
-.pf-v5-c-button {
-  border-radius: 0 !important;
-  border: 2px solid var(--cmp-border) !important;
-  box-shadow: none !important;
-}
-
-.pf-v5-c-button.pf-m-primary,
-#kc-login,
-#kc-register,
-input[type="submit"] {
-  background: var(--cmp-main) !important;
-  color: var(--cmp-foreground) !important;
-  border: 2px solid var(--cmp-border) !important;
-  box-shadow: var(--cmp-shadow) !important;
+.cmp-info-text a {
   font-weight: 700;
-}
-
-.pf-v5-c-button.pf-m-primary:hover,
-#kc-login:hover,
-#kc-register:hover,
-input[type="submit"]:hover {
-  transform: translate(4px, 4px);
-  box-shadow: none !important;
-}
-
-a {
-  color: var(--cmp-foreground) !important;
-  font-weight: 700;
+  color: #000;
   text-decoration: underline;
+}
+
+/* ─── Fields ─────────────────────────────────────────────────────────────── */
+
+.cmp-field {
+  margin-bottom: 14px;
+}
+
+.cmp-field--inline {
+  display: flex;
+  align-items: center;
+}
+
+.cmp-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  margin-bottom: 5px;
+  letter-spacing: 0.01em;
+}
+
+.cmp-input {
+  width: 100%;
+  padding: 9px 11px;
+  border: 2px solid #000;
+  border-radius: 0;
+  background: #fff;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #000;
+  box-sizing: border-box;
+  outline: none;
+  transition: box-shadow 0.15s ease;
+}
+
+.cmp-input:focus {
+  box-shadow: 0 0 0 3px oklch(66.34% 0.1806 277.2 / 0.25);
+}
+
+.cmp-input:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.cmp-input--error {
+  border-color: #dc2626;
+}
+
+.cmp-field-error {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #dc2626;
+  margin-top: 4px;
+}
+
+/* ─── Checkbox ───────────────────────────────────────────────────────────── */
+
+.cmp-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+
+.cmp-checkbox {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #000;
+  border-radius: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  accent-color: oklch(66.34% 0.1806 277.2);
+}
+
+/* ─── Buttons ────────────────────────────────────────────────────────────── */
+
+.cmp-btn {
+  display: block;
+  width: 100%;
+  padding: 11px 24px;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  border: 2px solid #000;
+  border-radius: 0;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  box-sizing: border-box;
+  margin-top: 8px;
+  font-family: inherit;
+}
+
+.cmp-btn--primary {
+  background-color: oklch(66.34% 0.1806 277.2);
+  color: #000;
+  box-shadow: 4px 4px 0 0 #000;
+}
+
+.cmp-btn--primary:hover,
+.cmp-btn--primary:focus-visible {
+  transform: translate(4px, 4px);
+  box-shadow: none;
+  outline: none;
+}
+
+.cmp-btn--secondary {
+  background-color: #fff;
+  color: #000;
+  box-shadow: 4px 4px 0 0 #000;
+  margin-top: 10px;
+}
+
+.cmp-btn--secondary:hover,
+.cmp-btn--secondary:focus-visible {
+  transform: translate(4px, 4px);
+  box-shadow: none;
+  outline: none;
+}
+
+/* ─── Secondary links ────────────────────────────────────────────────────── */
+
+.cmp-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 16px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.cmp-links a {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #000;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.cmp-links a:hover {
+  color: oklch(66.34% 0.1806 277.2);
+}
+
+/* ─── Locale switcher ────────────────────────────────────────────────────── */
+
+.cmp-locale-bar {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.cmp-locale-link {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #000;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.cmp-locale-link--active {
+  color: oklch(66.34% 0.1806 277.2);
+  text-decoration: none;
+}
+
+/* ─── RTL (Arabic) ───────────────────────────────────────────────────────── */
+
+[dir="rtl"] .cmp-card {
+  text-align: right;
+}
+
+[dir="rtl"] .cmp-checkbox-label {
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+}
+
+[dir="rtl"] .cmp-links {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .cmp-locale-bar {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .cmp-input {
+  direction: rtl;
+}
+
+/* ─── Mobile ─────────────────────────────────────────────────────────────── */
+
+@media (max-width: 480px) {
+  .cmp-page {
+    padding: 16px;
+    align-items: flex-start;
+    padding-top: 48px;
+  }
+
+  .cmp-card {
+    padding: 24px 20px;
+    max-width: 100%;
+  }
+
+  .cmp-brand-title {
+    font-size: 1.75rem;
+  }
 }

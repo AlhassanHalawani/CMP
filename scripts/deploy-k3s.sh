@@ -14,12 +14,14 @@ GH_USER="${GH_USER:-}"
 CR_PAT="${CR_PAT:-}"
 BACKEND_IMAGE="${BACKEND_IMAGE:-}"
 FRONTEND_IMAGE="${FRONTEND_IMAGE:-}"
+KEYCLOAK_IMAGE="${KEYCLOAK_IMAGE:-}"
 ROLLOUT_TIMEOUT="${ROLLOUT_TIMEOUT:-180s}"
 
 if [[ -z "$GH_USER" ]];        then echo "error: GH_USER is required" >&2;        exit 1; fi
 if [[ -z "$CR_PAT" ]];         then echo "error: CR_PAT is required" >&2;         exit 1; fi
 if [[ -z "$BACKEND_IMAGE" ]];  then echo "error: BACKEND_IMAGE is required" >&2;  exit 1; fi
 if [[ -z "$FRONTEND_IMAGE" ]]; then echo "error: FRONTEND_IMAGE is required" >&2; exit 1; fi
+if [[ -z "$KEYCLOAK_IMAGE" ]]; then echo "error: KEYCLOAK_IMAGE is required" >&2; exit 1; fi
 
 # Ensure kubectl can reach the cluster; fall back to k3s admin kubeconfig
 K3S_YAML=/etc/rancher/k3s/k3s.yaml
@@ -43,6 +45,7 @@ fi
 echo "Deploying to namespace: ${NAMESPACE}"
 echo "Backend:  ${BACKEND_IMAGE}"
 echo "Frontend: ${FRONTEND_IMAGE}"
+echo "Keycloak: ${KEYCLOAK_IMAGE}"
 
 echo "Refreshing pull secret..."
 kubectl -n "$NAMESPACE" delete secret ghcr-creds --ignore-not-found
@@ -57,6 +60,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 echo "Applying deployment manifests..."
 kubectl apply -f "$REPO_ROOT/infra/k8s/backend/deployment.yaml"
 kubectl apply -f "$REPO_ROOT/infra/k8s/frontend/deployment.yaml"
+kubectl apply -f "$REPO_ROOT/infra/k8s/keycloak/statefulset.yaml"
 
 echo "Updating deployment images..."
 kubectl -n "$NAMESPACE" set image deploy/cmp-backend \
@@ -64,12 +68,16 @@ kubectl -n "$NAMESPACE" set image deploy/cmp-backend \
   migrate="$BACKEND_IMAGE"
 kubectl -n "$NAMESPACE" set image deploy/cmp-frontend \
   frontend="$FRONTEND_IMAGE"
+kubectl -n "$NAMESPACE" set image statefulset/cmp-keycloak \
+  keycloak="$KEYCLOAK_IMAGE"
 
 echo "Waiting for rollout..."
 kubectl -n "$NAMESPACE" rollout status deploy/cmp-backend --timeout="$ROLLOUT_TIMEOUT"
 kubectl -n "$NAMESPACE" rollout status deploy/cmp-frontend --timeout="$ROLLOUT_TIMEOUT"
+kubectl -n "$NAMESPACE" rollout status statefulset/cmp-keycloak --timeout="$ROLLOUT_TIMEOUT"
 
 echo ""
 echo "Deploy complete."
 kubectl -n "$NAMESPACE" get deploy cmp-backend cmp-frontend -o wide
+kubectl -n "$NAMESPACE" get statefulset cmp-keycloak -o wide
 kubectl -n "$NAMESPACE" get pods -o wide

@@ -5,6 +5,9 @@
   "registrationAllowed": true,
   "resetPasswordAllowed": true,
   "loginTheme": "cmp-neo",
+  "internationalizationEnabled": true,
+  "supportedLocales": ["en", "ar"],
+  "defaultLocale": "en",
   "roles": {
     "realm": [
       {

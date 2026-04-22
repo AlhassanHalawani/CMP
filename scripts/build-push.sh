@@ -20,10 +20,12 @@ if [[ -z "$CR_PAT" ]]; then echo "error: CR_PAT is required" >&2; exit 1; fi
 
 BACKEND_IMAGE="ghcr.io/${GH_USER}/cmp-backend:${TAG}"
 FRONTEND_IMAGE="ghcr.io/${GH_USER}/cmp-frontend:${TAG}"
+KEYCLOAK_IMAGE="ghcr.io/${GH_USER}/cmp-keycloak:${TAG}"
 
 echo "Tag: ${TAG}"
 echo "Backend:  ${BACKEND_IMAGE}"
 echo "Frontend: ${FRONTEND_IMAGE}"
+echo "Keycloak: ${KEYCLOAK_IMAGE}"
 
 echo "Ensuring ARM64 build support..."
 # Install QEMU binfmt handlers for ARM64 cross-compilation
@@ -62,11 +64,18 @@ docker buildx build --platform linux/arm64 \
   --build-arg VITE_KEYCLOAK_CLIENT_ID="$KEYCLOAK_CLIENT_ID" \
   --push .
 
+echo "Building and pushing keycloak (linux/arm64)..."
+docker buildx build --platform linux/arm64 \
+  -f infra/keycloak/Dockerfile \
+  -t "$KEYCLOAK_IMAGE" \
+  --push infra/keycloak/
+
 echo ""
 echo "Done. Now run this on the Pi to deploy:"
 echo ""
 echo "  BACKEND_IMAGE=${BACKEND_IMAGE} \\"
 echo "  FRONTEND_IMAGE=${FRONTEND_IMAGE} \\"
+echo "  KEYCLOAK_IMAGE=${KEYCLOAK_IMAGE} \\"
 echo "  GH_USER=${GH_USER} \\"
 echo "  CR_PAT='<token>' \\"
 echo "  bash scripts/deploy-k3s.sh"
