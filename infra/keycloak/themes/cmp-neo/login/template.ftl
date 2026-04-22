@@ -1,6 +1,7 @@
 <#macro registrationLayout bodyClass="" displayInfo=false displayMessage=true>
+<#assign currentLang = (locale.currentLanguageTag)!"en">
 <!DOCTYPE html>
-<html lang="${locale.currentLanguageTag}"<#if locale.currentLanguageTag == "ar"> dir="rtl"</#if>>
+<html lang="${currentLang}"<#if currentLang == "ar"> dir="rtl"</#if>>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -24,10 +25,10 @@
 
       <#nested>
 
-      <#if realm.internationalizationEnabled && locale.supported?has_content && (locale.supported?size gt 1)>
+      <#if realm.internationalizationEnabled && locale?? && locale.supported?has_content && (locale.supported?size gt 1)>
         <div class="cmp-locale-bar">
           <#list locale.supported as l>
-            <a href="${l.url}" class="cmp-locale-link<#if l.languageTag == locale.currentLanguageTag> cmp-locale-link--active</#if>">${l.label}</a>
+            <a href="${l.url}" class="cmp-locale-link<#if l.languageTag == currentLang> cmp-locale-link--active</#if>">${l.label}</a>
           </#list>
         </div>
       </#if>
