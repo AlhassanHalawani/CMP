@@ -10,7 +10,7 @@
   <#if !(skipLink?? && skipLink)>
     <div class="cmp-links">
       <#if client?? && client.baseUrl?has_content>
-        <a href="${client.baseUrl?html}">${msg("backToApplication")!"Back to App"}</a>
+        <a href="${client.baseUrl}">${msg("backToApplication")!"Back to App"}</a>
       <#else>
         <a href="${url.loginUrl}">${msg("backToLogin")}</a>
       </#if>

@@ -9,7 +9,7 @@
       <label class="cmp-label" for="firstName">${msg("firstName")}</label>
       <input class="cmp-input<#if messagesPerField.existsError("firstName")> cmp-input--error</#if>"
              id="firstName" name="firstName" type="text"
-             value="${(register.formData.firstName!"")?html}"
+             value="${register.formData.firstName!""}"
              autofocus>
       <#if messagesPerField.existsError("firstName")>
         <span class="cmp-field-error">${kcSanitize(messagesPerField.get("firstName"))?no_esc}</span>
@@ -20,7 +20,7 @@
       <label class="cmp-label" for="lastName">${msg("lastName")}</label>
       <input class="cmp-input<#if messagesPerField.existsError("lastName")> cmp-input--error</#if>"
              id="lastName" name="lastName" type="text"
-             value="${(register.formData.lastName!"")?html}">
+             value="${register.formData.lastName!""}">
       <#if messagesPerField.existsError("lastName")>
         <span class="cmp-field-error">${kcSanitize(messagesPerField.get("lastName"))?no_esc}</span>
       </#if>
@@ -31,7 +31,7 @@
       <label class="cmp-label" for="username">${msg("username")}</label>
       <input class="cmp-input<#if messagesPerField.existsError("username")> cmp-input--error</#if>"
              id="username" name="username" type="text"
-             value="${(register.formData.username!"")?html}">
+             value="${register.formData.username!""}">
       <#if messagesPerField.existsError("username")>
         <span class="cmp-field-error">${kcSanitize(messagesPerField.get("username"))?no_esc}</span>
       </#if>
@@ -42,7 +42,7 @@
       <label class="cmp-label" for="email">${msg("email")}</label>
       <input class="cmp-input<#if messagesPerField.existsError("email")> cmp-input--error</#if>"
              id="email" name="email" type="email"
-             value="${(register.formData.email!"")?html}"
+             value="${register.formData.email!""}"
              autocomplete="email">
       <#if messagesPerField.existsError("email")>
         <span class="cmp-field-error">${kcSanitize(messagesPerField.get("email"))?no_esc}</span>

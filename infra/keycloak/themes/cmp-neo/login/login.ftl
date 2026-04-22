@@ -15,7 +15,7 @@
       </label>
       <input class="cmp-input<#if hasFieldErrors> cmp-input--error</#if>"
              id="username" name="username" type="text"
-             value="${(login.username!"")?html}"
+             value="${login.username!""}"
              tabindex="1" autocomplete="username"
              <#if usernameEditDisabled!false>disabled</#if>
              autofocus>

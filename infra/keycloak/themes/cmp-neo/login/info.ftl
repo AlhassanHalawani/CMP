@@ -11,11 +11,11 @@
   </#if>
 
   <#if pageRedirectUri?has_content>
-    <a class="cmp-btn cmp-btn--primary" href="${pageRedirectUri?html}">
+    <a class="cmp-btn cmp-btn--primary" href="${pageRedirectUri}">
       ${msg("backToApplication")!"Continue"}
     </a>
   <#elseif actionUri?has_content>
-    <a class="cmp-btn cmp-btn--primary" href="${actionUri?html}">
+    <a class="cmp-btn cmp-btn--primary" href="${actionUri}">
       ${msg("proceedWithAction")!"Continue"}
     </a>
   <#else>

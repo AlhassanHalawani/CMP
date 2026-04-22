@@ -15,15 +15,15 @@
         </#if>
 
         <div class="cmp-field">
-          <label class="cmp-label" for="${fieldName?html}">
+          <label class="cmp-label" for="${fieldName}">
             ${advancedMsg(attribute.displayName)!fieldName}
             <#if attribute.required><span aria-hidden="true"> *</span></#if>
           </label>
           <input class="cmp-input<#if messagesPerField.existsError(fieldName)> cmp-input--error</#if>"
-                 id="${fieldName?html}"
-                 name="${fieldName?html}"
+                 id="${fieldName}"
+                 name="${fieldName}"
                  type="${fieldType}"
-                 value="${(attribute.value!"")?html}"
+                 value="${(attribute.value!"")}"
                  <#if attribute.readOnly>disabled</#if>
                  <#if attribute?is_first>autofocus</#if>
                  <#if fieldType == "email">autocomplete="email"</#if>>

@@ -22,7 +22,7 @@
       </label>
       <input class="cmp-input<#if hasFieldErrors> cmp-input--error</#if>"
              id="username" name="username" type="text"
-             value="${(auth.attemptedUsername!"")?html}"
+             value="${auth.attemptedUsername!""}"
              autofocus autocomplete="username">
       <#if hasFieldErrors>
         <span class="cmp-field-error">${kcSanitize(messagesPerField.get("username"))?no_esc}</span>
