@@ -1,5 +1,6 @@
 <#import "template.ftl" as layout>
-<@layout.registrationLayout displayMessage=!(messagesPerField.existsError("username"))>
+<#assign hasFieldErrors = messagesPerField.existsError("username")>
+<@layout.registrationLayout displayMessage=!hasFieldErrors>
 
   <h2 class="cmp-form-title">${msg("emailForgotTitle")}</h2>
 
@@ -19,11 +20,11 @@
         <#elseif !realm.registrationEmailAsUsername>${msg("usernameOrEmail")}
         <#else>${msg("email")}</#if>
       </label>
-      <input class="cmp-input<#if messagesPerField.existsError("username")> cmp-input--error</#if>"
+      <input class="cmp-input<#if hasFieldErrors> cmp-input--error</#if>"
              id="username" name="username" type="text"
              value="${(auth.attemptedUsername!"")?html}"
              autofocus autocomplete="username">
-      <#if messagesPerField.existsError("username")>
+      <#if hasFieldErrors>
         <span class="cmp-field-error">${kcSanitize(messagesPerField.get("username"))?no_esc}</span>
       </#if>
     </div>

@@ -1,5 +1,6 @@
 <#import "template.ftl" as layout>
-<@layout.registrationLayout displayMessage=!(messagesPerField.existsError("password-new","password-new-confirm"))>
+<#assign hasFieldErrors = messagesPerField.existsError("password-new", "password-new-confirm")>
+<@layout.registrationLayout displayMessage=!hasFieldErrors>
 
   <h2 class="cmp-form-title">${msg("updatePasswordTitle")}</h2>
 

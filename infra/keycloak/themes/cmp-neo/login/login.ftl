@@ -1,18 +1,19 @@
 <#import "template.ftl" as layout>
-<@layout.registrationLayout displayMessage=!(messagesPerField.existsError("username","password"))>
+<#assign hasFieldErrors = messagesPerField.existsError("username", "password")>
+<@layout.registrationLayout displayMessage=!hasFieldErrors>
 
   <h2 class="cmp-form-title">${msg("loginAccountTitle")}</h2>
 
   <form id="kc-form-login" action="${url.loginAction}" method="post">
 
-    <#if !(usernameHidden!false)>
+    <#if !usernameHidden?? || !usernameHidden>
     <div class="cmp-field">
       <label class="cmp-label" for="username">
         <#if !realm.loginWithEmailAllowed>${msg("username")}
         <#elseif !realm.registrationEmailAsUsername>${msg("usernameOrEmail")}
         <#else>${msg("email")}</#if>
       </label>
-      <input class="cmp-input<#if messagesPerField.existsError("username","password")> cmp-input--error</#if>"
+      <input class="cmp-input<#if hasFieldErrors> cmp-input--error</#if>"
              id="username" name="username" type="text"
              value="${(login.username!"")?html}"
              tabindex="1" autocomplete="username"
@@ -23,23 +24,23 @@
 
     <div class="cmp-field">
       <label class="cmp-label" for="password">${msg("password")}</label>
-      <input class="cmp-input<#if messagesPerField.existsError("username","password")> cmp-input--error</#if>"
+      <input class="cmp-input<#if hasFieldErrors> cmp-input--error</#if>"
              id="password" name="password" type="password"
              tabindex="2" autocomplete="current-password"
-             <#if usernameHidden!false>autofocus</#if>>
+             <#if usernameHidden?? && usernameHidden>autofocus</#if>>
     </div>
 
-    <#if messagesPerField.existsError("username","password")>
+    <#if hasFieldErrors>
       <div class="cmp-alert cmp-alert--error" role="alert">
-        ${kcSanitize(messagesPerField.get("username","password"))?no_esc}
+        ${kcSanitize(messagesPerField.get("username", "password"))?no_esc}
       </div>
     </#if>
 
-    <#if realm.rememberMe && !(usernameEditDisabled!false)>
+    <#if realm.rememberMe && !usernameEditDisabled!true>
     <div class="cmp-field cmp-field--inline">
       <label class="cmp-checkbox-label">
         <input class="cmp-checkbox" type="checkbox" id="rememberMe" name="rememberMe" tabindex="3"
-               <#if login.rememberMe??>checked</#if>>
+               <#if login.rememberMe>checked</#if>>
         <span>${msg("rememberMe")}</span>
       </label>
     </div>
@@ -58,7 +59,7 @@
     <#if realm.resetPasswordAllowed>
       <a href="${url.loginResetCredentialsUrl}">${msg("doForgotPassword")}</a>
     </#if>
-    <#if realm.password && realm.registrationAllowed && !(registrationDisabled!false)>
+    <#if realm.password && realm.registrationAllowed && !registrationDisabled!true>
       <a href="${url.registrationUrl}">${msg("doRegister")}</a>
     </#if>
   </div>
