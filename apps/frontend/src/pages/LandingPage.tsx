@@ -16,7 +16,7 @@ const WIZARD_STEPS = 3;
 
 export function LandingPage() {
   const { t } = useTranslation();
-  const { authenticated, initialized, user, logout } = useAuth();
+  const { authenticated, initialized, user, logout, login, register } = useAuth();
   const { toggleLanguage, language } = useLanguage();
   const navigate = useNavigate();
 
@@ -71,7 +71,7 @@ export function LandingPage() {
     setIntroCompleted(true);
     localStorage.setItem(STORAGE_INTRO, 'true');
     setWizardStep(0);
-    navigate('/login');
+    login();
   };
 
   const handleViewIntroAgain = () => {
@@ -135,12 +135,12 @@ export function LandingPage() {
         </button>
         {!authenticated && (
           <>
-            <Link to="/login" className="text-sm font-bold underline">
+            <button onClick={login} className="text-sm font-bold underline">
               {t('landing.loginCta')}
-            </Link>
-            <Link to="/signup" className="text-sm font-bold underline">
+            </button>
+            <button onClick={() => register()} className="text-sm font-bold underline">
               {t('auth.signup').split('?')[0].trim()}
-            </Link>
+            </button>
           </>
         )}
         {authenticated && initialized && (
@@ -185,17 +185,14 @@ export function LandingPage() {
         {/* Unauthenticated CTAs */}
         {!authenticated && (
           <div className="flex flex-wrap items-center gap-4">
-            <Button size="lg" asChild>
-              <Link to="/signup">{t('landing.signupCta')}</Link>
+            <Button size="lg" onClick={() => register()}>
+              {t('landing.signupCta')}
             </Button>
-            <Button variant="neutral" size="lg" asChild>
-              <Link to="/login">{t('landing.loginCta')}</Link>
+            <Button variant="neutral" size="lg" onClick={login}>
+              {t('landing.loginCta')}
             </Button>
             {landingSeen && (
-              <button
-                onClick={() => navigate('/login')}
-                className="text-sm font-bold underline"
-              >
+              <button onClick={login} className="text-sm font-bold underline">
                 {t('landing.skipIntro')}
               </button>
             )}
@@ -287,18 +284,18 @@ export function LandingPage() {
             <button onClick={handleSkipIntro} className="text-sm font-bold underline">
               {t('landing.wizardSkip')}
             </button>
-            <Button variant="outline" size="sm" asChild>
-              <Link to="/signup">{t('landing.signupCta')}</Link>
+            <Button variant="outline" size="sm" onClick={() => register()}>
+              {t('landing.signupCta')}
             </Button>
           </div>
 
           {/* Mobile sticky CTA */}
           <div className="fixed bottom-0 start-0 end-0 z-40 flex gap-2 border-t-2 border-[var(--border)] bg-[var(--background)] p-3 sm:hidden">
-            <Button className="flex-1" asChild>
-              <Link to="/signup">{t('landing.signupCta')}</Link>
+            <Button className="flex-1" onClick={() => register()}>
+              {t('landing.signupCta')}
             </Button>
-            <Button variant="neutral" className="flex-1" asChild>
-              <Link to="/login">{t('landing.loginCta')}</Link>
+            <Button variant="neutral" className="flex-1" onClick={login}>
+              {t('landing.loginCta')}
             </Button>
           </div>
         </section>
@@ -330,11 +327,11 @@ export function LandingPage() {
           {/* Mid-page CTA */}
           {!authenticated && (
             <div className="mt-8 flex flex-wrap gap-4">
-              <Button size="lg" asChild>
-                <Link to="/signup">{t('landing.signupCta')}</Link>
+              <Button size="lg" onClick={() => register()}>
+                {t('landing.signupCta')}
               </Button>
-              <Button variant="neutral" size="lg" asChild>
-                <Link to="/login">{t('landing.loginCta')}</Link>
+              <Button variant="neutral" size="lg" onClick={login}>
+                {t('landing.loginCta')}
               </Button>
             </div>
           )}
@@ -364,11 +361,11 @@ export function LandingPage() {
             {t('landing.finalCtaBody')}
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            <Button size="lg" asChild>
-              <Link to="/signup">{t('landing.finalCtaSignup')}</Link>
+            <Button size="lg" onClick={() => register()}>
+              {t('landing.finalCtaSignup')}
             </Button>
-            <Button variant="neutral" size="lg" asChild>
-              <Link to="/login">{t('landing.finalCtaLogin')}</Link>
+            <Button variant="neutral" size="lg" onClick={login}>
+              {t('landing.finalCtaLogin')}
             </Button>
           </div>
         </section>
