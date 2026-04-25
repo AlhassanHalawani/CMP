@@ -1,8 +1,4 @@
-# Poster Prompt for Canva
 
-Replace the bracketed placeholders before using this in Canva AI.
-
-```text
 Create an A1 portrait academic poster for a university Poster Day presentation about a software engineering project called "FCIT Clubs Management Platform (CMP)". I will provide the official header separately, so reserve a full-width header area at the very top for that external header and do not invent a different university banner.
 
 Match the visual style of an existing web app that uses light-mode neobrutalism. The poster should feel bold, clean, playful, and academic at the same time. Use a pale lavender main background, white secondary panels, a vivid purple accent color, black 2 px borders, square corners, and hard black drop shadows around cards and buttons. Use a subtle black grid background across the page with evenly spaced lines, similar to a 56 px grid. Keep everything high-contrast and readable from a distance. Avoid dark mode, glossy effects, gradients, glassmorphism, soft shadows, and stock photos.
@@ -102,4 +98,4 @@ Poster layout:
                                     - Do not invent fake statistics, accuracy percentages, or evaluation numbers.
                                     - Do not use screenshots unless they are represented as clean placeholder frames.
                                     - Keep the poster fully in English.
-                                    - Preserve an academic tone, but make it visually bold and contemporary.
+                                    - Preserve an academic tone, but make it visually bold and contemporary.w
