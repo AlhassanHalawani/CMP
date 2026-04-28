@@ -120,9 +120,37 @@ export function createTestDb() {
       club_id INTEGER NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','active','inactive')),
+      primary_role TEXT,
+      role_notes TEXT,
+      approved_at TEXT,
+      approved_by INTEGER REFERENCES users(id),
       requested_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE(club_id, user_id)
+    );
+    CREATE TABLE IF NOT EXISTS club_followers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      club_id INTEGER NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      muted_at TEXT,
+      UNIQUE(club_id, user_id)
+    );
+    CREATE TABLE IF NOT EXISTS club_tasks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      club_id INTEGER NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+      event_id INTEGER REFERENCES events(id) ON DELETE SET NULL,
+      title TEXT NOT NULL,
+      description TEXT,
+      status TEXT NOT NULL DEFAULT 'todo' CHECK(status IN ('todo','in_progress','done','cancelled')),
+      priority TEXT NOT NULL DEFAULT 'normal' CHECK(priority IN ('low','normal','high')),
+      due_at TEXT,
+      created_by INTEGER NOT NULL REFERENCES users(id),
+      assigned_to INTEGER REFERENCES users(id),
+      role_key TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      completed_at TEXT
     );
   `);
 

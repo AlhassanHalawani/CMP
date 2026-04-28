@@ -19,6 +19,7 @@ import analyticsRouter from './routes/analytics.routes';
 import userPreferencesRouter from './routes/userPreferences.routes';
 import dailyQuestionsRouter from './routes/dailyQuestions.routes';
 import badgesRouter from './routes/badges.routes';
+import feedRouter from './routes/feed.routes';
 import { startEventReminderJob } from './jobs/event-reminders.job';
 
 // ensure db is initialized on startup
@@ -54,6 +55,7 @@ app.use('/api/analytics', analyticsRouter);
 app.use('/api/users', userPreferencesRouter);
 app.use('/api/daily-questions', dailyQuestionsRouter);
 app.use('/api/badges', badgesRouter);
+app.use('/api/feed', feedRouter);
 
 // --- error handler (must be last) ---
 app.use(errorHandler);

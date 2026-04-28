@@ -22,6 +22,8 @@ import { kpiApi } from '@/api/kpi';
 import { analyticsApi } from '@/api/analytics';
 import { gamificationApi } from '@/api/gamification';
 import { usersApi } from '@/api/users';
+import { clubTasksApi, type ClubTask } from '@/api/clubTasks';
+import { feedApi, type FeedEvent } from '@/api/feed';
 import { KpiOverviewSection } from '@/components/KpiOverviewSection';
 
 // ─── Visitors Chart (admin only) ─────────────────────────────────────────────
@@ -214,6 +216,13 @@ function EventFeedCard({ event, language }: { event: import('@/api/events').Even
 
 // ─── Student Dashboard ────────────────────────────────────────────────────────
 
+function taskStatusColor(status: ClubTask['status']): string {
+  if (status === 'done') return 'text-green-600';
+  if (status === 'in_progress') return 'text-yellow-600';
+  if (status === 'cancelled') return 'text-muted-foreground line-through';
+  return '';
+}
+
 function StudentDashboard() {
   const { t } = useTranslation();
   const { language } = useLanguage();
@@ -231,12 +240,30 @@ function StudentDashboard() {
     enabled: !!currentUser,
   });
 
+  const { data: myTasksData } = useQuery({
+    queryKey: ['me', 'club-tasks'],
+    queryFn: () => clubTasksApi.getMyClubTasks(),
+    enabled: !!currentUser,
+  });
+
+  const { data: feedData, isLoading: feedLoading } = useQuery({
+    queryKey: ['feed', 'events'],
+    queryFn: () => feedApi.getEvents({ limit: 10 }),
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+  });
+
   const { data: eventsData, isLoading: eventsLoading } = useQuery({
     queryKey: ['events', 'upcoming', 'feed'],
     queryFn: () => eventsApi.list({ status: 'published', limit: 10 }),
     refetchInterval: 60_000,
     refetchOnWindowFocus: true,
   });
+
+  const myTasks = myTasksData?.data ?? [];
+  const activeTasks = myTasks.filter((t) => t.status !== 'cancelled' && t.status !== 'done');
+  const feedEvents = feedData?.data ?? [];
+  const hasFeed = feedEvents.length > 0;
 
   return (
     <div>
@@ -282,7 +309,68 @@ function StudentDashboard() {
         </Card>
       </div>
 
-      {/* Event feed: 2-col on md+, 1-col on mobile */}
+      {/* Assigned club tasks */}
+      {activeTasks.length > 0 && (
+        <div className="mb-8">
+          <h2 className="mb-3 text-xl font-black">My Club Tasks</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {activeTasks.map((task) => (
+              <Card key={task.id}>
+                <CardHeader className="pb-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <CardTitle className={`text-base ${taskStatusColor(task.status)}`}>{task.title}</CardTitle>
+                    <Badge variant={task.priority === 'high' ? 'default' : 'outline'} className="shrink-0 text-xs">
+                      {task.priority}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="text-sm space-y-1">
+                  {task.event_title && <p className="opacity-60">Event: {task.event_title}</p>}
+                  {task.due_at && (
+                    <p className="opacity-60">Due: {new Date(task.due_at).toLocaleDateString()}</p>
+                  )}
+                  <Badge variant="secondary" className="text-xs">{task.status.replace('_', ' ')}</Badge>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Club feed — events from followed + member clubs */}
+      {hasFeed && (
+        <div className="mb-8">
+          <h2 className="mb-4 text-xl font-black">From Clubs You Follow</h2>
+          {feedLoading ? (
+            <div className="flex justify-center p-8"><Spinner size="lg" /></div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+              {feedEvents.map((ev: FeedEvent) => (
+                <Link key={ev.id} to={`/events/${ev.id}`}>
+                  <Card className="cursor-pointer hover:-translate-y-0.5 transition-transform">
+                    <CardHeader>
+                      <div className="flex items-start justify-between gap-2">
+                        <CardTitle className="text-base">{language === 'ar' ? ev.title_ar : ev.title}</CardTitle>
+                        <div className="flex gap-1 shrink-0">
+                          {ev.members_only && <Badge variant="outline" className="text-xs">Members Only</Badge>}
+                          {ev.source === 'member' && <Badge variant="secondary" className="text-xs">Member</Badge>}
+                        </div>
+                      </div>
+                      <p className="text-xs opacity-60">{language === 'ar' ? ev.club_name_ar : ev.club_name}</p>
+                    </CardHeader>
+                    <CardContent className="text-sm opacity-70">
+                      {ev.location && <span>{ev.location} · </span>}
+                      {new Date(ev.starts_at).toLocaleDateString()}
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Global upcoming events */}
       <h2 className="mb-4 text-xl font-black">{t('dashboard.upcomingEvents')}</h2>
       {eventsLoading ? (
         <div className="flex justify-center p-8"><Spinner size="lg" /></div>

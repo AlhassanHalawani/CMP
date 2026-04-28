@@ -30,15 +30,18 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { ImageCard } from '@/components/ui/image-card';
 import { clubsApi } from '@/api/clubs';
 import { eventsApi } from '@/api/events';
 import { membershipsApi, type MembershipWithUser } from '@/api/memberships';
+import { clubFollowersApi } from '@/api/clubFollowers';
+import { clubTasksApi, type ClubTask, type CreateTaskPayload, TaskStatus } from '@/api/clubTasks';
 import { ClubFormDialog } from '@/components/clubs/ClubFormDialog';
 import { useAppToast } from '@/contexts/ToastContext';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-
 
 function statusBadgeVariant(status: string): 'default' | 'secondary' | 'outline' {
   if (status === 'active') return 'default';
@@ -46,9 +49,21 @@ function statusBadgeVariant(status: string): 'default' | 'secondary' | 'outline'
   return 'outline';
 }
 
+function taskStatusBadgeVariant(status: TaskStatus): 'default' | 'secondary' | 'outline' {
+  if (status === 'done') return 'default';
+  if (status === 'in_progress') return 'secondary';
+  return 'outline';
+}
+
+// ── Members tab ──────────────────────────────────────────────────────────────
+
 function MembersTab({ clubId, canManage }: { clubId: number; canManage: boolean }) {
   const queryClient = useQueryClient();
   const { showToast } = useAppToast();
+  const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [assigningRoleFor, setAssigningRoleFor] = useState<number | null>(null);
+  const [selectedRole, setSelectedRole] = useState<string>('');
 
   const { data: membersData, isLoading } = useQuery({
     queryKey: ['clubs', clubId, 'members'],
@@ -56,10 +71,16 @@ function MembersTab({ clubId, canManage }: { clubId: number; canManage: boolean 
     enabled: canManage,
   });
 
+  const { data: rolesData } = useQuery({
+    queryKey: ['member-roles'],
+    queryFn: () => membershipsApi.getMemberRoles(),
+  });
+
   const approveMutation = useMutation({
     mutationFn: (userId: number) => membershipsApi.updateMembership(clubId, userId, 'active'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clubs', clubId, 'members'] });
+      queryClient.invalidateQueries({ queryKey: ['clubs', clubId, 'stats'] });
       showToast('Membership approved', 'The member has been approved.');
     },
     onError: () => showToast('Error', 'Failed to approve membership.'),
@@ -74,15 +95,61 @@ function MembersTab({ clubId, canManage }: { clubId: number; canManage: boolean 
     onError: () => showToast('Error', 'Failed to decline membership.'),
   });
 
+  const assignRoleMutation = useMutation({
+    mutationFn: ({ userId, role }: { userId: number; role: string | null }) =>
+      membershipsApi.assignRole(clubId, userId, { primary_role: role }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clubs', clubId, 'members'] });
+      setAssigningRoleFor(null);
+      setSelectedRole('');
+      showToast('Role assigned', 'Member role updated.');
+    },
+    onError: () => showToast('Error', 'Failed to assign role.'),
+  });
+
   if (!canManage) return null;
   if (isLoading) return <div className="flex justify-center p-8"><Spinner size="lg" /></div>;
 
-  const members = membersData?.data ?? [];
+  const roles = rolesData?.data ?? [];
+  let members = membersData?.data ?? [];
+
+  if (statusFilter !== 'all') members = members.filter((m) => m.status === statusFilter);
+  if (roleFilter !== 'all') members = members.filter((m) => m.primary_role === roleFilter);
+
+  const pending = members.filter((m) => m.status === 'pending');
+  const rest = members.filter((m) => m.status !== 'pending');
+  const sorted = [...pending, ...rest];
 
   return (
-    <div>
-      {members.length === 0 ? (
-        <p className="text-sm py-4">No members yet.</p>
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-3">
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-36">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="inactive">Inactive</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={roleFilter} onValueChange={setRoleFilter}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Role" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All roles</SelectItem>
+            {roles.map((r) => (
+              <SelectItem key={r.key} value={r.key}>{r.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {sorted.length === 0 ? (
+        <p className="text-sm py-4 text-muted-foreground">No members match the current filters.</p>
       ) : (
         <Table>
           <TableHeader>
@@ -90,12 +157,13 @@ function MembersTab({ clubId, canManage }: { clubId: number; canManage: boolean 
               <TableHead>Member</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Role</TableHead>
               <TableHead>Requested</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {members.map((m: MembershipWithUser) => (
+            {sorted.map((m: MembershipWithUser) => (
               <TableRow key={m.id}>
                 <TableCell>
                   <div className="flex items-center gap-3">
@@ -110,27 +178,67 @@ function MembersTab({ clubId, canManage }: { clubId: number; canManage: boolean 
                 <TableCell>
                   <Badge variant={statusBadgeVariant(m.status)}>{m.status}</Badge>
                 </TableCell>
-                <TableCell className="text-sm">{new Date(m.requested_at).toLocaleDateString()}</TableCell>
-                <TableCell>
-                  {m.status === 'pending' && (
-                    <div className="flex gap-2">
+                <TableCell className="text-sm">
+                  {m.status === 'active' && assigningRoleFor === m.user_id ? (
+                    <div className="flex items-center gap-2">
+                      <Select value={selectedRole} onValueChange={setSelectedRole}>
+                        <SelectTrigger className="w-44 h-8">
+                          <SelectValue placeholder="Pick role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">No role</SelectItem>
+                          {roles.map((r) => (
+                            <SelectItem key={r.key} value={r.key}>{r.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <Button
                         size="sm"
-                        onClick={() => approveMutation.mutate(m.user_id)}
-                        disabled={approveMutation.isPending || declineMutation.isPending}
+                        onClick={() => assignRoleMutation.mutate({ userId: m.user_id, role: selectedRole === '__none__' ? null : selectedRole || null })}
+                        disabled={assignRoleMutation.isPending}
                       >
-                        Approve
+                        Save
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => declineMutation.mutate(m.user_id)}
-                        disabled={approveMutation.isPending || declineMutation.isPending}
-                      >
-                        Decline
+                      <Button size="sm" variant="ghost" onClick={() => { setAssigningRoleFor(null); setSelectedRole(''); }}>
+                        Cancel
                       </Button>
                     </div>
+                  ) : (
+                    <span>{roles.find((r) => r.key === m.primary_role)?.label ?? <span className="text-muted-foreground">—</span>}</span>
                   )}
+                </TableCell>
+                <TableCell className="text-sm">{new Date(m.requested_at).toLocaleDateString()}</TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-2">
+                    {m.status === 'pending' && (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() => approveMutation.mutate(m.user_id)}
+                          disabled={approveMutation.isPending || declineMutation.isPending}
+                        >
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => declineMutation.mutate(m.user_id)}
+                          disabled={approveMutation.isPending || declineMutation.isPending}
+                        >
+                          Decline
+                        </Button>
+                      </>
+                    )}
+                    {m.status === 'active' && assigningRoleFor !== m.user_id && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => { setAssigningRoleFor(m.user_id); setSelectedRole(m.primary_role ?? ''); }}
+                      >
+                        Assign Role
+                      </Button>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -140,6 +248,204 @@ function MembersTab({ clubId, canManage }: { clubId: number; canManage: boolean 
     </div>
   );
 }
+
+// ── Tasks tab ────────────────────────────────────────────────────────────────
+
+function TasksTab({ clubId }: { clubId: number }) {
+  const queryClient = useQueryClient();
+  const { showToast } = useAppToast();
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [createOpen, setCreateOpen] = useState(false);
+  const [form, setForm] = useState<CreateTaskPayload>({ title: '' });
+
+  const { data: tasksData, isLoading } = useQuery({
+    queryKey: ['clubs', clubId, 'tasks', statusFilter],
+    queryFn: () => clubTasksApi.listClubTasks(clubId, statusFilter !== 'all' ? { status: statusFilter } : {}),
+  });
+
+  const { data: assignableData } = useQuery({
+    queryKey: ['clubs', clubId, 'members', 'assignable'],
+    queryFn: () => membershipsApi.listAssignableMembers(clubId),
+  });
+
+  const { data: rolesData } = useQuery({
+    queryKey: ['member-roles'],
+    queryFn: () => membershipsApi.getMemberRoles(),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (payload: CreateTaskPayload) => clubTasksApi.createClubTask(clubId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clubs', clubId, 'tasks'] });
+      setCreateOpen(false);
+      setForm({ title: '' });
+      showToast('Task created', 'The task has been created.');
+    },
+    onError: () => showToast('Error', 'Failed to create task.'),
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ taskId, status }: { taskId: number; status: TaskStatus }) =>
+      clubTasksApi.updateClubTask(clubId, taskId, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clubs', clubId, 'tasks'] });
+    },
+    onError: () => showToast('Error', 'Failed to update task.'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (taskId: number) => clubTasksApi.deleteClubTask(clubId, taskId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clubs', clubId, 'tasks'] });
+      showToast('Task deleted', 'The task has been removed.');
+    },
+    onError: () => showToast('Error', 'Failed to delete task.'),
+  });
+
+  const assignable = assignableData?.data ?? [];
+  const roles = rolesData?.data ?? [];
+  const tasks = tasksData?.data ?? [];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value="todo">To Do</SelectItem>
+            <SelectItem value="in_progress">In Progress</SelectItem>
+            <SelectItem value="done">Done</SelectItem>
+            <SelectItem value="cancelled">Cancelled</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button onClick={() => setCreateOpen(true)}>+ New Task</Button>
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center p-8"><Spinner size="lg" /></div>
+      ) : tasks.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-4">No tasks found.</p>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Title</TableHead>
+              <TableHead>Assignee</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Priority</TableHead>
+              <TableHead>Due</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {tasks.map((t: ClubTask) => (
+              <TableRow key={t.id}>
+                <TableCell className="font-medium">{t.title}</TableCell>
+                <TableCell className="text-sm">{t.assignee_name ?? <span className="text-muted-foreground">—</span>}</TableCell>
+                <TableCell className="text-sm">{roles.find((r) => r.key === t.role_key)?.label ?? <span className="text-muted-foreground">—</span>}</TableCell>
+                <TableCell>
+                  <Badge variant={t.priority === 'high' ? 'default' : 'outline'}>{t.priority}</Badge>
+                </TableCell>
+                <TableCell className="text-sm">{t.due_at ? new Date(t.due_at).toLocaleDateString() : '—'}</TableCell>
+                <TableCell>
+                  <Badge variant={taskStatusBadgeVariant(t.status)}>{t.status.replace('_', ' ')}</Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="flex gap-2 flex-wrap">
+                    {t.status !== 'done' && t.status !== 'cancelled' && (
+                      <Button size="sm" variant="outline" onClick={() => updateStatusMutation.mutate({ taskId: t.id, status: 'done' })}>
+                        Done
+                      </Button>
+                    )}
+                    {t.status !== 'cancelled' && (
+                      <Button size="sm" variant="ghost" onClick={() => updateStatusMutation.mutate({ taskId: t.id, status: 'cancelled' })}>
+                        Cancel
+                      </Button>
+                    )}
+                    <Button size="sm" variant="destructive" onClick={() => deleteMutation.mutate(t.id)}>
+                      Delete
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Task</DialogTitle>
+            <DialogDescription>Assign a task to an active club member.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              placeholder="Title *"
+              value={form.title}
+              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+            />
+            <Input
+              placeholder="Description"
+              value={form.description ?? ''}
+              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value || undefined }))}
+            />
+            <Select value={String(form.assigned_to ?? '')} onValueChange={(v) => setForm((f) => ({ ...f, assigned_to: v ? parseInt(v) : undefined }))}>
+              <SelectTrigger>
+                <SelectValue placeholder="Assign to member" />
+              </SelectTrigger>
+              <SelectContent>
+                {assignable.map((m) => (
+                  <SelectItem key={m.user_id} value={String(m.user_id)}>{m.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={form.role_key ?? ''} onValueChange={(v) => setForm((f) => ({ ...f, role_key: v || undefined }))}>
+              <SelectTrigger>
+                <SelectValue placeholder="Suggested role" />
+              </SelectTrigger>
+              <SelectContent>
+                {roles.map((r) => (
+                  <SelectItem key={r.key} value={r.key}>{r.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={form.priority ?? 'normal'} onValueChange={(v) => setForm((f) => ({ ...f, priority: v as any }))}>
+              <SelectTrigger>
+                <SelectValue placeholder="Priority" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="low">Low</SelectItem>
+                <SelectItem value="normal">Normal</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              type="date"
+              value={form.due_at ?? ''}
+              onChange={(e) => setForm((f) => ({ ...f, due_at: e.target.value || undefined }))}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => createMutation.mutate(form)}
+              disabled={!form.title || createMutation.isPending}
+            >
+              {createMutation.isPending ? 'Creating…' : 'Create'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
 
 export function ClubDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -185,12 +491,18 @@ export function ClubDetailPage() {
     enabled: !isAdmin && !isLeader,
   });
 
+  const { data: myFollow } = useQuery({
+    queryKey: ['clubs', clubId, 'follow', 'me'],
+    queryFn: () => clubFollowersApi.getMyFollow(clubId),
+    enabled: !isAdmin,
+  });
+
   const isClubOwner = isLeader && club?.leader_id === currentUser?.id;
   const canEdit = isAdmin || isClubOwner;
   const canManageMembers = isAdmin || isClubOwner;
-  // Suppress join/leave while currentUser is loading to avoid a brief false-positive
-  // that would show the Join button to a club owner before their DB id resolves.
   const showJoinLeave = !isAdmin && !isClubOwner && !currentUserLoading;
+  const showFollowToggle = !isAdmin && !currentUserLoading;
+  const isFollowing = !!myFollow;
 
   const logoUploadMutation = useMutation({
     mutationFn: (file: File) => clubsApi.uploadLogo(clubId, file),
@@ -220,6 +532,29 @@ export function ClubDetailPage() {
       showToast('Left club', 'You have left the club.');
     },
     onError: () => showToast('Error', 'Failed to leave the club.'),
+  });
+
+  const followMutation = useMutation({
+    mutationFn: () => clubFollowersApi.follow(clubId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clubs', clubId, 'follow', 'me'] });
+      queryClient.invalidateQueries({ queryKey: ['clubs', clubId, 'stats'] });
+      showToast('Following', `You are now following ${clubName}.`);
+    },
+    onError: (error: unknown) => {
+      const message = isAxiosError(error) ? (error.response?.data?.error ?? 'Failed to follow.') : 'Failed to follow.';
+      showToast('Error', message);
+    },
+  });
+
+  const unfollowMutation = useMutation({
+    mutationFn: () => clubFollowersApi.unfollow(clubId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clubs', clubId, 'follow', 'me'] });
+      queryClient.invalidateQueries({ queryKey: ['clubs', clubId, 'stats'] });
+      showToast('Unfollowed', `You unfollowed ${clubName}.`);
+    },
+    onError: () => showToast('Error', 'Failed to unfollow.'),
   });
 
   const updateMutation = useMutation({
@@ -370,11 +705,31 @@ export function ClubDetailPage() {
             )}
           </>
         )}
+
+        {showFollowToggle && (
+          isFollowing ? (
+            <Button
+              variant="ghost"
+              onClick={() => unfollowMutation.mutate()}
+              disabled={unfollowMutation.isPending}
+            >
+              Following ✓ — Unfollow
+            </Button>
+          ) : (
+            <Button
+              variant="secondary"
+              onClick={() => followMutation.mutate()}
+              disabled={followMutation.isPending}
+            >
+              Follow
+            </Button>
+          )
+        )}
       </div>
 
-      {/* Verified stats */}
+      {/* Stats */}
       {stats && (
-        <div className="grid grid-cols-2 gap-3 mb-8 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 mb-8 md:grid-cols-4 lg:grid-cols-6">
           <Card>
             <CardHeader className="pb-1">
               <CardTitle className="text-sm font-medium text-muted-foreground">Published Events</CardTitle>
@@ -399,9 +754,32 @@ export function ClubDetailPage() {
               <p className="text-3xl font-black">{stats.active_members}</p>
             </CardContent>
           </Card>
+          <Card>
+            <CardHeader className="pb-1">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Followers</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-black">{stats.followers_count}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-1">
+              <CardTitle className="text-sm font-medium text-muted-foreground">New Followers (30d)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-black">{stats.new_followers_last_30_days}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-1">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Follower→Member %</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-black">{stats.follower_to_member_conversion_rate}%</p>
+            </CardContent>
+          </Card>
         </div>
       )}
-
 
       {/* Recent events showcase */}
       {recentEvents.length > 0 && (
@@ -456,6 +834,7 @@ export function ClubDetailPage() {
         <TabsList className="mb-4">
           <TabsTrigger value="events">{t('clubs.events')}</TabsTrigger>
           {canManageMembers && <TabsTrigger value="members">Members</TabsTrigger>}
+          {canManageMembers && <TabsTrigger value="tasks">Tasks</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="events">
@@ -485,6 +864,12 @@ export function ClubDetailPage() {
         {canManageMembers && (
           <TabsContent value="members">
             <MembersTab clubId={clubId} canManage={canManageMembers} />
+          </TabsContent>
+        )}
+
+        {canManageMembers && (
+          <TabsContent value="tasks">
+            <TasksTab clubId={clubId} />
           </TabsContent>
         )}
       </Tabs>

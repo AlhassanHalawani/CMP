@@ -15,6 +15,9 @@ export interface ClubStats {
   published_events: number;
   total_attendance: number;
   active_members: number;
+  followers_count: number;
+  new_followers_last_30_days: number;
+  follower_to_member_conversion_rate: number;
 }
 
 export interface ClubDashboard {

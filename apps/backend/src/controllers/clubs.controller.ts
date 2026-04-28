@@ -120,7 +120,21 @@ export function getClubStats(req: Request, res: Response) {
     .prepare(`SELECT COUNT(*) AS active_members FROM memberships WHERE club_id = ? AND status = 'active'`)
     .get(clubId) as { active_members: number };
 
-  res.json({ published_events, total_attendance, active_members });
+  const { followers_count } = db
+    .prepare(`SELECT COUNT(*) AS followers_count FROM club_followers WHERE club_id = ?`)
+    .get(clubId) as { followers_count: number };
+
+  const { new_followers_last_30_days } = db
+    .prepare(
+      `SELECT COUNT(*) AS new_followers_last_30_days FROM club_followers
+       WHERE club_id = ? AND created_at >= datetime('now', '-30 days')`
+    )
+    .get(clubId) as { new_followers_last_30_days: number };
+
+  const follower_to_member_conversion_rate =
+    followers_count > 0 ? Math.round((active_members / followers_count) * 100) : 0;
+
+  res.json({ published_events, total_attendance, active_members, followers_count, new_followers_last_30_days, follower_to_member_conversion_rate });
 }
 
 /**

@@ -5,6 +5,10 @@ export interface Membership {
   club_id: number;
   user_id: number;
   status: 'pending' | 'active' | 'inactive';
+  primary_role: string | null;
+  role_notes: string | null;
+  approved_at: string | null;
+  approved_by: number | null;
   requested_at: string;
   updated_at: string;
 }
@@ -20,6 +24,10 @@ export const MembershipModel = {
     return db
       .prepare('SELECT * FROM memberships WHERE club_id = ? AND user_id = ?')
       .get(clubId, userId) as Membership | undefined;
+  },
+
+  findById(id: number): Membership | undefined {
+    return db.prepare('SELECT * FROM memberships WHERE id = ?').get(id) as Membership | undefined;
   },
 
   findByClub(clubId: number, status?: string): MembershipWithUser[] {
@@ -63,6 +71,32 @@ export const MembershipModel = {
   updateStatus(id: number, status: string): Membership {
     db.prepare("UPDATE memberships SET status = ?, updated_at = datetime('now') WHERE id = ?").run(status, id);
     return db.prepare('SELECT * FROM memberships WHERE id = ?').get(id) as Membership;
+  },
+
+  approve(id: number, approvedBy: number): Membership {
+    db.prepare(
+      "UPDATE memberships SET status = 'active', approved_at = datetime('now'), approved_by = ?, updated_at = datetime('now') WHERE id = ?"
+    ).run(approvedBy, id);
+    return db.prepare('SELECT * FROM memberships WHERE id = ?').get(id) as Membership;
+  },
+
+  updateRole(id: number, primaryRole: string | null, roleNotes?: string): Membership {
+    db.prepare(
+      "UPDATE memberships SET primary_role = ?, role_notes = ?, updated_at = datetime('now') WHERE id = ?"
+    ).run(primaryRole, roleNotes ?? null, id);
+    return db.prepare('SELECT * FROM memberships WHERE id = ?').get(id) as Membership;
+  },
+
+  listActiveAssignableMembers(clubId: number): MembershipWithUser[] {
+    return db
+      .prepare(
+        `SELECT m.*, u.name, u.email, u.avatar_url
+         FROM memberships m
+         JOIN users u ON u.id = m.user_id
+         WHERE m.club_id = ? AND m.status = 'active'
+         ORDER BY u.name ASC`
+      )
+      .all(clubId) as MembershipWithUser[];
   },
 
   countActive(clubId: number): number {
