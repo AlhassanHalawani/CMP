@@ -78,6 +78,66 @@ export function updateClub(req: AuthRequest, res: Response) {
     return;
   }
 
+  // When admin changes leader_id, enforce one-leader-per-user and handle role promotion/demotion
+  const newLeaderId: number | null | undefined = req.body.leader_id;
+  if (isAdmin(user) && 'leader_id' in req.body) {
+    const previousLeaderId = existing.leader_id;
+    const leaderIsChanging = newLeaderId !== previousLeaderId;
+
+    if (leaderIsChanging && newLeaderId != null) {
+      const newLeaderUser = UserModel.findById(newLeaderId);
+      if (!newLeaderUser) {
+        res.status(404).json({ error: 'New leader user not found' });
+        return;
+      }
+      const alreadyLeads = ClubModel.findByLeader(newLeaderId);
+      if (alreadyLeads && alreadyLeads.id !== id) {
+        res.status(409).json({ error: `This user already leads "${alreadyLeads.name}". A leader can only lead one club.` });
+        return;
+      }
+    }
+
+    const club = ClubModel.update(id, req.body);
+
+    if (leaderIsChanging) {
+      db.transaction(() => {
+        if (newLeaderId != null) {
+          UserModel.updateRole(newLeaderId, 'club_leader');
+        }
+        if (previousLeaderId && previousLeaderId !== newLeaderId) {
+          const stillLeads = (db.prepare(
+            'SELECT COUNT(*) as cnt FROM clubs WHERE leader_id = ? AND id != ?'
+          ).get(previousLeaderId, id) as { cnt: number }).cnt;
+          if (stillLeads === 0) {
+            UserModel.updateRole(previousLeaderId, 'student');
+          }
+        }
+      })();
+
+      // Sync Keycloak roles best-effort
+      if (newLeaderId != null) {
+        const newLeaderUser = UserModel.findById(newLeaderId);
+        if (newLeaderUser) {
+          syncUserRealmRole(newLeaderUser.keycloak_id, 'club_leader', newLeaderUser.role).catch((err: Error) => {
+            logger.warn(`Keycloak role sync failed for new leader ${newLeaderId}: ${err.message}`);
+          });
+        }
+      }
+      if (previousLeaderId && previousLeaderId !== newLeaderId) {
+        const prevLeader = UserModel.findById(previousLeaderId);
+        if (prevLeader) {
+          syncUserRealmRole(prevLeader.keycloak_id, 'student', 'club_leader').catch((err: Error) => {
+            logger.warn(`Keycloak role sync failed for demoted leader ${previousLeaderId}: ${err.message}`);
+          });
+        }
+      }
+    }
+
+    logAction({ actorId: user.id, action: 'update', entityType: 'club', entityId: id });
+    res.json(club);
+    return;
+  }
+
   const club = ClubModel.update(id, req.body);
   logAction({ actorId: user.id, action: 'update', entityType: 'club', entityId: id });
   res.json(club);

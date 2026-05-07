@@ -130,6 +130,23 @@ export async function syncUserRealmRole(
   await assignRealmRoleToUser(token, keycloakUserId, next);
 }
 
+/**
+ * Terminates all active Keycloak sessions for a user so their existing JWTs
+ * become invalid at the Keycloak layer immediately (before account deletion).
+ */
+export async function logoutAllKeycloakSessions(keycloakUserId: string): Promise<void> {
+  const token = await getAdminToken();
+  const url = `${env.keycloak.url}/admin/realms/${env.keycloak.realm}/users/${keycloakUserId}/logout`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok && res.status !== 404) {
+    const text = await res.text();
+    throw new Error(`Failed to logout Keycloak sessions for user ${keycloakUserId}: ${res.status} ${text}`);
+  }
+}
+
 export async function deleteKeycloakUser(keycloakUserId: string): Promise<void> {
   const token = await getAdminToken();
   const url = `${env.keycloak.url}/admin/realms/${env.keycloak.realm}/users/${keycloakUserId}`;

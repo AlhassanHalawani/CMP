@@ -128,12 +128,13 @@ describe('Club ownership — PATCH /api/clubs/:id', () => {
     expect(res.body.error).toMatch(/admin/i);
   });
 
-  it('allows admin to change leader_id', async () => {
+  it('allows admin to change leader_id to a user who does not lead another club', async () => {
     const token = generateAdminToken();
+    // user 1 is a student with no club — eligible to receive leadership
     const res = await request(app)
       .patch('/api/clubs/1')
       .set('Authorization', `Bearer ${token}`)
-      .send({ leader_id: 4 });
+      .send({ leader_id: 1 });
     expect(res.status).toBe(200);
   });
 });
@@ -221,15 +222,9 @@ describe('Event ownership — PATCH /api/events/:id', () => {
     expect(res.body).toHaveProperty('error');
   });
 
-  it('allows leader to move event to another club they own', async () => {
-    // Set club 2 leader to leader1 first (admin action)
-    const adminToken = generateAdminToken();
-    await request(app)
-      .patch('/api/clubs/2')
-      .set('Authorization', `Bearer ${adminToken}`)
-      .send({ leader_id: 3 }); // leader1 now owns both clubs
-
-    const token = generateLeaderToken();
+  it('allows admin to move event to a different club', async () => {
+    // A leader can only lead one club, so only admin can move events between clubs
+    const token = generateAdminToken();
     const res = await request(app)
       .patch('/api/events/1')
       .set('Authorization', `Bearer ${token}`)

@@ -2,7 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { UserModel } from '../models/user.model';
 import { logAction } from '../services/audit.service';
-import { syncUserRealmRole, deleteKeycloakUser } from '../services/keycloakAdmin.service';
+import { syncUserRealmRole, deleteKeycloakUser, logoutAllKeycloakSessions } from '../services/keycloakAdmin.service';
 import { logger } from '../utils/logger';
 import { db } from '../config/database';
 import { evaluateStudentAchievements } from '../services/achievement-engine.service';
@@ -217,12 +217,16 @@ export async function deleteMe(req: AuthRequest, res: Response) {
     return;
   }
 
-  UserModel.deleteById(user.id);
   logAction({ actorId: user.id, action: 'delete_account', entityType: 'user', entityId: user.id, payload: {} });
+  db.prepare('INSERT OR IGNORE INTO _deleted_users (keycloak_id) VALUES (?)').run(user.keycloak_id);
+  UserModel.deleteById(user.id);
 
-  deleteKeycloakUser(user.keycloak_id).catch((err: Error) => {
-    logger.warn(`Keycloak user deletion failed for ${user.id}: ${err.message}`);
-  });
+  // Invalidate existing sessions first, then remove the account — both best-effort
+  logoutAllKeycloakSessions(user.keycloak_id)
+    .then(() => deleteKeycloakUser(user.keycloak_id))
+    .catch((err: Error) => {
+      logger.warn(`Keycloak cleanup failed for ${user.id}: ${err.message}`);
+    });
 
   res.status(204).send();
 }
@@ -240,12 +244,15 @@ export async function deleteUser(req: AuthRequest, res: Response) {
     return;
   }
 
-  UserModel.deleteById(id);
   logAction({ actorId: req.user!.id, action: 'delete_user', entityType: 'user', entityId: id, payload: { email: target.email } });
+  db.prepare('INSERT OR IGNORE INTO _deleted_users (keycloak_id) VALUES (?)').run(target.keycloak_id);
+  UserModel.deleteById(id);
 
-  deleteKeycloakUser(target.keycloak_id).catch((err: Error) => {
-    logger.warn(`Keycloak user deletion failed for ${id}: ${err.message}`);
-  });
+  logoutAllKeycloakSessions(target.keycloak_id)
+    .then(() => deleteKeycloakUser(target.keycloak_id))
+    .catch((err: Error) => {
+      logger.warn(`Keycloak cleanup failed for ${id}: ${err.message}`);
+    });
 
   res.status(204).send();
 }

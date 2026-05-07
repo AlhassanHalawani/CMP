@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import jwksRsa from 'jwks-rsa';
 import { env } from '../config/env';
 import { UserModel, User } from '../models/user.model';
+import { db } from '../config/database';
 
 export interface AuthRequest extends Request {
   user?: User;
@@ -77,8 +78,17 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
 
     req.tokenPayload = payload;
 
-    // Sync user from Keycloak claims to local DB
+    // Reject tokens belonging to deleted accounts
     const keycloakId = payload.sub as string;
+    const blocked = db
+      .prepare('SELECT 1 FROM _deleted_users WHERE keycloak_id = ?')
+      .get(keycloakId);
+    if (blocked) {
+      res.status(401).json({ error: 'Account has been deleted' });
+      return;
+    }
+
+    // Sync user from Keycloak claims to local DB
     const email = payload.email || `${keycloakId}@placeholder`;
     const name = payload.name || payload.preferred_username || 'Unknown';
     const roles = extractRoles(payload);

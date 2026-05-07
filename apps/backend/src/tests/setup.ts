@@ -138,6 +138,10 @@ export function createTestDb() {
       muted_at TEXT,
       UNIQUE(club_id, user_id)
     );
+    CREATE TABLE IF NOT EXISTS _deleted_users (
+      keycloak_id TEXT PRIMARY KEY NOT NULL,
+      deleted_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    );
     CREATE TABLE IF NOT EXISTS club_tasks (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       club_id INTEGER NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,

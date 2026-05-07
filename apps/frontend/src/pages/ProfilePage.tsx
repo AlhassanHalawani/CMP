@@ -206,6 +206,7 @@ export function ProfilePage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   const isStudent = !hasRole('admin') && !hasRole('club_leader');
+  const canHaveStudentId = !hasRole('admin');
   const existingStudentId = currentUser?.student_id ?? null;
 
   // Badge progress summary
@@ -279,7 +280,7 @@ export function ProfilePage() {
                   <label className="block text-sm font-bold mb-1">Name</label>
                   <Input value={name} onChange={(e) => setName(e.target.value)} />
                 </div>
-                {isStudent && (
+                {canHaveStudentId && (
                   <div>
                     <label className="block text-sm font-bold mb-1">
                       {t('profile.studentId')}
@@ -291,7 +292,7 @@ export function ProfilePage() {
                         <Input
                           value={studentId}
                           onChange={(e) => setStudentId(e.target.value)}
-                          placeholder="e.g. 2138217"
+                          placeholder="e.g. 2612345"
                         />
                         <p className="text-xs opacity-50 mt-1">
                           {t('profile.studentIdHint')}
@@ -303,11 +304,11 @@ export function ProfilePage() {
                 <Button
                   disabled={
                     updateMutation.isPending ||
-                    (name === user?.name && (!isStudent || existingStudentId !== null || !studentId.trim()))
+                    (name === user?.name && (!canHaveStudentId || existingStudentId !== null || !studentId.trim()))
                   }
                   onClick={() => {
                     const payload: { name: string; student_id?: string } = { name };
-                    if (isStudent && !existingStudentId && studentId.trim()) {
+                    if (canHaveStudentId && !existingStudentId && studentId.trim()) {
                       payload.student_id = studentId.trim();
                     }
                     updateMutation.mutate(payload);
