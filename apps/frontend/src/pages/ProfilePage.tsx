@@ -202,9 +202,11 @@ export function ProfilePage() {
   const { currentUser } = useCurrentUser();
   const navigate = useNavigate();
   const [name, setName] = useState(user?.name || '');
+  const [studentId, setStudentId] = useState('');
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   const isStudent = !hasRole('admin') && !hasRole('club_leader');
+  const existingStudentId = currentUser?.student_id ?? null;
 
   // Badge progress summary
   const { data: badgeProgress } = useQuery({
@@ -221,12 +223,16 @@ export function ProfilePage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: { name: string }) => usersApi.updateMe(data),
+    mutationFn: (data: { name: string; student_id?: string }) => usersApi.updateMe(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users', 'me'] });
-      showToast('Profile updated', 'Your name has been saved.');
+      setStudentId('');
+      showToast('Profile updated', 'Your profile has been saved.');
     },
-    onError: () => showToast('Error', 'Failed to update profile.'),
+    onError: (err: unknown) => {
+      const msg = isAxiosError(err) ? err.response?.data?.error : 'Failed to update profile.';
+      showToast('Error', msg ?? 'Failed to update profile.');
+    },
   });
 
   const deleteMutation = useMutation({
@@ -273,9 +279,39 @@ export function ProfilePage() {
                   <label className="block text-sm font-bold mb-1">Name</label>
                   <Input value={name} onChange={(e) => setName(e.target.value)} />
                 </div>
+                {isStudent && (
+                  <div>
+                    <label className="block text-sm font-bold mb-1">
+                      {t('profile.studentId')}
+                    </label>
+                    {existingStudentId ? (
+                      <Input value={existingStudentId} disabled />
+                    ) : (
+                      <>
+                        <Input
+                          value={studentId}
+                          onChange={(e) => setStudentId(e.target.value)}
+                          placeholder="e.g. 2138217"
+                        />
+                        <p className="text-xs opacity-50 mt-1">
+                          {t('profile.studentIdHint')}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                )}
                 <Button
-                  disabled={updateMutation.isPending || name === user?.name}
-                  onClick={() => updateMutation.mutate({ name })}
+                  disabled={
+                    updateMutation.isPending ||
+                    (name === user?.name && (!isStudent || existingStudentId !== null || !studentId.trim()))
+                  }
+                  onClick={() => {
+                    const payload: { name: string; student_id?: string } = { name };
+                    if (isStudent && !existingStudentId && studentId.trim()) {
+                      payload.student_id = studentId.trim();
+                    }
+                    updateMutation.mutate(payload);
+                  }}
                 >
                   {updateMutation.isPending ? 'Saving…' : t('common.save')}
                 </Button>

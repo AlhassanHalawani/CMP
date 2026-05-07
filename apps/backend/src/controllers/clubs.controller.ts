@@ -166,6 +166,13 @@ export function assignClubLeader(req: AuthRequest, res: Response) {
     return;
   }
 
+  // Enforce one-leader-per-user rule
+  const alreadyLeads = ClubModel.findByLeader(newLeaderId);
+  if (alreadyLeads && alreadyLeads.id !== clubId) {
+    res.status(409).json({ error: `This user already leads "${alreadyLeads.name}". A leader can only lead one club.` });
+    return;
+  }
+
   const previousLeaderId = club.leader_id;
 
   db.transaction(() => {

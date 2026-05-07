@@ -106,4 +106,10 @@ export const MembershipModel = {
         .get(clubId) as any
     ).count;
   },
+
+  findActiveByUser(userId: number): Membership | undefined {
+    return db
+      .prepare("SELECT * FROM memberships WHERE user_id = ? AND status = 'active' LIMIT 1")
+      .get(userId) as Membership | undefined;
+  },
 };

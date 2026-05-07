@@ -55,8 +55,8 @@ export const attendanceApi = {
     api.post<QrResponse>(`/attendance/${eventId}/qr`).then((r) => r.data),
   checkIn: (token: string) =>
     api.post<Attendance>('/attendance/check-in', { token }).then((r) => r.data),
-  manualCheckIn: (eventId: number, user_id: number) =>
-    api.post<Attendance>(`/attendance/${eventId}/manual`, { user_id }).then((r) => r.data),
+  manualCheckIn: (eventId: number, student_id: string) =>
+    api.post<Attendance>(`/attendance/${eventId}/manual`, { student_id }).then((r) => r.data),
   listAttendance: (eventId: number, params?: { status?: 'present' | 'no_show' | 'all' }) =>
     api
       .get<{ data: AttendeeRecord[]; summary: AttendanceSummary }>(`/attendance/${eventId}`, { params })

@@ -50,7 +50,7 @@ export function EventAttendancePage() {
   const isLeader = hasRole('club_leader');
   const { currentUser } = useCurrentUser();
 
-  const [manualUserId, setManualUserId] = useState('');
+  const [manualStudentId, setManualStudentId] = useState('');
 
   const { data: event, isLoading: eventLoading } = useQuery({
     queryKey: ['events', eventId],
@@ -86,10 +86,10 @@ export function EventAttendancePage() {
   });
 
   const manualCheckInMutation = useMutation({
-    mutationFn: () => attendanceApi.manualCheckIn(eventId, parseInt(manualUserId)),
+    mutationFn: () => attendanceApi.manualCheckIn(eventId, manualStudentId.trim()),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['attendance', eventId] });
-      setManualUserId('');
+      setManualStudentId('');
       showToast(t('attendance.checkedIn'), t('attendance.manualSuccess'));
     },
     onError: (error: unknown) => {
@@ -302,15 +302,15 @@ export function EventAttendancePage() {
             )}
             <div className="flex gap-3">
               <Input
-                type="number"
-                placeholder={t('attendance.userIdPlaceholder')}
-                value={manualUserId}
-                onChange={(e) => setManualUserId(e.target.value)}
+                type="text"
+                placeholder={t('attendance.studentIdPlaceholder')}
+                value={manualStudentId}
+                onChange={(e) => setManualStudentId(e.target.value)}
                 disabled={checkinFinalized || !checkinOpen}
               />
               <Button
                 onClick={() => manualCheckInMutation.mutate()}
-                disabled={manualCheckInMutation.isPending || !manualUserId || checkinFinalized || !checkinOpen}
+                disabled={manualCheckInMutation.isPending || !manualStudentId.trim() || checkinFinalized || !checkinOpen}
               >
                 {manualCheckInMutation.isPending ? t('common.loading') : t('attendance.checkInBtn')}
               </Button>

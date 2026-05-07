@@ -46,6 +46,13 @@ function UsersTab() {
   const [assignDialog, setAssignDialog] = useState<{ user: User } | null>(null);
   const [selectedClubId, setSelectedClubId] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
+  const [profileDialog, setProfileDialog] = useState<User | null>(null);
+
+  const { data: profileDetail } = useQuery({
+    queryKey: ['admin', 'user-profile', profileDialog?.id],
+    queryFn: () => usersApi.getUserById(profileDialog!.id),
+    enabled: !!profileDialog,
+  });
 
   const roleMutation = useMutation({
     mutationFn: ({ id, role }: { id: number; role: string }) => usersApi.updateRole(id, role),
@@ -107,8 +114,11 @@ function UsersTab() {
             <div>
               <p className="font-bold">{u.name}</p>
               <p className="text-xs opacity-60">{u.email}</p>
+              <p className="text-xs opacity-50 mt-0.5">
+                ID: {u.student_id ?? <span className="text-amber-500">No Student ID</span>}
+              </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge variant={roleVariant[u.role] ?? 'default'}>{u.role}</Badge>
 
               {/* Role selector */}
@@ -125,6 +135,15 @@ function UsersTab() {
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
+
+              {/* View Profile */}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setProfileDialog(u)}
+              >
+                View Profile
+              </Button>
 
               {/* Assign as club leader */}
               <Button
@@ -167,6 +186,54 @@ function UsersTab() {
             >
               {deleteMutation.isPending ? 'Deleting…' : 'Delete'}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* User profile detail dialog */}
+      <Dialog open={!!profileDialog} onOpenChange={(o) => { if (!o) setProfileDialog(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>User Profile</DialogTitle>
+          </DialogHeader>
+          {profileDetail ? (
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between"><span className="font-bold">Name</span><span>{profileDetail.name}</span></div>
+              <div className="flex justify-between"><span className="font-bold">Email</span><span>{profileDetail.email}</span></div>
+              <div className="flex justify-between"><span className="font-bold">Role</span><Badge variant={roleVariant[profileDetail.role] ?? 'default'}>{profileDetail.role}</Badge></div>
+              <div className="flex justify-between">
+                <span className="font-bold">Student ID</span>
+                <span>{profileDetail.student_id ?? <span className="text-amber-500">Not set</span>}</span>
+              </div>
+              <div className="flex justify-between"><span className="font-bold">Joined</span><span>{new Date(profileDetail.created_at).toLocaleDateString()}</span></div>
+              {(profileDetail as any).active_membership && (
+                <div className="flex justify-between">
+                  <span className="font-bold">Active Club</span>
+                  <span>{(profileDetail as any).active_membership.club_name}</span>
+                </div>
+              )}
+              {(profileDetail as any).event_stats && (
+                <>
+                  <div className="flex justify-between"><span className="font-bold">Events Registered</span><span>{(profileDetail as any).event_stats.registered}</span></div>
+                  <div className="flex justify-between"><span className="font-bold">Events Attended</span><span>{(profileDetail as any).event_stats.attended}</span></div>
+                </>
+              )}
+              {(profileDetail as any).followed_clubs?.length > 0 && (
+                <div>
+                  <p className="font-bold mb-1">Followed Clubs</p>
+                  <div className="flex flex-wrap gap-1">
+                    {(profileDetail as any).followed_clubs.map((c: any) => (
+                      <Badge key={c.id} variant="neutral">{c.name}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex justify-center p-4"><span className="opacity-50 text-sm">Loading…</span></div>
+          )}
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setProfileDialog(null)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

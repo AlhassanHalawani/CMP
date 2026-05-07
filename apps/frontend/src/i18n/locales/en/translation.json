@@ -140,6 +140,7 @@
     "checkInBtn": "Check In",
     "tokenPlaceholder": "Enter QR token or scan QR code",
     "userIdPlaceholder": "User ID",
+    "studentIdPlaceholder": "Student ID",
     "checkInSuccess": "Successfully checked in!",
     "alreadyCheckedIn": "You have already checked in for this event.",
     "checkInError": "Check-in failed. Please try again.",
@@ -280,6 +281,10 @@
     "semesters": "Semesters",
     "auditLog": "Audit Log",
     "stats": "Statistics"
+  },
+  "profile": {
+    "studentId": "Student ID",
+    "studentIdHint": "Your Student ID cannot be changed after it is saved."
   },
   "theme": {
     "light": "Light",

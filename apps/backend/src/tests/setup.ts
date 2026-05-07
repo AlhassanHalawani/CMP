@@ -17,8 +17,10 @@ export function createTestDb() {
       name TEXT NOT NULL,
       role TEXT NOT NULL DEFAULT 'student' CHECK (role IN ('student', 'club_leader', 'admin')),
       avatar_url TEXT,
+      student_id TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_users_student_id_unique ON users(student_id) WHERE student_id IS NOT NULL;
     CREATE TABLE IF NOT EXISTS clubs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -194,7 +196,7 @@ export function generateLeaderToken(overrides: Record<string, any> = {}) {
 /** Insert seed data for attendance tests: a user, club, published event, and registration */
 export function seedAttendanceData(db: Database.Database) {
   db.exec(`
-    INSERT INTO users (keycloak_id, email, name, role) VALUES ('test-keycloak-id', 'test@stu.kau.edu.sa', 'Test User', 'student');
+    INSERT INTO users (keycloak_id, email, name, role, student_id) VALUES ('test-keycloak-id', 'test@stu.kau.edu.sa', 'Test User', 'student', '1000001');
     INSERT INTO users (keycloak_id, email, name, role) VALUES ('admin-keycloak-id', 'admin@kau.edu.sa', 'Admin User', 'admin');
     INSERT INTO users (keycloak_id, email, name, role) VALUES ('leader-keycloak-id', 'leader@kau.edu.sa', 'Club Leader', 'club_leader');
     INSERT INTO clubs (name, name_ar, leader_id) VALUES ('Test Club', 'نادي اختبار', 3);
@@ -231,7 +233,7 @@ export function seedAttendanceData(db: Database.Database) {
  */
 export function seedOwnershipData(db: Database.Database) {
   db.exec(`
-    INSERT INTO users (keycloak_id, email, name, role) VALUES ('test-keycloak-id', 'test@stu.kau.edu.sa', 'Test User', 'student');
+    INSERT INTO users (keycloak_id, email, name, role, student_id) VALUES ('test-keycloak-id', 'test@stu.kau.edu.sa', 'Test User', 'student', '1000001');
     INSERT INTO users (keycloak_id, email, name, role) VALUES ('admin-keycloak-id', 'admin@kau.edu.sa', 'Admin User', 'admin');
     INSERT INTO users (keycloak_id, email, name, role) VALUES ('leader-keycloak-id', 'leader@kau.edu.sa', 'Club Leader 1', 'club_leader');
     INSERT INTO users (keycloak_id, email, name, role) VALUES ('leader2-keycloak-id', 'leader2@kau.edu.sa', 'Club Leader 2', 'club_leader');

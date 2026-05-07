@@ -4,6 +4,7 @@ import { AttendanceModel } from '../models/attendance.model';
 import { EventModel } from '../models/event.model';
 import { ClubModel } from '../models/club.model';
 import { RegistrationModel } from '../models/registration.model';
+import { UserModel } from '../models/user.model';
 import { generateQr } from '../services/qrcode.service';
 import { generateAttendanceReport } from '../services/pdf.service';
 import { isAdmin, leaderOwnsEvent } from '../services/ownership.service';
@@ -120,13 +121,20 @@ export async function checkIn(req: AuthRequest, res: Response) {
 
 export async function manualCheckIn(req: AuthRequest, res: Response) {
   const eventId = parseInt(req.params.eventId);
-  const { user_id } = req.body;
+  const { student_id } = req.body;
   const user = req.user!;
 
-  if (!user_id || typeof user_id !== 'number') {
-    res.status(400).json({ error: 'Valid user_id is required' });
+  if (!student_id || typeof student_id !== 'string' || !student_id.trim()) {
+    res.status(400).json({ error: 'Valid student_id is required' });
     return;
   }
+  const target = UserModel.findByStudentId(student_id.trim());
+  if (!target) {
+    res.status(404).json({ error: 'No user found with that Student ID' });
+    return;
+  }
+  const targetUserId = target.id;
+
   const event = EventModel.findById(eventId);
   if (!event) {
     res.status(404).json({ error: 'Event not found' });
@@ -151,27 +159,34 @@ export async function manualCheckIn(req: AuthRequest, res: Response) {
     return;
   }
 
-  const existing = AttendanceModel.findByEventAndUser(eventId, user_id);
+  // Enforce registration requirement (matches QR check-in behavior)
+  const registration = RegistrationModel.findByEventAndUser(eventId, targetUserId);
+  if (!registration || registration.status === 'cancelled') {
+    res.status(403).json({ error: 'Student must be registered for this event to check in' });
+    return;
+  }
+
+  const existing = AttendanceModel.findByEventAndUser(eventId, targetUserId);
   if (existing) {
     res.status(409).json({ error: 'Already checked in' });
     return;
   }
-  const attendance = AttendanceModel.checkIn({ event_id: eventId, user_id, method: 'manual' });
+  const attendance = AttendanceModel.checkIn({ event_id: eventId, user_id: targetUserId, method: 'manual' });
 
   // Best-effort: evaluate student achievements/badges and award XP after manual check-in
-  try { evaluateStudentAchievements(user_id); } catch { /* ignore */ }
-  try { evaluateStudentBadges(user_id); } catch { /* ignore */ }
+  try { evaluateStudentAchievements(targetUserId); } catch { /* ignore */ }
+  try { evaluateStudentBadges(targetUserId); } catch { /* ignore */ }
   try {
     const xpResult = awardXp({
-      userId: user_id,
+      userId: targetUserId,
       actionKey: 'event_attended',
-      referenceKey: `attendance:${eventId}:${user_id}`,
+      referenceKey: `attendance:${eventId}:${targetUserId}`,
       sourceType: 'event',
       sourceId: eventId,
     });
     if (xpResult?.level_up) {
       await notify({
-        userId: user_id,
+        userId: targetUserId,
         eventType: 'level_up',
         title: 'Level Up!',
         body: `You reached Level ${xpResult.new_level}. Keep it up!`,

@@ -60,4 +60,8 @@ export const ClubModel = {
   count(): number {
     return (db.prepare('SELECT COUNT(*) as count FROM clubs').get() as any).count;
   },
+
+  findByLeader(leaderId: number): Club | undefined {
+    return db.prepare('SELECT * FROM clubs WHERE leader_id = ? LIMIT 1').get(leaderId) as Club | undefined;
+  },
 };

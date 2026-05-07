@@ -314,7 +314,7 @@ describe('Attendance ownership', () => {
       const res = await request(app)
         .post('/api/attendance/1/manual')
         .set('Authorization', `Bearer ${token}`)
-        .send({ user_id: 1 });
+        .send({ student_id: '1000001' });
       expect(res.status).toBe(201);
     });
 
@@ -323,7 +323,7 @@ describe('Attendance ownership', () => {
       const res = await request(app)
         .post('/api/attendance/1/manual')
         .set('Authorization', `Bearer ${token}`)
-        .send({ user_id: 1 });
+        .send({ student_id: '1000001' });
       expect(res.status).toBe(201);
     });
 
@@ -332,7 +332,7 @@ describe('Attendance ownership', () => {
       const res = await request(app)
         .post('/api/attendance/3/manual')
         .set('Authorization', `Bearer ${token}`)
-        .send({ user_id: 1 });
+        .send({ student_id: '1000001' });
       expect(res.status).toBe(403);
       expect(res.body).toHaveProperty('error');
     });

@@ -201,16 +201,16 @@ describe('Attendance API', () => {
       const res = await request(app)
         .post('/api/attendance/1/manual')
         .set('Authorization', `Bearer ${token}`)
-        .send({ user_id: 1 });
+        .send({ student_id: '1000001' });
       expect(res.status).toBe(403);
     });
 
-    it('succeeds for admin with valid user_id', async () => {
+    it('succeeds for admin with valid student_id', async () => {
       const token = generateAdminToken();
       const res = await request(app)
         .post('/api/attendance/1/manual')
         .set('Authorization', `Bearer ${token}`)
-        .send({ user_id: 1 });
+        .send({ student_id: '1000001' });
       expect(res.status).toBe(201);
       expect(res.body.method).toBe('manual');
     });
@@ -220,12 +220,12 @@ describe('Attendance API', () => {
       await request(app)
         .post('/api/attendance/1/manual')
         .set('Authorization', `Bearer ${token}`)
-        .send({ user_id: 1 });
+        .send({ student_id: '1000001' });
 
       const res = await request(app)
         .post('/api/attendance/1/manual')
         .set('Authorization', `Bearer ${token}`)
-        .send({ user_id: 1 });
+        .send({ student_id: '1000001' });
       expect(res.status).toBe(409);
     });
 
@@ -234,8 +234,17 @@ describe('Attendance API', () => {
       const res = await request(app)
         .post('/api/attendance/2/manual')
         .set('Authorization', `Bearer ${token}`)
-        .send({ user_id: 1 });
+        .send({ student_id: '1000001' });
       expect(res.status).toBe(400);
+    });
+
+    it('returns 404 for unknown student_id', async () => {
+      const token = generateAdminToken();
+      const res = await request(app)
+        .post('/api/attendance/1/manual')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ student_id: 'UNKNOWN999' });
+      expect(res.status).toBe(404);
     });
   });
 

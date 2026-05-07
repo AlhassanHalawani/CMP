@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth';
 import { requireRole } from '../middleware/roles';
-import { getMe, updateMe, listUsers, updateUserRole, recordLoginActivity, getGamification, getXpHistory, getMyStats, deleteMe, deleteUser } from '../controllers/users.controller';
+import { getMe, updateMe, listUsers, getUserById, updateUserRole, recordLoginActivity, getGamification, getXpHistory, getMyStats, deleteMe, deleteUser } from '../controllers/users.controller';
 import { getMyClubTasks } from '../controllers/clubTasks.controller';
 
 const router = Router();
@@ -17,6 +17,7 @@ router.get('/me/xp-history', getXpHistory);
 router.delete('/me', deleteMe);
 router.get('/me/club-tasks', getMyClubTasks);
 router.get('/', requireRole('admin'), listUsers);
+router.get('/:id', requireRole('admin'), getUserById);
 router.patch('/:id/role', requireRole('admin'), updateUserRole);
 router.delete('/:id', requireRole('admin'), deleteUser);
 

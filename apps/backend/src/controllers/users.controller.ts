@@ -55,14 +55,35 @@ export function recordLoginActivity(req: AuthRequest, res: Response) {
 }
 
 export function updateMe(req: AuthRequest, res: Response) {
-  const { name, avatar_url } = req.body;
+  const { name, avatar_url, student_id } = req.body;
   const userId = req.user!.id;
+  const currentUser = req.user!;
 
-  UserModel.updateProfile(userId, { name, avatar_url });
+  // student_id may only be set once; block changes after first save
+  if (student_id !== undefined) {
+    if (currentUser.student_id !== null) {
+      res.status(409).json({ error: 'Student ID has already been set and cannot be changed.' });
+      return;
+    }
+    const trimmed = typeof student_id === 'string' ? student_id.trim() : '';
+    if (!trimmed) {
+      res.status(400).json({ error: 'Student ID must not be empty.' });
+      return;
+    }
+    const conflict = UserModel.findByStudentId(trimmed);
+    if (conflict && conflict.id !== userId) {
+      res.status(409).json({ error: 'This Student ID is already in use.' });
+      return;
+    }
+    UserModel.updateProfile(userId, { name, avatar_url, student_id: trimmed });
+  } else {
+    UserModel.updateProfile(userId, { name, avatar_url });
+  }
+
   const updated = UserModel.findById(userId)!;
 
   // Award profile-completion XP once if the profile is now complete for the first time
-  if (!updated.profile_completed_at && updated.name && updated.avatar_url) {
+  if (!updated.profile_completed_at && updated.name && updated.avatar_url && updated.student_id) {
     db.prepare(`UPDATE users SET profile_completed_at = datetime('now') WHERE id = ?`).run(userId);
     const xpResult = awardXp({
       userId,
@@ -138,6 +159,45 @@ export function getXpHistory(req: AuthRequest, res: Response) {
     .all(userId, limit);
 
   res.json({ data: rows, total: (db.prepare('SELECT COUNT(*) as c FROM xp_transactions WHERE user_id = ?').get(userId) as any).c });
+}
+
+export function getUserById(req: AuthRequest, res: Response) {
+  const id = parseInt(req.params.id);
+  const user = UserModel.findById(id);
+  if (!user) {
+    res.status(404).json({ error: 'User not found' });
+    return;
+  }
+
+  const activeMembership = db
+    .prepare(
+      `SELECT m.*, c.name AS club_name, c.name_ar AS club_name_ar
+       FROM memberships m
+       JOIN clubs c ON c.id = m.club_id
+       WHERE m.user_id = ? AND m.status = 'active'
+       LIMIT 1`
+    )
+    .get(id);
+
+  const followedClubs = db
+    .prepare(
+      `SELECT c.id, c.name, c.name_ar
+       FROM club_followers cf
+       JOIN clubs c ON c.id = cf.club_id
+       WHERE cf.user_id = ?
+       ORDER BY cf.created_at DESC`
+    )
+    .all(id);
+
+  const eventStats = db
+    .prepare(
+      `SELECT
+         (SELECT COUNT(*) FROM registrations WHERE user_id = ? AND status != 'cancelled') AS registered,
+         (SELECT COUNT(*) FROM attendance WHERE user_id = ?) AS attended`
+    )
+    .get(id, id) as { registered: number; attended: number };
+
+  res.json({ ...user, active_membership: activeMembership ?? null, followed_clubs: followedClubs, event_stats: eventStats });
 }
 
 export function listUsers(req: AuthRequest, res: Response) {

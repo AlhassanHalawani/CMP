@@ -7,6 +7,7 @@ export interface User {
   name: string;
   role: 'student' | 'club_leader' | 'admin';
   avatar_url: string | null;
+  student_id: string | null;
   xp_total: number;
   current_level: number;
   profile_completed_at: string | null;
@@ -24,6 +25,10 @@ export const UserModel = {
 
   findByEmail(email: string): User | undefined {
     return db.prepare('SELECT * FROM users WHERE email = ?').get(email) as User | undefined;
+  },
+
+  findByStudentId(studentId: string): User | undefined {
+    return db.prepare('SELECT * FROM users WHERE student_id = ?').get(studentId) as User | undefined;
   },
 
   upsert(data: { keycloak_id: string; email: string; name: string; role?: string }): User {
@@ -46,7 +51,7 @@ export const UserModel = {
     db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, id);
   },
 
-  updateProfile(id: number, data: { name?: string; avatar_url?: string | null }): void {
+  updateProfile(id: number, data: { name?: string; avatar_url?: string | null; student_id?: string | null }): void {
     const fields: string[] = [];
     const values: any[] = [];
     if (data.name !== undefined) {
@@ -56,6 +61,10 @@ export const UserModel = {
     if (data.avatar_url !== undefined) {
       fields.push('avatar_url = ?');
       values.push(data.avatar_url);
+    }
+    if (data.student_id !== undefined) {
+      fields.push('student_id = ?');
+      values.push(data.student_id);
     }
     if (fields.length === 0) return;
     values.push(id);

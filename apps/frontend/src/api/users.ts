@@ -7,6 +7,7 @@ export interface User {
   name: string;
   role: string;
   avatar_url: string | null;
+  student_id: string | null;
   created_at: string;
 }
 
@@ -30,7 +31,8 @@ export interface MyStats {
 export const usersApi = {
   getMe: () => api.get<User>('/users/me').then((r) => r.data),
   getMyStats: () => api.get<MyStats>('/users/me/stats').then((r) => r.data),
-  updateMe: (data: { name?: string; avatar_url?: string }) => api.patch<User>('/users/me', data).then((r) => r.data),
+  updateMe: (data: { name?: string; avatar_url?: string; student_id?: string }) => api.patch<User>('/users/me', data).then((r) => r.data),
+  getUserById: (id: number) => api.get<User>(`/users/${id}`).then((r) => r.data),
   list: (params?: { role?: string; limit?: number; offset?: number }) =>
     api.get<{ data: User[]; total: number }>('/users', { params }).then((r) => r.data),
   updateRole: (id: number, role: string) => api.patch<User>(`/users/${id}/role`, { role }).then((r) => r.data),

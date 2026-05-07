@@ -30,6 +30,13 @@ export async function createLeaderRequest(req: AuthRequest, res: Response) {
     return;
   }
 
+  // Block if user already leads a club
+  const alreadyLeads = ClubModel.findByLeader(user.id);
+  if (alreadyLeads) {
+    res.status(409).json({ error: `You already lead "${alreadyLeads.name}". A leader can only lead one club.` });
+    return;
+  }
+
   // Prevent duplicate pending request
   const existing = LeaderRequestModel.findPendingByUserAndClub(user.id, clubId);
   if (existing) {
@@ -88,6 +95,13 @@ export async function approveLeaderRequest(req: AuthRequest, res: Response) {
   const club = ClubModel.findById(request.club_id);
   if (!club) {
     res.status(404).json({ error: 'Club not found' });
+    return;
+  }
+
+  // Enforce one-leader-per-user at approval time
+  const alreadyLeads = ClubModel.findByLeader(request.user_id);
+  if (alreadyLeads && alreadyLeads.id !== request.club_id) {
+    res.status(409).json({ error: `This user already leads "${alreadyLeads.name}". A leader can only lead one club.` });
     return;
   }
 

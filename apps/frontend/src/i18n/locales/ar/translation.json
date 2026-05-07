@@ -140,6 +140,7 @@
     "checkInBtn": "تسجيل",
     "tokenPlaceholder": "أدخل رمز QR أو امسح الرمز",
     "userIdPlaceholder": "رقم المستخدم",
+    "studentIdPlaceholder": "الرقم الجامعي",
     "checkInSuccess": "تم تسجيل الحضور بنجاح!",
     "alreadyCheckedIn": "لقد سجّلت حضورك مسبقاً لهذه الفعالية.",
     "checkInError": "فشل تسجيل الحضور. حاول مرة أخرى.",
@@ -280,6 +281,10 @@
     "semesters": "الفصول الدراسية",
     "auditLog": "سجل المراجعة",
     "stats": "الإحصائيات"
+  },
+  "profile": {
+    "studentId": "الرقم الجامعي",
+    "studentIdHint": "لا يمكن تغيير الرقم الجامعي بعد حفظه."
   },
   "theme": {
     "light": "فاتح",

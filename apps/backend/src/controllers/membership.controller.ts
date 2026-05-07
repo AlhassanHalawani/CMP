@@ -22,6 +22,13 @@ export async function joinClub(req: AuthRequest, res: Response) {
     return;
   }
 
+  // Prevent requesting membership when already active in another club
+  const activeElsewhere = MembershipModel.findActiveByUser(userId);
+  if (activeElsewhere && activeElsewhere.club_id !== clubId) {
+    res.status(409).json({ error: 'You are already an active member of another club. Leave that club first.' });
+    return;
+  }
+
   const existing = MembershipModel.findByClubAndUser(clubId, userId);
   if (existing) {
     if (existing.status === 'active') {
@@ -147,6 +154,11 @@ export async function updateMembership(req: AuthRequest, res: Response) {
 
   let updated;
   if (status === 'active') {
+    const activeElsewhere = MembershipModel.findActiveByUser(targetUserId);
+    if (activeElsewhere && activeElsewhere.club_id !== clubId) {
+      res.status(409).json({ error: 'This student is already an active member of another club.' });
+      return;
+    }
     updated = MembershipModel.approve(membership.id, user.id);
   } else {
     updated = MembershipModel.updateStatus(membership.id, status);
