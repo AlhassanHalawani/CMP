@@ -1,0 +1,60 @@
+% Integration testing table for the CMP web application.
+% Required packages in the main report preamble:
+% \usepackage{array}
+% \usepackage{longtable}
+
+\begin{longtable}{|p{0.12\textwidth}|p{0.34\textwidth}|p{0.38\textwidth}|p{0.10\textwidth}|}
+\caption{Integration Testing Results for the Web Application}
+\label{tab:web-app-integration-testing}\\
+\hline
+\textbf{Test ID} & \textbf{Input / Action} & \textbf{Expected Result} & \textbf{Status} \\
+\hline
+\endfirsthead
+
+\hline
+\textbf{Test ID} & \textbf{Input / Action} & \textbf{Expected Result} & \textbf{Status} \\
+\hline
+\endhead
+
+IT-001 & User logs in through Keycloak and returns to the web application. & The frontend receives the authenticated session, stores the user state, and redirects the user to the protected area. & Passed \\
+\hline
+IT-002 & Authenticated user opens \texttt{/dashboard}. & The dashboard page loads through protected routing and requests the required backend data using the active token. & Passed \\
+\hline
+IT-003 & Authenticated user opens \texttt{/clubs}. & The frontend calls the clubs API and displays the list of available clubs. & Passed \\
+\hline
+IT-004 & Authenticated user selects a club from the clubs page. & The application navigates to the club detail route and displays the selected club information from the backend. & Passed \\
+\hline
+IT-005 & Authenticated user opens \texttt{/events}. & The frontend calls the events API and displays the event list with the correct routing links. & Passed \\
+\hline
+IT-006 & Authenticated user opens an event detail page. & The event detail route loads the selected event data and displays registration or attendance-related actions where applicable. & Passed \\
+\hline
+IT-007 & User registers for an available event. & The registration request is sent to the backend and the frontend updates the event registration state. & Passed \\
+\hline
+IT-008 & Admin or club leader opens \texttt{/events/:id/attendance}. & The attendance page loads only for authorized roles and displays attendance controls for the selected event. & Passed \\
+\hline
+IT-009 & Attendance is recorded for a registered student. & The attendance API saves the record and the frontend reflects the updated attendance status. & Passed \\
+\hline
+IT-010 & Admin or club leader opens \texttt{/kpi}. & The KPI page retrieves computed metrics from the backend and renders the KPI overview correctly. & Passed \\
+\hline
+IT-011 & Admin or club leader opens \texttt{/reports}. & The reports page loads report data from the backend and displays the selected report view. & Passed \\
+\hline
+IT-012 & Authenticated user opens \texttt{/notifications}. & The frontend retrieves user notifications and displays unread and read notification states correctly. & Passed \\
+\hline
+IT-013 & User opens a notification that contains a target route. & The application navigates to the related page and keeps the notification state synchronized with the backend. & Passed \\
+\hline
+IT-014 & Authenticated user opens \texttt{/profile}. & The profile page retrieves the current user data and displays profile information from the backend. & Passed \\
+\hline
+IT-015 & User changes profile or UI preferences. & The frontend sends the update to the backend and the updated preference is reflected in the interface. & Passed \\
+\hline
+IT-016 & User toggles the application language. & The language context updates the interface direction and the translated labels are loaded from the localization files. & Passed \\
+\hline
+IT-017 & Admin opens \texttt{/admin}. & The admin page is accessible only to users with the admin role and loads administrative data from the backend. & Passed \\
+\hline
+IT-018 & Non-admin user attempts to open \texttt{/admin}. & Protected routing blocks access and redirects the user to \texttt{/dashboard}. & Passed \\
+\hline
+IT-019 & User session expires while the application is open. & Token refresh is attempted; if refresh fails, the user state is cleared and protected pages require login again. & Passed \\
+\hline
+IT-020 & Backend API returns an error during a page data load. & The frontend handles the failed request gracefully and prevents the application from crashing. & Passed \\
+\hline
+
+\end{longtable}

@@ -1,0 +1,56 @@
+% Unit testing table for the CMP web application.
+% Required packages in the main report preamble:
+% \usepackage{array}
+% \usepackage{longtable}
+
+\begin{longtable}{|p{0.12\textwidth}|p{0.34\textwidth}|p{0.38\textwidth}|p{0.10\textwidth}|}
+\caption{Unit Testing Results for the Web Application}
+\label{tab:web-app-unit-testing}\\
+\hline
+\textbf{Test ID} & \textbf{Input / Action} & \textbf{Expected Result} & \textbf{Status} \\
+\hline
+\endfirsthead
+
+\hline
+\textbf{Test ID} & \textbf{Input / Action} & \textbf{Expected Result} & \textbf{Status} \\
+\hline
+\endhead
+
+UT-001 & Open the landing route \texttt{/}. & The landing page component is rendered successfully without requiring authentication. & Passed \\
+\hline
+UT-002 & Open the login route \texttt{/login}. & The login page is displayed and the user can start the authentication flow. & Passed \\
+\hline
+UT-003 & Open the signup route \texttt{/signup}. & The signup page is displayed and the user can start the registration flow. & Passed \\
+\hline
+UT-004 & Access a protected route such as \texttt{/dashboard} while the authentication state is not initialized. & A loading spinner is displayed until authentication initialization finishes. & Passed \\
+\hline
+UT-005 & Access a protected route such as \texttt{/dashboard} as an unauthenticated user. & The user is redirected to \texttt{/login}. & Passed \\
+\hline
+UT-006 & Access a normal protected route as an authenticated user. & The requested page is rendered inside the main page layout. & Passed \\
+\hline
+UT-007 & Access an admin-only route such as \texttt{/admin} with a non-admin role. & The user is redirected to \texttt{/dashboard}. & Passed \\
+\hline
+UT-008 & Access a role-restricted route such as \texttt{/kpi}, \texttt{/reports}, or \texttt{/events/:id/attendance} with an allowed role. & The page is displayed when the user has the required \texttt{admin} or \texttt{club\_leader} role. & Passed \\
+\hline
+UT-009 & Send an API request when a Keycloak token exists. & The API client adds the \texttt{Authorization: Bearer <token>} header to the request. & Passed \\
+\hline
+UT-010 & Send an API request when no Keycloak token exists. & The API client sends the request without an authorization header. & Passed \\
+\hline
+UT-011 & Toggle the application language from English to Arabic. & The language changes to Arabic, the HTML \texttt{lang} attribute becomes \texttt{ar}, and the page direction becomes \texttt{rtl}. & Passed \\
+\hline
+UT-012 & Toggle the application language from Arabic to English. & The language changes to English, the HTML \texttt{lang} attribute becomes \texttt{en}, and the page direction becomes \texttt{ltr}. & Passed \\
+\hline
+UT-013 & Open an unknown route. & The not found page is rendered. & Passed \\
+\hline
+UT-014 & A child component throws a rendering error inside the application tree. & The error boundary catches the error and prevents the whole application from crashing. & Passed \\
+\hline
+UT-015 & Open the notifications page as an authenticated user. & The notifications page is rendered through the protected layout. & Passed \\
+\hline
+UT-016 & Open the clubs page and club detail route as an authenticated user. & The clubs page and selected club detail page are reachable through protected routing. & Passed \\
+\hline
+UT-017 & Open the events page and event detail route as an authenticated user. & The events list and selected event detail page are reachable through protected routing. & Passed \\
+\hline
+UT-018 & Open the profile page as an authenticated user. & The profile page is rendered through the protected layout. & Passed \\
+\hline
+
+\end{longtable}

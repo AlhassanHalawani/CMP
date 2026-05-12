@@ -2,6 +2,7 @@ import { type ReactNode, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AppSidebar } from './Sidebar';
 import { Topbar } from './Topbar';
+import { MobileBottomNav } from './MobileBottomNav';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import {
   Dialog,
@@ -61,9 +62,11 @@ export function PageLayout({ children }: { children: ReactNode }) {
             <Topbar />
           </div>
         </div>
-        <div className="flex-1 p-6">{children}</div>
+        {/* pb-20 md:pb-0 reserves space for the mobile bottom nav on small screens */}
+        <div className="flex-1 p-6 pb-24 md:pb-6">{children}</div>
       </SidebarInset>
       <MissingStudentIdPrompt />
+      <MobileBottomNav />
     </SidebarProvider>
   );
 }

@@ -1,0 +1,18 @@
+{
+  "name": "CMP — FCIT Clubs Management Platform",
+  "short_name": "CMP",
+  "description": "Manage FCIT clubs, events, attendance, and achievements at King Abdulaziz University.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#ffffff",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -13,7 +13,17 @@
     "notifications": "Notifications",
     "admin": "Admin",
     "reports": "Reports",
-    "profile": "Profile"
+    "profile": "Profile",
+    "myClub": "My Club",
+    "scan": "Scan QR",
+    "createEvent": "Create",
+    "mobileNav": "Mobile navigation"
+  },
+  "pwa": {
+    "install": "Install App",
+    "installBody": "Add CMP to your home screen for quick access.",
+    "iosFallback": "To install: tap the Share button then \"Add to Home Screen\".",
+    "alreadyInstalled": "Already installed"
   },
   "auth": {
     "login": "Login",

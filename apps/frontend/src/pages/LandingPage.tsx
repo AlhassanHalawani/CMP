@@ -3,8 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { usePwaInstall } from '@/hooks/usePwaInstall';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { Download } from 'lucide-react';
 
 type Audience = 'student' | 'staff';
 
@@ -19,6 +21,7 @@ export function LandingPage() {
   const { authenticated, initialized, user, logout, login, register } = useAuth();
   const { toggleLanguage, language } = useLanguage();
   const navigate = useNavigate();
+  const { canInstall, install, isInstalled, isIosSafari } = usePwaInstall();
 
   const [audience, setAudience] = useState<Audience | null>(() => {
     const stored = localStorage.getItem(STORAGE_AUDIENCE);
@@ -195,6 +198,23 @@ export function LandingPage() {
               <button onClick={login} className="text-sm font-bold underline">
                 {t('landing.skipIntro')}
               </button>
+            )}
+          </div>
+        )}
+
+        {/* PWA install prompt — mobile only, hidden when already installed */}
+        {!isInstalled && (canInstall || isIosSafari) && (
+          <div className="mt-6 border-2 border-[var(--border)] bg-[var(--secondary-background)] p-4 shadow-[4px_4px_0px_0px_var(--border)] sm:hidden">
+            <p className="mb-2 text-sm font-bold">{t('pwa.installBody')}</p>
+            {canInstall ? (
+              <Button variant="neutral" size="sm" onClick={install} className="gap-2">
+                <Download size={16} />
+                {t('pwa.install')}
+              </Button>
+            ) : (
+              <p className="text-sm font-medium text-[var(--foreground)]/70">
+                {t('pwa.iosFallback')}
+              </p>
             )}
           </div>
         )}
